@@ -1,11 +1,11 @@
 # PRD 01: Product Vision, Core Features & System Architecture
 
 ## 1. Product Vision & Core Idea
-**Habit Tracker AI** is an intelligent multi-platform habit tracking and calendar scheduling system (Mobile, Web, Desktop). The product combines **Habit Tracking**, **Two-Way Google Calendar Sync**, **Focus Management (Pomodoro)**, and **Predictive AI Insights (Machine Learning)**.
+**Habit Tracker** is an intelligent multi-platform habit tracking and calendar scheduling system (Mobile, Web, Desktop). The product combines **Habit Tracking**, **Two-Way Google Calendar Sync**, **Focus Management (Pomodoro)**, and **Interactive Analytics & Gamification**.
 
 ### Core Value Propositions
 1. **Seamless Calendar & Habit Sync**: Converts daily habits into dynamic schedule slots, supporting real-time bi-directional synchronization with Google Calendar via Webhooks and SignalR.
-2. **AI-Powered Predictive Insights**: Predicts habit completion probability, recommends optimal time slots, and forecasts streak continuity using dedicated Machine Learning models.
+2. **Interactive Analytics & Performance**: Visualizes habit completion rates, focus time distribution, heatmaps, and streak tracking.
 3. **Cross-Platform Native Experience**: Modern UI (Shadcn UI style), native Android App Widgets (Glance Composables), and instant synchronization across devices.
 4. **Gamification & Focus Tools**: Integrated Pomodoro Timer, XP progression, level-ups, and cosmetic rewards (Avatars/Borders) to maintain user motivation.
 
@@ -13,14 +13,12 @@
 
 ## 2. System Architecture Overview
 
-The system follows a **Distributed Micro-Services / Modular Monolith Architecture** with clear boundaries between Frontend, Core Backend, and ML Engine.
+The system follows a **Clean Architecture + CQRS Modular Architecture** with clear separation between the Flutter Frontend and .NET Core Backend.
 
 ```mermaid
 graph TD
     Client[Flutter Multi-Platform App] -->|.NET REST API / SignalR| Backend[.NET 9 Web API]
-    Client -->|FastAPI Direct REST| ML[Python FastAPI ML Engine]
     Backend -->|EF Core PostgreSQL| DB[(PostgreSQL Database)]
-    ML -->|Psycopg2 SQL Query| DB
     Backend <-->|OAuth2 / Webhooks| GCal[Google Calendar API]
 ```
 
@@ -51,16 +49,6 @@ graph TD
   - `HabitTracker.Infrastructure`: Persistence, Google API Service, SignalR.
   - `HabitTracker.Web`: Endpoints (Minimal APIs / Controllers), Webhooks, Middlewares.
 
-### 3.3. Machine Learning Engine: Python FastAPI (`/ml`)
-* **Framework**: Python 3.11+ FastAPI + Uvicorn.
-* **ML Libraries**: `scikit-learn`, `pandas`, `numpy`, `joblib`.
-* **Database Connection**: Direct PostgreSQL connection via `psycopg2` feature store.
-* **Machine Learning Models**:
-  - **Completion Prediction**: Logistic Regression / Random Forest (Predicts daily habit completion probability based on historical patterns).
-  - **Optimal Time Slot**: Decision Tree Regressor (Recommends optimal focus hours).
-  - **Streak Forecast**: Ridge Regression (Forecasts streak maintenance days).
-* **Automated Data Pipeline**: Built-in Seeder & Synthetic Data Generator for 30 days of historical data.
-
 ---
 
 ## 4. Key Data Flow Models
@@ -69,8 +57,7 @@ graph TD
 1. **Outbound**: User creates/edits an Event on Flutter App $\rightarrow$ .NET Web API receives command $\rightarrow$ Creates Event on Google Calendar $\rightarrow$ Emits SignalR push to update UI.
 2. **Inbound**: User updates schedule on Google Calendar $\rightarrow$ Google sends Webhook ping to `.NET /api/v1/webhooks/google-calendar` $\rightarrow$ Background Job syncs delta $\rightarrow$ Pushes SignalR notification $\rightarrow$ Flutter Client updates UI seamlessly without manual reload.
 
-### 4.2. AI Recommendation Flow
-1. Client requests AI Analytics for a habit $\rightarrow$ Calls `/api/predictions/habit-completion` on FastAPI.
-2. FastAPI fetches Feature Store directly from PostgreSQL (`Events`, `DailyUserSummary`, `Habits`).
-3. Model executes inference and returns probability + explanatory factors.
-4. If FastAPI is offline, Client seamlessly uses Fallback Mechanism to prevent UX disruption.
+### 4.2. Analytics & Performance Tracking Flow
+1. Client requests habit analytics for a selected period $\rightarrow$ Calls `/api/v1/analytics/summary`, `/time-distribution`, `/performance` on .NET Backend.
+2. Backend queries aggregated metrics and daily summaries directly from PostgreSQL.
+3. Response is cached on the client using Stale-While-Revalidate pattern for fast navigation.

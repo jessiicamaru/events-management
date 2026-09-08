@@ -13,7 +13,6 @@ The project strictly adheres to **Clean Code Standards** and automated quality v
 3. **Static Analysis & Linting Gates**:
    - Flutter: `flutter analyze` zero warnings / zero errors.
    - .NET: `dotnet build` clean architecture enforcement.
-   - Python: `flake8` / `black` formatting compliance.
 
 ### 1.2. Automated Testing Strategy
 - **Unit Tests**:
@@ -34,8 +33,6 @@ The system is fully containerized using Docker to ensure environment parity betw
 ├── docker-compose.yml
 ├── server/
 │   └── Dockerfile (Multi-stage build .NET 9 Web API)
-├── ml/
-│   └── Dockerfile (Python 3.11 FastAPI + Dependencies)
 └── apps/
     └── Dockerfile (Flutter Web Nginx Container)
 ```
@@ -46,7 +43,6 @@ The system is fully containerized using Docker to ensure environment parity betw
 |---|---|---|---|
 | `db` | `postgres:16-alpine` | `54322:5432` | Core PostgreSQL Database |
 | `backend` | `mcr.microsoft.com/dotnet/aspnet:9.0` | `5000:80` | Core Web API + SignalR Engine |
-| `ml-service` | `python:3.11-slim` | `8000:8000` | FastAPI Prediction & AI Service |
 | `web-app` | `nginx:alpine` | `8080:80` | Flutter Web Client Distribution |
 
 ---
@@ -54,11 +50,11 @@ The system is fully containerized using Docker to ensure environment parity betw
 ## 3. Database Migration & Automated Seeding
 
 ### 3.1. Database Seeder Strategy
-The system integrates `ApplicationDbContextInitialiser` in .NET Backend and a Python Database Seeder in the ML module.
+The system integrates `ApplicationDbContextInitialiser` in the .NET Backend.
 - On initial startup in Dev environment, the system automatically:
   1. Executes Entity Framework Core Migrations (`context.Database.MigrateAsync()`).
   2. Seeds default Test User (`dung@gmail.com` / `Password123!`).
-  3. Generates synthetic historical data for the past 30 days (Events, Daily Summaries, Hourly Activity) to train AI models.
+  3. Generates synthetic historical data for the past 30 days (Events, Daily Summaries, Hourly Activity) for analytics testing.
 
 ---
 
@@ -73,12 +69,7 @@ docker-compose up db -d
 cd server
 dotnet run --project src/Web/
 
-# 3. Start Python FastAPI ML Engine
-cd ml
-source venv/Scripts/activate # or venv/bin/activate
-uvicorn app.main:app --reload --port 8000
-
-# 4. Start Flutter App
+# 3. Start Flutter App
 cd apps
 flutter run -d chrome # or android emulator
 ```
