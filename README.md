@@ -45,7 +45,6 @@ Detailed system documentation is located in the [`docs/`](./docs) directory:
 
 - 📐 **[PRD 01: Product Vision & Architecture Specs](./docs/PRD_PRODUCT_AND_ARCHITECTURE.md)**
 - 📦 **[PRD 02: Execution & Packaging Guide](./docs/PRD_EXECUTION_AND_PACKAGING.md)**
-- 🚀 **[Runbook: Commit Extraction Guide](./docs/RUNBOOK.md)**
 
 ---
 
