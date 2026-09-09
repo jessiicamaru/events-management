@@ -11,8 +11,11 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
   title: json['title'] as String,
   startTime: DateTime.parse(json['startTime'] as String),
   endTime: DateTime.parse(json['endTime'] as String),
-  category: json['category'] as String,
-  isPomodoroAttached: json['isPomodoroAttached'] as bool? ?? false,
+  habitId: json['habitId'] as String,
+  isCompleted: json['isCompleted'] as bool? ?? false,
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
 );
 
 Map<String, dynamic> _$EventModelToJson(_EventModel instance) =>
@@ -21,6 +24,7 @@ Map<String, dynamic> _$EventModelToJson(_EventModel instance) =>
       'title': instance.title,
       'startTime': instance.startTime.toIso8601String(),
       'endTime': instance.endTime.toIso8601String(),
-      'category': instance.category,
-      'isPomodoroAttached': instance.isPomodoroAttached,
+      'habitId': instance.habitId,
+      'isCompleted': instance.isCompleted,
+      'createdAt': instance.createdAt?.toIso8601String(),
     };

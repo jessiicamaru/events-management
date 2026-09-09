@@ -18,6 +18,7 @@ public static class DependencyInjection
 
         services.AddScoped<IHabitRepository, HabitRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<ApplicationDbContextInitialiser>();
 
         return services;
     }

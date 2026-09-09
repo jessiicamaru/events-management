@@ -41,6 +41,10 @@ dependencies:
   dio: ^5.10.0
   syncfusion_flutter_calendar: ^34.1.31
   wakelock_plus: ^1.6.1
+  shadcn_ui: ^0.55.0
+  lucide_icons: ^0.257.0
+  google_fonts: ^8.2.0
+  riverpod_annotation: ^4.0.2
 
 dev_dependencies:
   flutter_test:

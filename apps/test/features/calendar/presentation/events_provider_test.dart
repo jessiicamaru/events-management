@@ -42,7 +42,7 @@ void main() {
       EventModel(
         id: '1',
         title: 'Event 1',
-        category: 'Study',
+        habitId: 'habit_1',
         startTime: DateTime(2023, 1, 1, 10),
         endTime: DateTime(2023, 1, 1, 11),
       )
@@ -63,7 +63,7 @@ void main() {
     final newEvent = EventModel(
       id: '2',
       title: 'Event 2',
-      category: 'Work',
+      habitId: 'habit_2',
       startTime: DateTime(2023, 1, 2, 10),
       endTime: DateTime(2023, 1, 2, 11),
     );

@@ -10,8 +10,9 @@ abstract class EventModel with _$EventModel {
     required String title,
     required DateTime startTime,
     required DateTime endTime,
-    required String category,
-    @Default(false) bool isPomodoroAttached,
+    required String habitId,
+    @Default(false) bool isCompleted,
+    DateTime? createdAt,
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);

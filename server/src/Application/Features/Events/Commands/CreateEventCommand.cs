@@ -29,8 +29,8 @@ namespace HabitTracker.Application.Features.Events.Commands
             var ev = new Event
             {
                 Title = request.Title,
-                StartTime = request.StartTime,
-                EndTime = request.EndTime,
+                StartTime = request.StartTime.ToUniversalTime(),
+                EndTime = request.EndTime.ToUniversalTime(),
                 HabitId = request.HabitId
             };
 

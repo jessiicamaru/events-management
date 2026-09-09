@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$EventModel {
 
- String get id; String get title; DateTime get startTime; DateTime get endTime; String get category; bool get isPomodoroAttached;
+ String get id; String get title; DateTime get startTime; DateTime get endTime; String get habitId; bool get isCompleted; DateTime? get createdAt;
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $EventModelCopyWith<EventModel> get copyWith => _$EventModelCopyWithImpl<EventMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.category, category) || other.category == category)&&(identical(other.isPomodoroAttached, isPomodoroAttached) || other.isPomodoroAttached == isPomodoroAttached));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,category,isPomodoroAttached);
+int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,createdAt);
 
 @override
 String toString() {
-  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, category: $category, isPomodoroAttached: $isPomodoroAttached)';
+  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $EventModelCopyWith<$Res>  {
   factory $EventModelCopyWith(EventModel value, $Res Function(EventModel) _then) = _$EventModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, DateTime startTime, DateTime endTime, String category, bool isPomodoroAttached
+ String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, DateTime? createdAt
 });
 
 
@@ -65,15 +65,16 @@ class _$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? category = null,Object? isPomodoroAttached = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,startTime: null == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime,endTime: null == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
-as DateTime,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String,isPomodoroAttached: null == isPomodoroAttached ? _self.isPomodoroAttached : isPomodoroAttached // ignore: cast_nullable_to_non_nullable
-as bool,
+as DateTime,habitId: null == habitId ? _self.habitId : habitId // ignore: cast_nullable_to_non_nullable
+as String,isCompleted: null == isCompleted ? _self.isCompleted : isCompleted // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String category,  bool isPomodoroAttached)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  DateTime? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.category,_that.isPomodoroAttached);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.createdAt);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.categor
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String category,  bool isPomodoroAttached)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  DateTime? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _EventModel():
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.category,_that.isPomodoroAttached);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.categor
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String category,  bool isPomodoroAttached)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  DateTime? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.category,_that.isPomodoroAttached);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.createdAt);case _:
   return null;
 
 }
@@ -214,15 +215,16 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.categor
 @JsonSerializable()
 
 class _EventModel implements EventModel {
-  const _EventModel({required this.id, required this.title, required this.startTime, required this.endTime, required this.category, this.isPomodoroAttached = false});
+  const _EventModel({required this.id, required this.title, required this.startTime, required this.endTime, required this.habitId, this.isCompleted = false, this.createdAt});
   factory _EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
 
 @override final  String id;
 @override final  String title;
 @override final  DateTime startTime;
 @override final  DateTime endTime;
-@override final  String category;
-@override@JsonKey() final  bool isPomodoroAttached;
+@override final  String habitId;
+@override@JsonKey() final  bool isCompleted;
+@override final  DateTime? createdAt;
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +239,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.category, category) || other.category == category)&&(identical(other.isPomodoroAttached, isPomodoroAttached) || other.isPomodoroAttached == isPomodoroAttached));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,category,isPomodoroAttached);
+int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,createdAt);
 
 @override
 String toString() {
-  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, category: $category, isPomodoroAttached: $isPomodoroAttached)';
+  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, createdAt: $createdAt)';
 }
 
 
@@ -257,7 +259,7 @@ abstract mixin class _$EventModelCopyWith<$Res> implements $EventModelCopyWith<$
   factory _$EventModelCopyWith(_EventModel value, $Res Function(_EventModel) _then) = __$EventModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, DateTime startTime, DateTime endTime, String category, bool isPomodoroAttached
+ String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, DateTime? createdAt
 });
 
 
@@ -274,15 +276,16 @@ class __$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? category = null,Object? isPomodoroAttached = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? createdAt = freezed,}) {
   return _then(_EventModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,startTime: null == startTime ? _self.startTime : startTime // ignore: cast_nullable_to_non_nullable
 as DateTime,endTime: null == endTime ? _self.endTime : endTime // ignore: cast_nullable_to_non_nullable
-as DateTime,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String,isPomodoroAttached: null == isPomodoroAttached ? _self.isPomodoroAttached : isPomodoroAttached // ignore: cast_nullable_to_non_nullable
-as bool,
+as DateTime,habitId: null == habitId ? _self.habitId : habitId // ignore: cast_nullable_to_non_nullable
+as String,isCompleted: null == isCompleted ? _self.isCompleted : isCompleted // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

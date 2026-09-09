@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/habits/presentation/habits_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -44,25 +45,38 @@ class ScaffoldWithNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    
     return Scaffold(
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: theme.colorScheme.border)),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: theme.colorScheme.background,
+          selectedItemColor: theme.colorScheme.primary,
+          unselectedItemColor: theme.colorScheme.mutedForeground,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
+            icon: Icon(LucideIcons.calendarDays),
             label: 'Calendar',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.list),
+            icon: Icon(LucideIcons.listTodo),
             label: 'Habits',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
+            icon: Icon(LucideIcons.settings),
             label: 'Settings',
           ),
         ],
-        currentIndex: _calculateSelectedIndex(context),
-        onTap: (int idx) => _onItemTapped(idx, context),
+          currentIndex: _calculateSelectedIndex(context),
+          onTap: (int idx) => _onItemTapped(idx, context),
+        ),
       ),
     );
   }
