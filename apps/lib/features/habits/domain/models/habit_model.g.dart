@@ -13,7 +13,8 @@ _HabitModel _$HabitModelFromJson(Map<String, dynamic> json) => _HabitModel(
       .map((e) => (e as num).toInt())
       .toList(),
   category: json['category'] as String?,
-  streak: (json['streak'] as num?)?.toInt() ?? 0,
+  currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+  longestStreak: (json['longestStreak'] as num?)?.toInt() ?? 0,
   heatmapData:
       (json['heatmapData'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(DateTime.parse(k), (e as num).toInt()),
@@ -27,7 +28,8 @@ Map<String, dynamic> _$HabitModelToJson(_HabitModel instance) =>
       'name': instance.name,
       'targetDays': instance.targetDays,
       'category': instance.category,
-      'streak': instance.streak,
+      'currentStreak': instance.currentStreak,
+      'longestStreak': instance.longestStreak,
       'heatmapData': instance.heatmapData.map(
         (k, e) => MapEntry(k.toIso8601String(), e),
       ),

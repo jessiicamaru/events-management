@@ -10,7 +10,8 @@ abstract class HabitModel with _$HabitModel {
     required String name,
     required List<int> targetDays,
     String? category,
-    @Default(0) int streak,
+    @Default(0) int currentStreak,
+    @Default(0) int longestStreak,
     @Default({}) Map<DateTime, int> heatmapData,
   }) = _HabitModel;
 

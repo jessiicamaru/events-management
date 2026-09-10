@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$HabitModel {
 
- String get id; String get name; List<int> get targetDays; String? get category; int get streak; Map<DateTime, int> get heatmapData;
+ String get id; String get name; List<int> get targetDays; String? get category; int get currentStreak; int get longestStreak; Map<DateTime, int> get heatmapData;
 /// Create a copy of HabitModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $HabitModelCopyWith<HabitModel> get copyWith => _$HabitModelCopyWithImpl<HabitMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is HabitModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.targetDays, targetDays)&&(identical(other.category, category) || other.category == category)&&(identical(other.streak, streak) || other.streak == streak)&&const DeepCollectionEquality().equals(other.heatmapData, heatmapData));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is HabitModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.targetDays, targetDays)&&(identical(other.category, category) || other.category == category)&&(identical(other.currentStreak, currentStreak) || other.currentStreak == currentStreak)&&(identical(other.longestStreak, longestStreak) || other.longestStreak == longestStreak)&&const DeepCollectionEquality().equals(other.heatmapData, heatmapData));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(targetDays),category,streak,const DeepCollectionEquality().hash(heatmapData));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(targetDays),category,currentStreak,longestStreak,const DeepCollectionEquality().hash(heatmapData));
 
 @override
 String toString() {
-  return 'HabitModel(id: $id, name: $name, targetDays: $targetDays, category: $category, streak: $streak, heatmapData: $heatmapData)';
+  return 'HabitModel(id: $id, name: $name, targetDays: $targetDays, category: $category, currentStreak: $currentStreak, longestStreak: $longestStreak, heatmapData: $heatmapData)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $HabitModelCopyWith<$Res>  {
   factory $HabitModelCopyWith(HabitModel value, $Res Function(HabitModel) _then) = _$HabitModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, List<int> targetDays, String? category, int streak, Map<DateTime, int> heatmapData
+ String id, String name, List<int> targetDays, String? category, int currentStreak, int longestStreak, Map<DateTime, int> heatmapData
 });
 
 
@@ -65,13 +65,14 @@ class _$HabitModelCopyWithImpl<$Res>
 
 /// Create a copy of HabitModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? targetDays = null,Object? category = freezed,Object? streak = null,Object? heatmapData = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? targetDays = null,Object? category = freezed,Object? currentStreak = null,Object? longestStreak = null,Object? heatmapData = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,targetDays: null == targetDays ? _self.targetDays : targetDays // ignore: cast_nullable_to_non_nullable
 as List<int>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String?,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
+as String?,currentStreak: null == currentStreak ? _self.currentStreak : currentStreak // ignore: cast_nullable_to_non_nullable
+as int,longestStreak: null == longestStreak ? _self.longestStreak : longestStreak // ignore: cast_nullable_to_non_nullable
 as int,heatmapData: null == heatmapData ? _self.heatmapData : heatmapData // ignore: cast_nullable_to_non_nullable
 as Map<DateTime, int>,
   ));
@@ -158,10 +159,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  List<int> targetDays,  String? category,  int streak,  Map<DateTime, int> heatmapData)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  List<int> targetDays,  String? category,  int currentStreak,  int longestStreak,  Map<DateTime, int> heatmapData)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _HabitModel() when $default != null:
-return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak,_that.heatmapData);case _:
+return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.currentStreak,_that.longestStreak,_that.heatmapData);case _:
   return orElse();
 
 }
@@ -179,10 +180,10 @@ return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  List<int> targetDays,  String? category,  int streak,  Map<DateTime, int> heatmapData)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  List<int> targetDays,  String? category,  int currentStreak,  int longestStreak,  Map<DateTime, int> heatmapData)  $default,) {final _that = this;
 switch (_that) {
 case _HabitModel():
-return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak,_that.heatmapData);case _:
+return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.currentStreak,_that.longestStreak,_that.heatmapData);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +200,10 @@ return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  List<int> targetDays,  String? category,  int streak,  Map<DateTime, int> heatmapData)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  List<int> targetDays,  String? category,  int currentStreak,  int longestStreak,  Map<DateTime, int> heatmapData)?  $default,) {final _that = this;
 switch (_that) {
 case _HabitModel() when $default != null:
-return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak,_that.heatmapData);case _:
+return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.currentStreak,_that.longestStreak,_that.heatmapData);case _:
   return null;
 
 }
@@ -214,7 +215,7 @@ return $default(_that.id,_that.name,_that.targetDays,_that.category,_that.streak
 @JsonSerializable()
 
 class _HabitModel implements HabitModel {
-  const _HabitModel({required this.id, required this.name, required final  List<int> targetDays, this.category, this.streak = 0, final  Map<DateTime, int> heatmapData = const {}}): _targetDays = targetDays,_heatmapData = heatmapData;
+  const _HabitModel({required this.id, required this.name, required final  List<int> targetDays, this.category, this.currentStreak = 0, this.longestStreak = 0, final  Map<DateTime, int> heatmapData = const {}}): _targetDays = targetDays,_heatmapData = heatmapData;
   factory _HabitModel.fromJson(Map<String, dynamic> json) => _$HabitModelFromJson(json);
 
 @override final  String id;
@@ -227,7 +228,8 @@ class _HabitModel implements HabitModel {
 }
 
 @override final  String? category;
-@override@JsonKey() final  int streak;
+@override@JsonKey() final  int currentStreak;
+@override@JsonKey() final  int longestStreak;
  final  Map<DateTime, int> _heatmapData;
 @override@JsonKey() Map<DateTime, int> get heatmapData {
   if (_heatmapData is EqualUnmodifiableMapView) return _heatmapData;
@@ -249,16 +251,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HabitModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._targetDays, _targetDays)&&(identical(other.category, category) || other.category == category)&&(identical(other.streak, streak) || other.streak == streak)&&const DeepCollectionEquality().equals(other._heatmapData, _heatmapData));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _HabitModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._targetDays, _targetDays)&&(identical(other.category, category) || other.category == category)&&(identical(other.currentStreak, currentStreak) || other.currentStreak == currentStreak)&&(identical(other.longestStreak, longestStreak) || other.longestStreak == longestStreak)&&const DeepCollectionEquality().equals(other._heatmapData, _heatmapData));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_targetDays),category,streak,const DeepCollectionEquality().hash(_heatmapData));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_targetDays),category,currentStreak,longestStreak,const DeepCollectionEquality().hash(_heatmapData));
 
 @override
 String toString() {
-  return 'HabitModel(id: $id, name: $name, targetDays: $targetDays, category: $category, streak: $streak, heatmapData: $heatmapData)';
+  return 'HabitModel(id: $id, name: $name, targetDays: $targetDays, category: $category, currentStreak: $currentStreak, longestStreak: $longestStreak, heatmapData: $heatmapData)';
 }
 
 
@@ -269,7 +271,7 @@ abstract mixin class _$HabitModelCopyWith<$Res> implements $HabitModelCopyWith<$
   factory _$HabitModelCopyWith(_HabitModel value, $Res Function(_HabitModel) _then) = __$HabitModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, List<int> targetDays, String? category, int streak, Map<DateTime, int> heatmapData
+ String id, String name, List<int> targetDays, String? category, int currentStreak, int longestStreak, Map<DateTime, int> heatmapData
 });
 
 
@@ -286,13 +288,14 @@ class __$HabitModelCopyWithImpl<$Res>
 
 /// Create a copy of HabitModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? targetDays = null,Object? category = freezed,Object? streak = null,Object? heatmapData = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? targetDays = null,Object? category = freezed,Object? currentStreak = null,Object? longestStreak = null,Object? heatmapData = null,}) {
   return _then(_HabitModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,targetDays: null == targetDays ? _self._targetDays : targetDays // ignore: cast_nullable_to_non_nullable
 as List<int>,category: freezed == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
-as String?,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
+as String?,currentStreak: null == currentStreak ? _self.currentStreak : currentStreak // ignore: cast_nullable_to_non_nullable
+as int,longestStreak: null == longestStreak ? _self.longestStreak : longestStreak // ignore: cast_nullable_to_non_nullable
 as int,heatmapData: null == heatmapData ? _self._heatmapData : heatmapData // ignore: cast_nullable_to_non_nullable
 as Map<DateTime, int>,
   ));

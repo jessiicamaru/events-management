@@ -4,6 +4,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../core/utils/app_constants.dart';
 import '../domain/models/habit_model.dart';
 import 'habits_provider.dart';
+import 'providers/heatmap_provider.dart';
+import 'widgets/heatmap_widget.dart';
 
 class HabitsScreen extends ConsumerWidget {
   const HabitsScreen({super.key});
@@ -40,11 +42,27 @@ class HabitsScreen extends ConsumerWidget {
                   if (habits.isEmpty) {
                     return const Center(child: Text(AppConstants.noHabitsMessage));
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    itemCount: habits.length,
-                    itemBuilder: (context, index) {
-                      final habit = habits[index];
+                  
+                  final heatmapAsync = ref.watch(heatmapProvider);
+                  
+                  return CustomScrollView(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: heatmapAsync.when(
+                            data: (data) => HeatmapWidget(data: data),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (err, stack) => Text('Error loading heatmap: $err'),
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final habit = habits[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: ShadCard(
@@ -62,12 +80,31 @@ class HabitsScreen extends ConsumerWidget {
                                   ),
                                 ],
                               ),
-                              Text('${habit.targetDays.length} days/week', style: theme.textTheme.muted),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (habit.currentStreak > 0)
+                                    Row(
+                                      children: [
+                                        Icon(LucideIcons.flame, color: Colors.orange, size: 18),
+                                        const SizedBox(width: 4),
+                                        Text('${habit.currentStreak}', style: theme.textTheme.large.copyWith(color: Colors.orange)),
+                                      ],
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Text('${habit.targetDays.length} days/week', style: theme.textTheme.muted),
+                                ],
+                              ),
                             ],
                           ),
                         ),
                       );
-                    },
+                            },
+                            childCount: habits.length,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),

@@ -18,6 +18,7 @@ public class Events : EndpointGroupBase
     {
         groupBuilder.MapGet("", GetEvents);
         groupBuilder.MapPost("", CreateEvent);
+        groupBuilder.MapPut("{id}/toggle", ToggleEvent);
     }
 
     public async Task<Ok<IEnumerable<Event>>> GetEvents(ISender sender)
@@ -31,4 +32,13 @@ public class Events : EndpointGroupBase
         var id = await sender.Send(command);
         return TypedResults.Created($"/api/v1/events/{id}", id);
     }
+
+    public async Task<Results<Ok, NotFound>> ToggleEvent(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] ToggleEventRequest request)
+    {
+        var result = await sender.Send(new ToggleEventCommand(id, request.IsCompleted));
+        if (!result) return TypedResults.NotFound();
+        return TypedResults.Ok();
+    }
 }
+
+public record ToggleEventRequest(bool IsCompleted);

@@ -8,6 +8,7 @@ final apiServiceProvider = Provider((ref) => ApiService(DioClient().dio));
 
 class ApiService {
   final Dio _dio;
+  Dio get dio => _dio;
 
   ApiService(this._dio);
 
@@ -38,5 +39,13 @@ class ApiService {
     final response = await _dio.get('/events');
     final data = response.data as List;
     return data.map((json) => EventModel.fromJson(json)).toList();
+  }
+
+  Future<void> toggleEvent(String id, bool isCompleted) async {
+    await _dio.put(
+      '/events/$id/toggle',
+      data: {'isCompleted': isCompleted},
+      options: Options(contentType: 'application/json'),
+    );
   }
 }
