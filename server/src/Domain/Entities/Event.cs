@@ -10,6 +10,8 @@ namespace HabitTracker.Domain.Entities
         public DateTime EndTime { get; set; }
         public string HabitId { get; set; } = string.Empty;
         public bool IsCompleted { get; set; }
+        public TimeSpan TargetDuration { get; set; }
+        public TimeSpan? ActualDuration { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

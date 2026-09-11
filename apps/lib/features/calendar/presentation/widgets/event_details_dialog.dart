@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
 
 import '../events_provider.dart';
 
@@ -51,15 +52,19 @@ class EventDetailsDialog extends ConsumerWidget {
                 backgroundColor: event.isCompleted ? theme.colorScheme.destructive : Colors.green,
                 hoverBackgroundColor: event.isCompleted ? theme.colorScheme.destructive.withOpacity(0.9) : Colors.green.withOpacity(0.9),
                 onPressed: () {
-                  ref.read(eventsProvider.notifier).toggleEvent(event.id, !event.isCompleted);
-                  Navigator.of(context).pop();
+                  if (event.isCompleted) {
+                    ref.read(eventsProvider.notifier).toggleEvent(event.id, false);
+                    Navigator.of(context).pop(false);
+                  } else {
+                    Navigator.of(context).pop(true); // Return true to start focus session
+                  }
                 },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(event.isCompleted ? LucideIcons.xCircle : LucideIcons.checkCircle, size: 16),
+                    Icon(event.isCompleted ? LucideIcons.xCircle : LucideIcons.play, size: 16),
                     const SizedBox(width: 8),
-                    Text(event.isCompleted ? 'Mark as Pending' : 'Mark as Completed'),
+                    Text(event.isCompleted ? 'Mark as Pending' : 'Start Focus Session'),
                   ],
                 ),
               ),

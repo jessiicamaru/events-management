@@ -48,4 +48,15 @@ class ApiService {
       options: Options(contentType: 'application/json'),
     );
   }
+
+  Future<void> completeSession(String id, String actualDuration, bool updateCalendar) async {
+    await _dio.put(
+      '/events/$id/complete-session',
+      data: {
+        'actualDuration': actualDuration,
+        'updateCalendar': updateCalendar,
+      },
+      options: Options(contentType: 'application/json'),
+    );
+  }
 }

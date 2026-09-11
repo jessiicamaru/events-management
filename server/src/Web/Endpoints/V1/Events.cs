@@ -19,6 +19,7 @@ public class Events : EndpointGroupBase
         groupBuilder.MapGet("", GetEvents);
         groupBuilder.MapPost("", CreateEvent);
         groupBuilder.MapPut("{id}/toggle", ToggleEvent);
+        groupBuilder.MapPut("{id}/complete-session", CompleteSession);
     }
 
     public async Task<Ok<IEnumerable<Event>>> GetEvents(ISender sender)
@@ -36,6 +37,17 @@ public class Events : EndpointGroupBase
     public async Task<Results<Ok, NotFound>> ToggleEvent(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] ToggleEventRequest request)
     {
         var result = await sender.Send(new ToggleEventCommand(id, request.IsCompleted));
+        if (!result) return TypedResults.NotFound();
+        return TypedResults.Ok();
+    }
+    public async Task<Results<Ok, NotFound>> CompleteSession(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] CompleteEventSessionRequest request)
+    {
+        var result = await sender.Send(new CompleteEventSessionCommand 
+        { 
+            EventId = id, 
+            ActualDuration = request.ActualDuration, 
+            UpdateCalendar = request.UpdateCalendar 
+        });
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();
     }

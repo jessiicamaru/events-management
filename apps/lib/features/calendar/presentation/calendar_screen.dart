@@ -13,6 +13,8 @@ import 'widgets/calendar_toolbar.dart';
 import 'widgets/calendar_event_card.dart';
 import 'widgets/create_event_sheet.dart';
 import 'widgets/event_details_dialog.dart';
+import '../../focus_session/presentation/screens/focus_screen.dart';
+import '../../focus_session/presentation/widgets/post_session_dialog.dart';
 
 // Helper enum for custom view selection
 enum AppCalendarView { day, threeDay, month }
@@ -125,17 +127,37 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         firstDayOfWeek: 1,
                                         specialRegions: _getSpecialRegions(theme),
                                         appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits),
-                                        onTap: (CalendarTapDetails tapDetails) {
+                                        onTap: (CalendarTapDetails tapDetails) async {
                                           if (tapDetails.targetElement == CalendarElement.appointment) {
                                             final event = tapDetails.appointments!.first as EventModel;
                                             final habit = habits.firstWhere(
                                               (h) => h.id == event.habitId, 
                                               orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
                                             );
-                                            showDialog(
+                                            final startFocus = await showDialog<bool>(
                                               context: context,
                                               builder: (context) => EventDetailsDialog(event: event, habit: habit),
                                             );
+
+                                            if (startFocus == true && context.mounted) {
+                                              final focusResult = await Navigator.of(context).push<Map<String, int>>(
+                                                MaterialPageRoute(
+                                                  builder: (_) => FocusScreen(event: event),
+                                                ),
+                                              );
+                                              
+                                              if (focusResult != null && context.mounted) {
+                                                showDialog(
+                                                  context: context,
+                                                  barrierDismissible: false,
+                                                  builder: (context) => PostSessionDialog(
+                                                    event: event,
+                                                    actualSeconds: focusResult['actual']!,
+                                                    targetSeconds: focusResult['target']!,
+                                                  ),
+                                                );
+                                              }
+                                            }
                                           }
                                         },
                                         viewHeaderStyle: ViewHeaderStyle(

@@ -22,6 +22,7 @@ class CreateEventSheet extends ConsumerStatefulWidget {
 
 class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   final _titleController = TextEditingController();
+  final _targetDurationController = TextEditingController();
   String? _selectedCategory;
   HabitModel? _selectedHabit;
   DateTime _startDate = DateTime.now();
@@ -42,6 +43,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   @override
   void dispose() {
     _titleController.dispose();
+    _targetDurationController.dispose();
     super.dispose();
   }
 
@@ -71,13 +73,27 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
         // Auto-extend end time by 1h
         final newEndHour = (picked.hour + 1) % 24;
         _endTime = TimeOfDay(hour: newEndHour, minute: picked.minute);
+        _updateTargetDuration();
       });
     }
   }
 
   Future<void> _pickEndTime() async {
     final picked = await showTimePicker(context: context, initialTime: _endTime);
-    if (picked != null) setState(() => _endTime = picked);
+    if (picked != null) {
+      setState(() {
+        _endTime = picked;
+        _updateTargetDuration();
+      });
+    }
+  }
+
+  void _updateTargetDuration() {
+    final start = DateTime(2000, 1, 1, _startTime.hour, _startTime.minute);
+    var end = DateTime(2000, 1, 1, _endTime.hour, _endTime.minute);
+    if (end.isBefore(start)) end = end.add(const Duration(days: 1));
+    final diffMins = end.difference(start).inMinutes;
+    _targetDurationController.text = diffMins.toString();
   }
 
   Future<void> _submit() async {
@@ -106,6 +122,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       habitId: _selectedHabit?.id ?? '',
       startTime: start,
       endTime: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+      targetDuration: int.tryParse(_targetDurationController.text),
     );
 
     await ref.read(eventsProvider.notifier).addEvent(event);
@@ -297,6 +314,17 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Target Duration
+                  Text('Target Duration (mins)', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  ShadInput(
+                    controller: _targetDurationController,
+                    placeholder: const Text('e.g. 45'),
+                    keyboardType: TextInputType.number,
                   ),
 
                   const SizedBox(height: 28),

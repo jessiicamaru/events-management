@@ -76,18 +76,18 @@ namespace HabitTracker.Infrastructure.Data
                     var currentDay = startOfWeek.AddDays(i);
                     // Add Morning Run
                     if (habit1.TargetDays.Contains((int)currentDay.DayOfWeek == 0 ? 7 : (int)currentDay.DayOfWeek))
-                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit1.Name, HabitId = habit1.Id.ToString(), StartTime = currentDay.AddHours(6), EndTime = currentDay.AddHours(7), IsCompleted = rand.NextDouble() > 0.5 });
+                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit1.Name, HabitId = habit1.Id.ToString(), StartTime = currentDay.AddHours(6), EndTime = currentDay.AddHours(7), TargetDuration = TimeSpan.FromHours(1), IsCompleted = rand.NextDouble() > 0.5 });
                     
                     // Add Standup
                     if (habit3.TargetDays.Contains((int)currentDay.DayOfWeek == 0 ? 7 : (int)currentDay.DayOfWeek))
-                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit3.Name, HabitId = habit3.Id.ToString(), StartTime = currentDay.AddHours(9), EndTime = currentDay.AddHours(9.5), IsCompleted = rand.NextDouble() > 0.2 });
+                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit3.Name, HabitId = habit3.Id.ToString(), StartTime = currentDay.AddHours(9), EndTime = currentDay.AddHours(9.5), TargetDuration = TimeSpan.FromMinutes(30), IsCompleted = rand.NextDouble() > 0.2 });
 
                     // Add Deep Work
                     if (habit6.TargetDays.Contains((int)currentDay.DayOfWeek == 0 ? 7 : (int)currentDay.DayOfWeek))
-                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit6.Name, HabitId = habit6.Id.ToString(), StartTime = currentDay.AddHours(14), EndTime = currentDay.AddHours(16), IsCompleted = false });
+                        events.Add(new Event { Id = Guid.NewGuid(), Title = habit6.Name, HabitId = habit6.Id.ToString(), StartTime = currentDay.AddHours(14), EndTime = currentDay.AddHours(16), TargetDuration = TimeSpan.FromHours(2), IsCompleted = false });
 
                     // Add Reading
-                    events.Add(new Event { Id = Guid.NewGuid(), Title = habit2.Name, HabitId = habit2.Id.ToString(), StartTime = currentDay.AddHours(20), EndTime = currentDay.AddHours(21), IsCompleted = currentDay < today });
+                    events.Add(new Event { Id = Guid.NewGuid(), Title = habit2.Name, HabitId = habit2.Id.ToString(), StartTime = currentDay.AddHours(20), EndTime = currentDay.AddHours(21), TargetDuration = TimeSpan.FromHours(1), IsCompleted = currentDay < today });
                 }
 
                 _context.Events.AddRange(events);
