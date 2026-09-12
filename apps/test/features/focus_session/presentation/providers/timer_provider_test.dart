@@ -2,24 +2,29 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/features/focus_session/presentation/providers/timer_provider.dart';
 import 'package:habit_tracker/features/focus_session/domain/models/timer_state.dart';
+import 'package:habit_tracker/features/focus_session/domain/services/wakelock_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('Timer starts with initial state', () {
+  ProviderContainer makeContainer() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    // Inject no-op wakelock to avoid native channel errors in tests
+    container.read(timerProvider.notifier).setWakelockService(NoOpWakelockService());
+    return container;
+  }
 
+  test('Timer starts with initial state', () {
+    final container = makeContainer();
     final state = container.read(timerProvider);
     expect(state, const TimerState.initial());
   });
 
   test('Timer transitions to running on start', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
+    final container = makeContainer();
     final notifier = container.read(timerProvider.notifier);
-    notifier.start(25); // 25 minutes
+    notifier.start(25);
 
     final state = container.read(timerProvider);
     state.maybeMap(
@@ -32,9 +37,7 @@ void main() {
   });
 
   test('Timer transitions to paused on pause', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
+    final container = makeContainer();
     final notifier = container.read(timerProvider.notifier);
     notifier.start(25);
     notifier.pause();
@@ -50,9 +53,7 @@ void main() {
   });
 
   test('Timer transitions to finished on finish', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
+    final container = makeContainer();
     final notifier = container.read(timerProvider.notifier);
     notifier.start(25);
     notifier.finish();

@@ -14,6 +14,7 @@ class HabitTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return ShadApp.router(
       title: 'Habit Tracker',
       theme: AppTheme.lightTheme,
@@ -24,7 +25,8 @@ class HabitTrackerApp extends ConsumerWidget {
           ? AppTheme.lightMaterialTheme 
           : AppTheme.darkMaterialTheme;
       },
-      routerConfig: appRouter,
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }

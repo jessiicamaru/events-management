@@ -1,23 +1,30 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../domain/models/timer_state.dart';
+import '../../domain/services/wakelock_service.dart';
 
 class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
   Timer? _timer;
   DateTime? _lastBackgroundTime;
   int _targetDurationSeconds = 0;
-  
+  late WakelockService _wakelockService;
+
   @override
   TimerState build() {
+    _wakelockService = WakelockPlusService();
     WidgetsBinding.instance.addObserver(this);
     ref.onDispose(() {
       WidgetsBinding.instance.removeObserver(this);
       _timer?.cancel();
-      WakelockPlus.disable();
+      _wakelockService.disable();
     });
     return const TimerState.initial();
+  }
+
+  // Allow overriding for testing
+  void setWakelockService(WakelockService service) {
+    _wakelockService = service;
   }
 
   void start(int targetDurationMinutes) {
@@ -26,13 +33,13 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
       remainingSeconds: _targetDurationSeconds,
       targetDuration: _targetDurationSeconds,
     );
-    WakelockPlus.enable();
+    _wakelockService.enable();
     _startTicker();
   }
 
   void pause() {
     _timer?.cancel();
-    WakelockPlus.disable();
+    _wakelockService.disable();
     state.maybeMap(
       running: (s) => state = TimerState.paused(
         remainingSeconds: s.remainingSeconds,
@@ -49,7 +56,7 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
           remainingSeconds: s.remainingSeconds,
           targetDuration: s.targetDuration,
         );
-        WakelockPlus.enable();
+        _wakelockService.enable();
         _startTicker();
       },
       orElse: () {},
@@ -61,13 +68,13 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
       overtimeSeconds: 0,
       targetDuration: _targetDurationSeconds,
     );
-    WakelockPlus.enable();
+    _wakelockService.enable();
     _startTicker();
   }
 
   void finish() {
     _timer?.cancel();
-    WakelockPlus.disable();
+    _wakelockService.disable();
     
     int actualSeconds = 0;
     state.maybeMap(
@@ -101,7 +108,7 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
             state = s.copyWith(remainingSeconds: s.remainingSeconds - 1);
           } else {
             timer.cancel();
-            WakelockPlus.disable();
+            _wakelockService.disable();
             state = const TimerState.targetReached();
           }
         },
@@ -126,7 +133,7 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
           final newRemaining = s.remainingSeconds - elapsedSeconds;
           if (newRemaining <= 0) {
             _timer?.cancel();
-            WakelockPlus.disable();
+            _wakelockService.disable();
             state = const TimerState.targetReached();
           } else {
             state = s.copyWith(remainingSeconds: newRemaining);

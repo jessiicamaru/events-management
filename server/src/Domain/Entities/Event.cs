@@ -12,6 +12,8 @@ namespace HabitTracker.Domain.Entities
         public bool IsCompleted { get; set; }
         public TimeSpan TargetDuration { get; set; }
         public TimeSpan? ActualDuration { get; set; }
+        public string? UserId { get; set; }
+        public ApplicationUser? User { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

@@ -21,11 +21,19 @@ namespace HabitTracker.Application.Features.Events.Commands
     {
         private readonly IEventRepository _eventRepository;
         private readonly IHabitRepository _habitRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly ISquadRepository _squadRepository;
 
-        public CompleteEventSessionCommandHandler(IEventRepository eventRepository, IHabitRepository habitRepository)
+        public CompleteEventSessionCommandHandler(
+            IEventRepository eventRepository, 
+            IHabitRepository habitRepository,
+            IUserRepository userRepository,
+            ISquadRepository squadRepository)
         {
             _eventRepository = eventRepository;
             _habitRepository = habitRepository;
+            _userRepository = userRepository;
+            _squadRepository = squadRepository;
         }
 
         public async Task<bool> Handle(CompleteEventSessionCommand request, CancellationToken cancellationToken)
@@ -42,8 +50,6 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             if (request.UpdateCalendar)
             {
-                // Optionally extend or shrink EndTime based on actual time spent
-                // Enforce a minimum duration of 15 minutes so the event doesn't disappear from UI
                 var duration = request.ActualDuration < TimeSpan.FromMinutes(15) 
                     ? TimeSpan.FromMinutes(15) 
                     : request.ActualDuration;
@@ -52,7 +58,6 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             await _eventRepository.UpdateAsync(ev);
 
-            // Update streaks if this is the first time it's completed
             if (!wasCompleted)
             {
                 if (Guid.TryParse(ev.HabitId, out Guid habitId))
@@ -62,6 +67,24 @@ namespace HabitTracker.Application.Features.Events.Commands
                     {
                         await RecalculateStreaks(habit);
                         await _habitRepository.UpdateAsync(habit);
+                    }
+                }
+
+                // Add XP (e.g. 10 XP per completion)
+                if (!string.IsNullOrEmpty(ev.UserId))
+                {
+                    var user = await _userRepository.GetByIdAsync(ev.UserId);
+                    if (user != null)
+                    {
+                        user.TotalXP += 10;
+                        await _userRepository.UpdateAsync(user);
+
+                        var squad = await _squadRepository.GetSquadByUserIdAsync(user.Id);
+                        if (squad != null)
+                        {
+                            squad.TotalSquadXP += 10;
+                            await _squadRepository.UpdateAsync(squad);
+                        }
                     }
                 }
             }

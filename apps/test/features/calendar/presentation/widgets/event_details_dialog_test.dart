@@ -42,7 +42,7 @@ void main() {
     expect(find.text('Morning Run'), findsOneWidget);
     expect(find.text('Pending'), findsOneWidget);
     expect(find.text('Health'), findsOneWidget);
-    expect(find.text('Mark as Completed'), findsOneWidget);
+    expect(find.text('Start Focus Session'), findsOneWidget);
   });
 
   testWidgets('EventDetailsDialog renders correctly for completed event', (WidgetTester tester) async {

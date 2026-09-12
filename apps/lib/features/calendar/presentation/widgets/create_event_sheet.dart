@@ -5,6 +5,7 @@ import '../../../../core/utils/app_constants.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../domain/models/event_model.dart';
 import '../events_provider.dart';
+import 'unscheduled_habits_selector.dart';
 
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
@@ -187,61 +188,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section: Quick fill from habits
-                  if (habits.isNotEmpty) ...[
-                    Text('Unscheduled Habits', style: theme.textTheme.small.copyWith(
-                      color: theme.colorScheme.mutedForeground,
-                      fontWeight: FontWeight.w600,
-                    )),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      height: 80,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: habits.length,
-                        separatorBuilder: (context, index) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final habit = habits[index];
-                          final isSelected = _selectedHabit?.id == habit.id;
-                          return GestureDetector(
-                            onTap: () => _fillFromHabit(habit),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                                    : theme.colorScheme.muted,
-                                border: Border.all(
-                                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.border,
-                                  width: isSelected ? 2 : 1,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    habit.name,
-                                    style: theme.textTheme.small.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: isSelected ? theme.colorScheme.primary : null,
-                                    ),
-                                  ),
-                                  if (habit.category != null)
-                                    Text(
-                                      habit.category!,
-                                      style: TextStyle(fontSize: 10, color: theme.colorScheme.mutedForeground),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
+                  UnscheduledHabitsSelector(
+                    habits: habits,
+                    selectedHabit: _selectedHabit,
+                    onSelect: _fillFromHabit,
+                  ),
 
                   // Title field
                   Text('Title', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),

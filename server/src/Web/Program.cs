@@ -12,6 +12,9 @@ builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddWebServices();
 
+builder.Services.AddAuthorizationBuilder();
+builder.Services.AddIdentityApiEndpoints<HabitTracker.Domain.Entities.ApplicationUser>()
+    .AddEntityFrameworkStores<HabitTracker.Infrastructure.Data.ApplicationDbContext>();
 var app = builder.Build();
 
 // Initialise and seed database
@@ -34,5 +37,7 @@ app.UseAuthorization();
 
 // Map Minimal APIs
 app.MapEndpoints();
+app.MapIdentityApi<HabitTracker.Domain.Entities.ApplicationUser>();
+app.MapHub<HabitTracker.Web.Hubs.SocialHub>("/socialHub");
 
 app.Run();

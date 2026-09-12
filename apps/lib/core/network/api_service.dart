@@ -3,14 +3,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/network/dio_client.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
+import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 
-final apiServiceProvider = Provider((ref) => ApiService(DioClient().dio));
+import '../../features/auth/presentation/providers/auth_provider.dart';
+
+final apiServiceProvider = Provider((ref) {
+  final dio = DioClient().dio;
+  
+  dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) async {
+      // Read token from the provider's future — safe and correct
+      final token = await ref.read(authProvider.future);
+      if (token != null) {
+        options.headers['Authorization'] = 'Bearer $token';
+      }
+      return handler.next(options);
+    },
+    onError: (error, handler) async {
+      if (error.response?.statusCode == 401) {
+        await ref.read(authProvider.notifier).logout();
+        // Here we could implement refresh token logic later
+      }
+      return handler.next(error);
+    }
+  ));
+  
+  return ApiService(dio);
+});
 
 class ApiService {
   final Dio _dio;
   Dio get dio => _dio;
 
   ApiService(this._dio);
+
+  Future<Response> post(String path, {dynamic data}) async {
+    return await _dio.post(path, data: data);
+  }
 
   Future<void> syncHabit(HabitModel habit) async {
     try {
@@ -58,5 +88,41 @@ class ApiService {
       },
       options: Options(contentType: 'application/json'),
     );
+  }
+  Future<SquadModel?> fetchMySquad() async {
+    try {
+      final response = await _dio.get('/squads');
+      return SquadModel.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<SquadModel> createSquad(String name, bool isBuddyMode) async {
+    final response = await _dio.post('/squads', data: {
+      'name': name,
+      'isBuddyMode': isBuddyMode,
+    });
+    return SquadModel.fromJson(response.data);
+  }
+
+  Future<void> joinSquad(String squadId) async {
+    await _dio.post('/squads/join', data: {
+      'squadId': squadId,
+    });
+  }
+
+  Future<UserProfileModel> fetchMe() async {
+    final response = await _dio.get('/users/me');
+    return UserProfileModel.fromJson(response.data);
+  }
+
+  Future<void> updateCosmetics({List<String>? unlockedEmojis, String? avatarBorderColor}) async {
+    final data = <String, dynamic>{};
+    if (unlockedEmojis != null) data['unlockedEmojis'] = unlockedEmojis;
+    if (avatarBorderColor != null) data['avatarBorderColor'] = avatarBorderColor;
+    
+    await _dio.put('/users/me/cosmetics', data: data);
   }
 }

@@ -5,35 +5,69 @@ import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/habits/presentation/habits_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
+
+import '../../features/squads/presentation/screens/squad_dashboard_screen.dart';
+
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-final appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/calendar',
-  routes: [
-    ShellRoute(
-      navigatorKey: _shellNavigatorKey,
-      builder: (context, state, child) {
-        return ScaffoldWithNavBar(child: child);
-      },
-      routes: [
-        GoRoute(
-          path: '/calendar',
-          builder: (context, state) => const CalendarScreen(),
-        ),
-        GoRoute(
-          path: '/habits',
-          builder: (context, state) => const HabitsScreen(),
-        ),
-        GoRoute(
-          path: '/settings',
-          builder: (context, state) => const SettingsScreen(),
-        ),
-      ],
-    ),
-  ],
-);
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/calendar',
+    redirect: (context, state) {
+      // While auth state is still loading from storage, don't redirect at all
+      if (authState.isLoading) return null;
+
+      final isAuthenticated = authState.value != null;
+      final isLoggingIn = state.uri.path == '/login' || state.uri.path == '/register';
+
+      if (!isAuthenticated && !isLoggingIn) return '/login';
+      if (isAuthenticated && isLoggingIn) return '/calendar';
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      ShellRoute(
+        navigatorKey: _shellNavigatorKey,
+        builder: (context, state, child) {
+          return ScaffoldWithNavBar(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: '/calendar',
+            builder: (context, state) => const CalendarScreen(),
+          ),
+          GoRoute(
+            path: '/habits',
+            builder: (context, state) => const HabitsScreen(),
+          ),
+          GoRoute(
+            path: '/squad',
+            builder: (context, state) => const SquadDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+});
 
 class ScaffoldWithNavBar extends StatelessWidget {
   const ScaffoldWithNavBar({
@@ -70,6 +104,10 @@ class ScaffoldWithNavBar extends StatelessWidget {
             label: 'Habits',
           ),
           BottomNavigationBarItem(
+            icon: Icon(LucideIcons.users),
+            label: 'Squad',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(LucideIcons.settings),
             label: 'Settings',
           ),
@@ -89,8 +127,11 @@ class ScaffoldWithNavBar extends StatelessWidget {
     if (location.startsWith('/habits')) {
       return 1;
     }
-    if (location.startsWith('/settings')) {
+    if (location.startsWith('/squad')) {
       return 2;
+    }
+    if (location.startsWith('/settings')) {
+      return 3;
     }
     return 0;
   }
@@ -104,6 +145,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
         GoRouter.of(context).go('/habits');
         break;
       case 2:
+        GoRouter.of(context).go('/squad');
+        break;
+      case 3:
         GoRouter.of(context).go('/settings');
         break;
     }

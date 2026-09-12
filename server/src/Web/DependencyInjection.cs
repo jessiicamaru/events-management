@@ -9,6 +9,7 @@ public static class DependencyInjection
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
         services.AddAuthorization();
+        services.AddSignalR();
         
         services.AddCors(options =>
         {
