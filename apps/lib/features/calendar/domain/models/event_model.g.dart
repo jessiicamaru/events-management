@@ -22,6 +22,7 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
   createdAt: json['createdAt'] == null
       ? null
       : DateTime.parse(json['createdAt'] as String),
+  userId: json['userId'] as String?,
 );
 
 Map<String, dynamic> _$EventModelToJson(
@@ -36,4 +37,5 @@ Map<String, dynamic> _$EventModelToJson(
   'targetDuration': const TimeSpanConverter().toJson(instance.targetDuration),
   'actualDuration': const TimeSpanConverter().toJson(instance.actualDuration),
   'createdAt': instance.createdAt?.toIso8601String(),
+  'userId': instance.userId,
 };

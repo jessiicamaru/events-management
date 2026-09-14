@@ -15,9 +15,12 @@ import 'widgets/create_event_sheet.dart';
 import 'widgets/event_details_dialog.dart';
 import '../../focus_session/presentation/screens/focus_screen.dart';
 import '../../focus_session/presentation/widgets/post_session_dialog.dart';
+import '../../profile/presentation/providers/user_profile_provider.dart';
+import 'providers/calendar_settings_provider.dart';
 
 // Helper enum for custom view selection
 enum AppCalendarView { day, threeDay, month }
+enum CalendarSourceFilter { all, personal, squads }
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -31,6 +34,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   final ScrollController _scrollController = ScrollController();
   AppCalendarView _currentView = AppCalendarView.threeDay;
   DateTime _displayDate = DateTime.now();
+  CalendarSourceFilter _sourceFilter = CalendarSourceFilter.all;
 
   @override
   void initState() {
@@ -73,7 +77,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Widget build(BuildContext context) {
     final habitsAsync = ref.watch(habitsProvider);
     final eventsAsync = ref.watch(eventsProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final settings = ref.watch(calendarSettingsProvider);
     final theme = ShadTheme.of(context);
+    final currentUserId = userProfileAsync.value?.id;
 
     return Scaffold(
       body: SafeArea(
@@ -92,6 +99,22 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   onNextPressed: () => _calendarController.forward!(),
                   onPrevPressed: () => _calendarController.backward!(),
                   totalEvents: eventsAsync.value?.length ?? 0,
+                ),
+                const Divider(height: 1),
+
+                // Source Filter Pills
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      _buildFilterPill('All', CalendarSourceFilter.all, theme),
+                      const SizedBox(width: 8),
+                      _buildFilterPill('Personal', CalendarSourceFilter.personal, theme),
+                      const SizedBox(width: 8),
+                      _buildFilterPill('Squads', CalendarSourceFilter.squads, theme),
+                    ],
+                  ),
                 ),
                 const Divider(height: 1),
 
@@ -116,10 +139,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                               width: calendarWidth,
                               child: eventsAsync.when(
                                 data: (events) {
+                                      final filteredEvents = events.where((e) {
+                                        if (_sourceFilter == CalendarSourceFilter.personal) {
+                                          return e.userId == currentUserId;
+                                        } else if (_sourceFilter == CalendarSourceFilter.squads) {
+                                          return e.userId != currentUserId;
+                                        }
+                                        return true; // all
+                                      }).toList();
+
                                       Widget calendar = SfCalendar(
                                         controller: _calendarController,
                                         allowDragAndDrop: true,
-                                        dataSource: _EventDataSource(events, habits, theme),
+                                        dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId),
                                         onViewChanged: _onViewHeaderChanged,
                                         headerHeight: 0, // Hide default header
                                         view: isThreeDayScrollable ? CalendarView.week : (_currentView == AppCalendarView.day ? CalendarView.day : CalendarView.month),
@@ -164,9 +196,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                           dayTextStyle: theme.textTheme.small,
                                           dateTextStyle: theme.textTheme.p,
                                         ),
-                                        timeSlotViewSettings: const TimeSlotViewSettings(
-                                          startHour: 6,
-                                          endHour: 24,
+                                        timeSlotViewSettings: TimeSlotViewSettings(
+                                          startHour: settings.visibleStartHour.toDouble(),
+                                          endHour: settings.visibleEndHour.toDouble(),
                                           timeIntervalHeight: 50,
                                           timeFormat: 'h a',
                                         ),
@@ -253,6 +285,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
+  Widget _buildFilterPill(String label, CalendarSourceFilter filter, ShadThemeData theme) {
+    final isSelected = _sourceFilter == filter;
+    return GestureDetector(
+      onTap: () => setState(() => _sourceFilter = filter),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.colorScheme.primary : theme.colorScheme.muted,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: theme.textTheme.small.copyWith(
+            color: isSelected ? theme.colorScheme.primaryForeground : theme.colorScheme.foreground,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
   List<TimeRegion> _getSpecialRegions(ShadThemeData theme) {
     if (_currentView != AppCalendarView.threeDay) return [];
     
@@ -299,8 +352,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
 class _EventDataSource extends CalendarDataSource {
   final List<HabitModel> _habits;
+  final String? _currentUserId;
 
-  _EventDataSource(List<EventModel> source, this._habits, ShadThemeData theme) {
+  _EventDataSource(List<EventModel> source, this._habits, ShadThemeData theme, this._currentUserId) {
     appointments = source;
   }
 
@@ -316,7 +370,9 @@ class _EventDataSource extends CalendarDataSource {
 
   @override
   String getSubject(int index) {
-    return (appointments![index] as EventModel).title;
+    final event = appointments![index] as EventModel;
+    final isSquadEvent = _currentUserId != null && event.userId != _currentUserId;
+    return isSquadEvent ? '[Squad] ${event.title}' : event.title;
   }
 
   @override

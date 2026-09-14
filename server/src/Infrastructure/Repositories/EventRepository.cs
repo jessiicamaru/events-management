@@ -22,6 +22,22 @@ namespace HabitTracker.Infrastructure.Repositories
             return await _context.Events.ToListAsync();
         }
 
+        public async Task<IEnumerable<Event>> GetEventsForUserAsync(string userId)
+        {
+            // Fetch events where e.UserId == userId OR e.UserId is in any Squad that userId belongs to.
+            var userSquads = _context.SquadMembers
+                .Where(sm => sm.UserId == userId)
+                .Select(sm => sm.SquadId);
+
+            var squadMembers = _context.SquadMembers
+                .Where(sm => userSquads.Contains(sm.SquadId))
+                .Select(sm => sm.UserId);
+
+            return await _context.Events
+                .Where(e => e.UserId == userId || squadMembers.Contains(e.UserId))
+                .ToListAsync();
+        }
+
         public async Task<Event?> GetByIdAsync(Guid id)
         {
             return await _context.Events.FindAsync(id);

@@ -6,6 +6,7 @@ import 'core/theme/app_theme.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const ProviderScope(child: HabitTrackerApp()));
 }
 

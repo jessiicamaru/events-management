@@ -39,6 +39,7 @@ abstract class EventModel with _$EventModel {
     @TimeSpanConverter() int? targetDuration, // Target duration in minutes
     @TimeSpanConverter() int? actualDuration, // Actual duration in minutes
     DateTime? createdAt,
+    String? userId, // ID of the user who owns this event
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);

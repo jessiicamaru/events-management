@@ -16,23 +16,34 @@ final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/calendar',
+    initialLocation: '/splash',
     redirect: (context, state) {
-      // While auth state is still loading from storage, don't redirect at all
-      if (authState.isLoading) return null;
+      final authState = ref.read(authProvider);
+      
+      // While auth state is still loading from storage, show splash
+      if (authState.isLoading) {
+        return state.uri.path == '/splash' ? null : '/splash';
+      }
 
       final isAuthenticated = authState.value != null;
       final isLoggingIn = state.uri.path == '/login' || state.uri.path == '/register';
+      final isSplash = state.uri.path == '/splash';
 
       if (!isAuthenticated && !isLoggingIn) return '/login';
-      if (isAuthenticated && isLoggingIn) return '/calendar';
+      if (isAuthenticated && (isLoggingIn || isSplash)) return '/calendar';
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        ),
+      ),
       GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
@@ -67,6 +78,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  ref.listen(authProvider, (_, __) => router.refresh());
+
+  return router;
 });
 
 class ScaffoldWithNavBar extends StatelessWidget {

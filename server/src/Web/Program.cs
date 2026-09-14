@@ -37,7 +37,7 @@ app.UseAuthorization();
 
 // Map Minimal APIs
 app.MapEndpoints();
-app.MapIdentityApi<HabitTracker.Domain.Entities.ApplicationUser>();
+app.MapGroup("/api/v1").MapIdentityApi<HabitTracker.Domain.Entities.ApplicationUser>();
 app.MapHub<HabitTracker.Web.Hubs.SocialHub>("/socialHub");
 
 app.Run();

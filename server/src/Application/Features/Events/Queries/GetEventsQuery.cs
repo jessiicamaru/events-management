@@ -7,7 +7,10 @@ using MediatR;
 
 namespace HabitTracker.Application.Features.Events.Queries
 {
-    public class GetEventsQuery : IRequest<IEnumerable<Event>> { }
+    public class GetEventsQuery : IRequest<IEnumerable<Event>>
+    {
+        public string UserId { get; set; } = string.Empty;
+    }
 
     public class GetEventsQueryHandler : IRequestHandler<GetEventsQuery, IEnumerable<Event>>
     {
@@ -20,7 +23,11 @@ namespace HabitTracker.Application.Features.Events.Queries
 
         public async Task<IEnumerable<Event>> Handle(GetEventsQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.GetAllAsync();
+            if (string.IsNullOrEmpty(request.UserId))
+            {
+                return await _repository.GetAllAsync();
+            }
+            return await _repository.GetEventsForUserAsync(request.UserId);
         }
     }
 }

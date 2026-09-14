@@ -16,6 +16,7 @@ public class Habits : EndpointGroupBase
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization();
         groupBuilder.MapGet("", GetHabits);
         groupBuilder.MapPost("", CreateHabit);
     }

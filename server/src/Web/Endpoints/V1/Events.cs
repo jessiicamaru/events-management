@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using System.Security.Claims;
 
 namespace HabitTracker.Web.Endpoints.V1;
 
@@ -16,15 +17,19 @@ public class Events : EndpointGroupBase
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization();
         groupBuilder.MapGet("", GetEvents);
         groupBuilder.MapPost("", CreateEvent);
         groupBuilder.MapPut("{id}/toggle", ToggleEvent);
         groupBuilder.MapPut("{id}/complete-session", CompleteSession);
     }
 
-    public async Task<Ok<IEnumerable<Event>>> GetEvents(ISender sender)
+    public async Task<IResult> GetEvents(ISender sender, System.Security.Claims.ClaimsPrincipal user)
     {
-        var events = await sender.Send(new GetEventsQuery());
+        var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var events = await sender.Send(new GetEventsQuery { UserId = userId });
         return TypedResults.Ok(events);
     }
 

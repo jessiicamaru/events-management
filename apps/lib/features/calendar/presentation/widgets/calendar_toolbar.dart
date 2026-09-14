@@ -3,6 +3,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../calendar_screen.dart';
 import '../providers/category_filter_provider.dart';
+import 'calendar_settings_sheet.dart';
 
 class CalendarToolbar extends ConsumerWidget {
   final DateTime displayDate;
@@ -112,6 +113,21 @@ class CalendarToolbar extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     onPressed: onNextPressed,
                     child: const Icon(LucideIcons.chevronRight, size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  ShadButton.outline(
+                    width: 32,
+                    height: 32,
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => const CalendarSettingsSheet(),
+                      );
+                    },
+                    child: const Icon(LucideIcons.settings, size: 16),
                   ),
                 ],
               ),
