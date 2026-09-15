@@ -33,9 +33,11 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _calendarKey = GlobalKey();
   AppCalendarView _currentView = AppCalendarView.threeDay;
   DateTime _displayDate = DateTime.now();
   CalendarSourceFilter _sourceFilter = CalendarSourceFilter.all;
+  EventModel? _hoverEvent;
 
   @override
   void initState() {
@@ -126,7 +128,44 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       // Calendar wrapped in DragTarget
                       Expanded(
                         child: DragTarget<HabitModel>(
+                          onMove: (details) {
+                            if (_calendarKey.currentContext != null) {
+                              final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
+                              final localOffset = box.globalToLocal(details.offset);
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              
+                              if (tapDetails != null && tapDetails.date != null) {
+                                final hoverDate = tapDetails.date!;
+                                if (_hoverEvent?.startTime != hoverDate) {
+                                  setState(() {
+                                    _hoverEvent = EventModel(
+                                      id: 'hover_preview',
+                                      title: 'Drop to schedule',
+                                      habitId: details.data.id,
+                                      startTime: hoverDate,
+                                      endTime: hoverDate.add(const Duration(hours: 1)),
+                                    );
+                                  });
+                                }
+                              }
+                            }
+                          },
+                          onLeave: (data) {
+                            setState(() { _hoverEvent = null; });
+                          },
                           onAcceptWithDetails: (details) {
+                            DateTime initialDate = _displayDate;
+                            if (_calendarKey.currentContext != null) {
+                              final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
+                              final localOffset = box.globalToLocal(details.offset);
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              if (tapDetails != null && tapDetails.date != null) {
+                                initialDate = tapDetails.date!;
+                              }
+                            }
+                            
+                            setState(() { _hoverEvent = null; });
+
                             showModalBottomSheet(
                               context: context,
                               backgroundColor: Colors.transparent,
@@ -137,7 +176,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 ),
                                 child: CreateEventSheet(
                                   habitsAsync: habitsAsync,
-                                  initialDate: _displayDate,
+                                  initialDate: initialDate,
                                   initialHabit: details.data,
                                 ),
                               ),
@@ -168,7 +207,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         return true; // all
                                       }).toList();
 
+                                      if (_hoverEvent != null) {
+                                        filteredEvents.add(_hoverEvent!);
+                                      }
+
                                       Widget calendar = SfCalendar(
+                                        key: _calendarKey,
                                         controller: _calendarController,
                                         allowDragAndDrop: true,
                                         dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId),
@@ -404,6 +448,10 @@ class _EventDataSource extends CalendarDataSource {
   @override
   Color getColor(int index) {
     final event = appointments![index] as EventModel;
+    if (event.id == 'hover_preview') {
+      return theme.colorScheme.primary.withOpacity(0.5);
+    }
+    
     final habit = _habits.firstWhere(
       (h) => h.id == event.habitId, 
       orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),

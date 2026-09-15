@@ -7,8 +7,9 @@ namespace HabitTracker.Domain.Interfaces
 {
     public interface IHabitRepository
     {
-        Task<IEnumerable<Habit>> GetAllAsync();
         Task<Habit?> GetByIdAsync(Guid id);
+        Task<IEnumerable<Habit>> GetAllAsync();
+        Task<IEnumerable<Habit>> GetHabitsForUserAsync(string userId);
         Task AddAsync(Habit habit);
         Task UpdateAsync(Habit habit);
         Task DeleteAsync(Guid id);

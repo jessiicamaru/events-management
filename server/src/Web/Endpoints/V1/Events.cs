@@ -33,8 +33,12 @@ public class Events : EndpointGroupBase
         return TypedResults.Ok(events);
     }
 
-    public async Task<Created<Guid>> CreateEvent(ISender sender, CreateEventCommand command)
+    public async Task<Results<Created<Guid>, UnauthorizedHttpResult>> CreateEvent(ISender sender, CreateEventCommand command, ClaimsPrincipal user)
     {
+        var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        command.UserId = userId;
         var id = await sender.Send(command);
         return TypedResults.Created($"/api/v1/events/{id}", id);
     }

@@ -22,6 +22,13 @@ namespace HabitTracker.Infrastructure.Repositories
             return await _context.Habits.ToListAsync();
         }
 
+        public async Task<IEnumerable<Habit>> GetHabitsForUserAsync(string userId)
+        {
+            return await _context.Habits
+                .Where(h => h.UserId == userId)
+                .ToListAsync();
+        }
+
         public async Task<Habit?> GetByIdAsync(Guid id)
         {
             return await _context.Habits.FindAsync(id);
