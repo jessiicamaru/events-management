@@ -423,8 +423,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 class _EventDataSource extends CalendarDataSource {
   final List<HabitModel> _habits;
   final String? _currentUserId;
+  final ShadThemeData _theme;
 
-  _EventDataSource(List<EventModel> source, this._habits, ShadThemeData theme, this._currentUserId) {
+  _EventDataSource(List<EventModel> source, this._habits, this._theme, this._currentUserId) {
     appointments = source;
   }
 
@@ -449,7 +450,7 @@ class _EventDataSource extends CalendarDataSource {
   Color getColor(int index) {
     final event = appointments![index] as EventModel;
     if (event.id == 'hover_preview') {
-      return theme.colorScheme.primary.withOpacity(0.5);
+      return _theme.colorScheme.primary.withOpacity(0.5);
     }
     
     final habit = _habits.firstWhere(

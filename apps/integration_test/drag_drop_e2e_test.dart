@@ -44,6 +44,25 @@ void main() {
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle(const Duration(seconds: 4));
 
+    // --- 1.5 CREATE HABIT ---
+    // Navigate to Habits tab (index 1)
+    await tester.tap(find.text('Habits'));
+    await tester.pumpAndSettle();
+
+    // Tap Fab to create habit
+    expect(find.byIcon(LucideIcons.plus), findsOneWidget);
+    await tester.tap(find.byIcon(LucideIcons.plus));
+    await tester.pumpAndSettle();
+
+    // Enter habit details
+    await tester.enterText(find.byType(ShadInput).first, 'Read E2E Test Book');
+    await tester.tap(find.text('Add'));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+
+    // Navigate back to Calendar tab (index 0)
+    await tester.tap(find.text('Calendar'));
+    await tester.pumpAndSettle();
+
     // --- 2. DRAG AND DROP FLOW ---
     // Wait for the calendar to render and fetch default habits
     expect(find.byType(SfCalendar), findsOneWidget);
