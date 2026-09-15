@@ -10,11 +10,13 @@ import 'unscheduled_habits_selector.dart';
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
   final DateTime? initialDate;
+  final HabitModel? initialHabit;
 
   const CreateEventSheet({
     super.key,
     required this.habitsAsync,
     this.initialDate,
+    this.initialHabit,
   });
 
   @override
@@ -38,6 +40,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     super.initState();
     if (widget.initialDate != null) {
       _startDate = widget.initialDate!;
+    }
+    if (widget.initialHabit != null) {
+      _selectedHabit = widget.initialHabit;
+      _titleController.text = widget.initialHabit!.name;
+      _selectedCategory = widget.initialHabit!.category;
     }
   }
 
