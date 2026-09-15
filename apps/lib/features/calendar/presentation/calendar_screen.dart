@@ -222,7 +222,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         viewNavigationMode: isThreeDayScrollable ? ViewNavigationMode.none : ViewNavigationMode.snap,
                                         firstDayOfWeek: 1,
                                         specialRegions: _getSpecialRegions(theme),
-                                        appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits),
+                                        appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits, settings.eventStyle),
                                         onTap: (CalendarTapDetails tapDetails) async {
                                           if (tapDetails.targetElement == CalendarElement.appointment) {
                                             final event = tapDetails.appointments!.first as EventModel;

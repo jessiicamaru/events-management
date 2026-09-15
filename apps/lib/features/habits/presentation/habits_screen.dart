@@ -127,7 +127,8 @@ class HabitsScreen extends ConsumerWidget {
           title: const Text(AppConstants.addHabit),
           description: const Text('Enter the details for your new habit.'),
           child: Container(
-            width: 320,
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxWidth: 500),
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: ShadInput(
               controller: nameController,

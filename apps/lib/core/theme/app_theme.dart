@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 
 class AppTheme {
   static final ThemeData lightMaterialTheme = ThemeData(
@@ -17,17 +18,69 @@ class AppTheme {
     textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
   );
 
-  static final ShadThemeData lightTheme = ShadThemeData(
-    brightness: Brightness.light,
-    colorScheme: const ShadZincColorScheme.light(),
-    textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.inter),
-  );
+  static ShadThemeData lightTheme(AppColorTheme colorTheme) {
+    ShadColorScheme colorScheme;
+    switch (colorTheme) {
+      case AppColorTheme.zinc:
+        colorScheme = const ShadZincColorScheme.light();
+        break;
+      case AppColorTheme.blue:
+        colorScheme = const ShadBlueColorScheme.light();
+        break;
+      case AppColorTheme.green:
+        colorScheme = const ShadGreenColorScheme.light();
+        break;
+      case AppColorTheme.rose:
+        colorScheme = const ShadRoseColorScheme.light();
+        break;
+      case AppColorTheme.orange:
+        colorScheme = const ShadOrangeColorScheme.light();
+        break;
+    }
 
-  static final ShadThemeData darkTheme = ShadThemeData(
-    brightness: Brightness.dark,
-    colorScheme: const ShadZincColorScheme.dark(),
-    textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.inter),
-  );
+    return ShadThemeData(
+      brightness: Brightness.light,
+      colorScheme: colorScheme,
+      textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.inter),
+    );
+  }
+
+  static ShadThemeData darkTheme(AppColorTheme colorTheme) {
+    ShadColorScheme colorScheme;
+    switch (colorTheme) {
+      case AppColorTheme.zinc:
+        colorScheme = const ShadZincColorScheme.dark();
+        break;
+      case AppColorTheme.blue:
+        colorScheme = const ShadBlueColorScheme.dark();
+        break;
+      case AppColorTheme.green:
+        colorScheme = const ShadGreenColorScheme.dark();
+        break;
+      case AppColorTheme.rose:
+        colorScheme = const ShadRoseColorScheme.dark();
+        break;
+      case AppColorTheme.orange:
+        colorScheme = const ShadOrangeColorScheme.dark();
+        break;
+    }
+
+    return ShadThemeData(
+      brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.inter),
+    );
+  }
+
+  static Color getBrandColor(AppColorTheme colorTheme) {
+    switch (colorTheme) {
+      case AppColorTheme.zinc: return const Color(0xFF18181B); // zinc-900
+      case AppColorTheme.blue: return const Color(0xFF3B82F6); // blue-500
+      case AppColorTheme.green: return const Color(0xFF22C55E); // green-500
+      case AppColorTheme.rose: return const Color(0xFFF43F5E); // rose-500
+      case AppColorTheme.orange: return const Color(0xFFF97316); // orange-500
+    }
+  }
 
   // Tailwind-style color palette for Habit categories
   static const Color tailwindBlue = Color(0xFF3B82F6);

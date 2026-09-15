@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/main.dart' as app;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('E2E: Register, Login, and verify Calendar filters & settings', (tester) async {
+    const storage = FlutterSecureStorage();
+    await storage.deleteAll();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
     app.main();
     await tester.pumpAndSettle();
 

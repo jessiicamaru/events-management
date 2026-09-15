@@ -5,9 +5,22 @@ import 'core/theme/app_theme.dart';
 
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-void main() {
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/providers/shared_preferences_provider.dart';
+import 'features/settings/presentation/providers/app_settings_provider.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: HabitTrackerApp()));
+  final prefs = await SharedPreferences.getInstance();
+  
+  runApp(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const HabitTrackerApp(),
+    ),
+  );
 }
 
 class HabitTrackerApp extends ConsumerWidget {
@@ -16,11 +29,13 @@ class HabitTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final appSettings = ref.watch(appSettingsProvider);
+
     return ShadApp.router(
       title: 'Habit Tracker',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark,
+      theme: AppTheme.lightTheme(appSettings.primaryColor),
+      darkTheme: AppTheme.darkTheme(appSettings.primaryColor),
+      themeMode: appSettings.themeMode,
       materialThemeBuilder: (context, theme) {
         return theme.brightness == Brightness.light 
           ? AppTheme.lightMaterialTheme 
