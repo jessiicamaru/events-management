@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/utils/app_constants.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../settings/presentation/providers/app_settings_provider.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../domain/models/event_model.dart';
 import '../events_provider.dart';
@@ -10,11 +12,13 @@ import 'unscheduled_habits_selector.dart';
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
   final DateTime? initialDate;
+  final HabitModel? initialHabit;
 
   const CreateEventSheet({
     super.key,
     required this.habitsAsync,
     this.initialDate,
+    this.initialHabit,
   });
 
   @override
@@ -38,6 +42,17 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     super.initState();
     if (widget.initialDate != null) {
       _startDate = widget.initialDate!;
+      _startTime = TimeOfDay.fromDateTime(widget.initialDate!);
+      
+      // Auto-extend end time by 1 hour from initial date
+      final endDateTime = widget.initialDate!.add(const Duration(hours: 1));
+      _endTime = TimeOfDay.fromDateTime(endDateTime);
+      _updateTargetDuration();
+    }
+    if (widget.initialHabit != null) {
+      _selectedHabit = widget.initialHabit;
+      _titleController.text = widget.initialHabit!.name;
+      _selectedCategory = widget.initialHabit!.category;
     }
   }
 
@@ -126,16 +141,28 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       targetDuration: int.tryParse(_targetDurationController.text),
     );
 
-    await ref.read(eventsProvider.notifier).addEvent(event);
+    try {
+      await ref.read(eventsProvider.notifier).addEvent(event);
 
-    if (mounted) {
-      Navigator.of(context).pop();
-      ShadToaster.of(context).show(
-        ShadToast(
-          title: const Text('Event Created'),
-          description: Text('Scheduled "$title" at ${_startTime.format(context)}'),
-        ),
-      );
+      if (mounted) {
+        Navigator.of(context).pop();
+        ShadToaster.of(context).show(
+          ShadToast(
+            title: const Text('Event Created'),
+            description: Text('Scheduled "$title" at ${_startTime.format(context)}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+        ShadToaster.of(context).show(
+          ShadToast.destructive(
+            title: const Text('Error'),
+            description: Text('Failed to create event: $e'),
+          ),
+        );
+      }
     }
   }
 
@@ -143,6 +170,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
     final habits = widget.habitsAsync.value ?? [];
+    final appSettings = ref.watch(appSettingsProvider);
+    final brandColor = AppTheme.getBrandColor(appSettings.primaryColor);
 
     return Container(
       decoration: BoxDecoration(
@@ -152,32 +181,45 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
+          // Handle (We can keep it above if the sheet background is still normal, but wait, if the header is colored, the handle should be inside the colored area)
           Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40,
-            height: 4,
             decoration: BoxDecoration(
-              color: theme.colorScheme.border,
-              borderRadius: BorderRadius.circular(2),
+              color: brandColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
-          ),
-
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Row(
+            child: Column(
               children: [
-                Text('Schedule Event', style: theme.textTheme.h4),
-                const Spacer(),
-                ShadButton.ghost(
-                  size: ShadButtonSize.sm,
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Icon(LucideIcons.x, size: 18),
+                const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Schedule Event', 
+                        style: theme.textTheme.h4.copyWith(color: Colors.white)
+                      ),
+                      const Spacer(),
+                      ShadButton.ghost(
+                        size: ShadButtonSize.sm,
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Icon(LucideIcons.x, size: 18, color: Colors.white),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
+
+
 
           const Divider(height: 1),
 
@@ -206,12 +248,15 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                   // Category
                   Text('Category', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  ShadSelect<String>(
-                    placeholder: const Text('Select category'),
-                    initialValue: _selectedCategory,
-                    onChanged: (val) => setState(() => _selectedCategory = val),
-                    options: _categories.map((c) => ShadOption(value: c, child: Text(c))).toList(),
-                    selectedOptionBuilder: (context, value) => Text(value),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadSelect<String>(
+                      placeholder: const Text('Select category'),
+                      initialValue: _selectedCategory,
+                      onChanged: (val) => setState(() => _selectedCategory = val),
+                      options: _categories.map((c) => ShadOption(value: c, child: Text(c))).toList(),
+                      selectedOptionBuilder: (context, value) => Text(value),
+                    ),
                   ),
                   const SizedBox(height: 16),
 

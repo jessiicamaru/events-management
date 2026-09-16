@@ -13,6 +13,7 @@ import 'widgets/calendar_toolbar.dart';
 import 'widgets/calendar_event_card.dart';
 import 'widgets/create_event_sheet.dart';
 import 'widgets/event_details_dialog.dart';
+import 'widgets/habit_dock.dart';
 import '../../focus_session/presentation/screens/focus_screen.dart';
 import '../../focus_session/presentation/widgets/post_session_dialog.dart';
 import '../../profile/presentation/providers/user_profile_provider.dart';
@@ -32,9 +33,11 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   final CalendarController _calendarController = CalendarController();
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _calendarKey = GlobalKey();
   AppCalendarView _currentView = AppCalendarView.threeDay;
   DateTime _displayDate = DateTime.now();
   CalendarSourceFilter _sourceFilter = CalendarSourceFilter.all;
+  EventModel? _hoverEvent;
 
   @override
   void initState() {
@@ -122,11 +125,67 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 Expanded(
                   child: Row(
                     children: [
-                      // Calendar
+                      // Calendar wrapped in DragTarget
                       Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isThreeDayScrollable = _currentView == AppCalendarView.threeDay;
+                        child: DragTarget<HabitModel>(
+                          onMove: (details) {
+                            if (_calendarKey.currentContext != null) {
+                              final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
+                              final localOffset = box.globalToLocal(details.offset);
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              
+                              if (tapDetails != null && tapDetails.date != null) {
+                                final hoverDate = tapDetails.date!;
+                                if (_hoverEvent?.startTime != hoverDate) {
+                                  setState(() {
+                                    _hoverEvent = EventModel(
+                                      id: 'hover_preview',
+                                      title: 'Drop to schedule',
+                                      habitId: details.data.id,
+                                      startTime: hoverDate,
+                                      endTime: hoverDate.add(const Duration(hours: 1)),
+                                    );
+                                  });
+                                }
+                              }
+                            }
+                          },
+                          onLeave: (data) {
+                            setState(() { _hoverEvent = null; });
+                          },
+                          onAcceptWithDetails: (details) {
+                            DateTime initialDate = _displayDate;
+                            if (_calendarKey.currentContext != null) {
+                              final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
+                              final localOffset = box.globalToLocal(details.offset);
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              if (tapDetails != null && tapDetails.date != null) {
+                                initialDate = tapDetails.date!;
+                              }
+                            }
+                            
+                            setState(() { _hoverEvent = null; });
+
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              builder: (bottomSheetContext) => Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+                                ),
+                                child: CreateEventSheet(
+                                  habitsAsync: habitsAsync,
+                                  initialDate: initialDate,
+                                  initialHabit: details.data,
+                                ),
+                              ),
+                            );
+                          },
+                          builder: (context, candidateData, rejectedData) {
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final isThreeDayScrollable = _currentView == AppCalendarView.threeDay;
                             final habits = habitsAsync.value ?? [];
 
                             // In threeDay view, we render a full week (7 days) but stretch it 
@@ -148,7 +207,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         return true; // all
                                       }).toList();
 
+                                      if (_hoverEvent != null) {
+                                        filteredEvents.add(_hoverEvent!);
+                                      }
+
                                       Widget calendar = SfCalendar(
+                                        key: _calendarKey,
                                         controller: _calendarController,
                                         allowDragAndDrop: true,
                                         dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId),
@@ -158,7 +222,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         viewNavigationMode: isThreeDayScrollable ? ViewNavigationMode.none : ViewNavigationMode.snap,
                                         firstDayOfWeek: 1,
                                         specialRegions: _getSpecialRegions(theme),
-                                        appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits),
+                                        appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits, settings.eventStyle),
                                         onTap: (CalendarTapDetails tapDetails) async {
                                           if (tapDetails.targetElement == CalendarElement.appointment) {
                                             final event = tapDetails.appointments!.first as EventModel;
@@ -245,15 +309,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 child: calendarWidget,
                               );
                             }
-                            return calendarWidget;
-                          },
-                        ),
+                              return calendarWidget;
+                            },
+                          );
+                        },
                       ),
+                    ),
 
 
                     ],
                   ),
                 ),
+
+                // Habit Dock at the bottom
+                if (habitsAsync.value != null)
+                  HabitDock(habits: habitsAsync.value!),
               ],
             );
           },
@@ -353,8 +423,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 class _EventDataSource extends CalendarDataSource {
   final List<HabitModel> _habits;
   final String? _currentUserId;
+  final ShadThemeData _theme;
 
-  _EventDataSource(List<EventModel> source, this._habits, ShadThemeData theme, this._currentUserId) {
+  _EventDataSource(List<EventModel> source, this._habits, this._theme, this._currentUserId) {
     appointments = source;
   }
 
@@ -378,6 +449,10 @@ class _EventDataSource extends CalendarDataSource {
   @override
   Color getColor(int index) {
     final event = appointments![index] as EventModel;
+    if (event.id == 'hover_preview') {
+      return _theme.colorScheme.primary.withOpacity(0.5);
+    }
+    
     final habit = _habits.firstWhere(
       (h) => h.id == event.habitId, 
       orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),

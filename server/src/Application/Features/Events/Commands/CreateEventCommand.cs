@@ -14,6 +14,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public DateTime EndTime { get; set; }
         public string HabitId { get; set; } = string.Empty;
         public TimeSpan? TargetDuration { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 
     public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -33,7 +34,8 @@ namespace HabitTracker.Application.Features.Events.Commands
                 StartTime = request.StartTime.ToUniversalTime(),
                 EndTime = request.EndTime.ToUniversalTime(),
                 HabitId = request.HabitId,
-                TargetDuration = request.TargetDuration ?? request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime()
+                TargetDuration = request.TargetDuration ?? request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime(),
+                UserId = request.UserId
             };
 
             await _repository.AddAsync(ev);

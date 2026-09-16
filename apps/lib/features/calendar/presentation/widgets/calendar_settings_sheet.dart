@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../providers/calendar_settings_provider.dart';
 import '../../../../core/theme/app_theme.dart';
-
+import '../../domain/models/calendar_event_style.dart';
 class CalendarSettingsSheet extends ConsumerWidget {
   const CalendarSettingsSheet({super.key});
 
@@ -92,6 +92,43 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 24),
+            Text('Event Style', style: theme.textTheme.large),
+            const SizedBox(height: 8),
+            Text(
+              'Choose how events look on the calendar.',
+              style: theme.textTheme.muted,
+            ),
+            const SizedBox(height: 16),
+            ShadSelect<CalendarEventStyle>(
+              placeholder: const Text('Style'),
+              initialValue: settings.eventStyle,
+              options: CalendarEventStyle.values.map((style) {
+                String label = '';
+                switch (style) {
+                  case CalendarEventStyle.dot: label = 'Dot'; break;
+                  case CalendarEventStyle.colored: label = 'Colored'; break;
+                  case CalendarEventStyle.mixed: label = 'Mixed'; break;
+                }
+                return ShadOption(
+                  value: style,
+                  child: Text(label),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(calendarSettingsProvider.notifier).updateSettings(eventStyle: val);
+                }
+              },
+              selectedOptionBuilder: (context, value) {
+                switch (value) {
+                  case CalendarEventStyle.dot: return const Text('Dot');
+                  case CalendarEventStyle.colored: return const Text('Colored');
+                  case CalendarEventStyle.mixed: return const Text('Mixed');
+                  default: return const Text('Unknown');
+                }
+              },
             ),
             const SizedBox(height: 32),
             ShadButton(

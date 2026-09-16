@@ -7,7 +7,10 @@ using MediatR;
 
 namespace HabitTracker.Application.Features.Habits.Queries
 {
-    public class GetHabitsQuery : IRequest<IEnumerable<Habit>> { }
+    public class GetHabitsQuery : IRequest<IEnumerable<Habit>> 
+    {
+        public string UserId { get; set; } = string.Empty;
+    }
 
     public class GetHabitsQueryHandler : IRequestHandler<GetHabitsQuery, IEnumerable<Habit>>
     {
@@ -20,7 +23,10 @@ namespace HabitTracker.Application.Features.Habits.Queries
 
         public async Task<IEnumerable<Habit>> Handle(GetHabitsQuery request, CancellationToken cancellationToken)
         {
-            return await _repository.GetAllAsync();
+            if (string.IsNullOrEmpty(request.UserId))
+                return await _repository.GetAllAsync();
+                
+            return await _repository.GetHabitsForUserAsync(request.UserId);
         }
     }
 }

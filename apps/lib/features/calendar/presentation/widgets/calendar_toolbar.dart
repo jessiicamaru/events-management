@@ -60,10 +60,10 @@ class CalendarToolbar extends ConsumerWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          color: theme.colorScheme.foreground,
+                          color: theme.colorScheme.primary,
                           child: Text(
                             shortMonthFormat.format(displayDate).toUpperCase(),
-                            style: theme.textTheme.small.copyWith(color: theme.colorScheme.background, fontWeight: FontWeight.bold),
+                            style: theme.textTheme.small.copyWith(color: theme.colorScheme.primaryForeground, fontWeight: FontWeight.bold),
                           ),
                         ),
                         Container(
@@ -187,13 +187,13 @@ class CalendarToolbar extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.foreground : Colors.transparent,
+          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(4), // slightly inner radius
         ),
         child: Icon(
           icon,
           size: 16,
-          color: isSelected ? theme.colorScheme.background : theme.colorScheme.foreground,
+          color: isSelected ? theme.colorScheme.primaryForeground : theme.colorScheme.foreground,
         ),
       ),
     );

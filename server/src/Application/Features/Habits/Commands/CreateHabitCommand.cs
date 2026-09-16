@@ -12,6 +12,7 @@ namespace HabitTracker.Application.Features.Habits.Commands
     {
         public string Name { get; set; } = string.Empty;
         public List<int> TargetDays { get; set; } = new();
+        public string UserId { get; set; } = string.Empty;
     }
 
     public class CreateHabitCommandHandler : IRequestHandler<CreateHabitCommand, Guid>
@@ -35,7 +36,8 @@ namespace HabitTracker.Application.Features.Habits.Commands
             {
                 Name = request.Name,
                 TargetDays = request.TargetDays,
-                Category = category
+                Category = category,
+                UserId = request.UserId
             };
 
             await _repository.AddAsync(habit);

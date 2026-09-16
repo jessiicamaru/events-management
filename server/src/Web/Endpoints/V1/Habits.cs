@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using System.Security.Claims;
 
 namespace HabitTracker.Web.Endpoints.V1;
 
@@ -21,14 +22,21 @@ public class Habits : EndpointGroupBase
         groupBuilder.MapPost("", CreateHabit);
     }
 
-    public async Task<Ok<IEnumerable<Habit>>> GetHabits(ISender sender)
+    public async Task<Results<Ok<IEnumerable<Habit>>, UnauthorizedHttpResult>> GetHabits(ISender sender, ClaimsPrincipal user)
     {
-        var habits = await sender.Send(new GetHabitsQuery());
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var habits = await sender.Send(new GetHabitsQuery { UserId = userId });
         return TypedResults.Ok(habits);
     }
 
-    public async Task<Created<Guid>> CreateHabit(ISender sender, CreateHabitCommand command)
+    public async Task<Results<Created<Guid>, UnauthorizedHttpResult>> CreateHabit(ISender sender, CreateHabitCommand command, ClaimsPrincipal user)
     {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        command.UserId = userId;
         var id = await sender.Send(command);
         return TypedResults.Created($"/api/v1/habits/{id}", id);
     }
