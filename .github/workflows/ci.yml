@@ -1,0 +1,73 @@
+name: CI
+
+# Both apps build, analyse and test on every push and pull request, so a broken commit is
+# caught here rather than on someone else's machine.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (.NET)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+
+  frontend:
+    name: Frontend (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned on purpose: `channel: stable` floats to whatever Flutter ships latest, which
+      # resolves newer packages than the committed pubspec.lock and makes the codegen check
+      # below fail on an SDK difference rather than a real problem. Bumping this is a
+      # deliberate change that will also rewrite pubspec.lock and some generated files.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Generated sources are committed, so a stale *.g.dart / *.freezed.dart would otherwise
+      # only surface much later. Scoped to generated Dart: build_runner also touches other
+      # files that this check is not about.
+      - name: Check generated code is up to date
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          if [ -n "$(git status --porcelain -- '*.g.dart' '*.freezed.dart')" ]; then
+            echo "::error::Generated Dart is out of date. Run: dart run build_runner build --delete-conflicting-outputs"
+            git --no-pager diff --stat -- '*.g.dart' '*.freezed.dart'
+            exit 1
+          fi
+
+      # Warnings fail the build; the 22 remaining infos (mostly deprecated_member_use) do not
+      # yet, so they can be cleared without blocking every push in the meantime. Drop this
+      # flag once they are gone.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test

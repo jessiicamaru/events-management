@@ -75,7 +75,6 @@ void main() {
     expect(firstHabitFinder, findsOneWidget);
 
     // Perform drag from the dock to the center of the calendar
-    final centerOfCalendar = tester.getCenter(find.byType(SfCalendar));
     await tester.drag(firstHabitFinder, Offset(0, -300)); // Drag upwards to the calendar
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
