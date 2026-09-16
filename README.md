@@ -48,6 +48,20 @@ Detailed system documentation is located in the [`docs/`](./docs) directory:
 
 ---
 
+## 🤝 Development & Credits
+
+Built by [@jessiicamaru](https://github.com/jessiicamaru), with
+[Claude Code](https://claude.com/claude-code) (Anthropic) as an AI pair programmer.
+
+The division of work: product decisions, feature scope and every merge are the author's;
+Claude Code contributed implementation, tests, documentation and code review, and appears
+as `Co-Authored-By` on the commits it worked on. The repository conventions it follows —
+build commands, architecture and the traps worth knowing — are in
+[`CLAUDE.md`](./CLAUDE.md), and the GitHub workflow skills it uses live in
+[`.claude/skills/`](./.claude/skills).
+
+---
+
 ## 📄 License
 
 MIT License
