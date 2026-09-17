@@ -18,6 +18,10 @@ void main() {
     testWidgets('renders all components correctly', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
+
+      bool todayPressed = false;
+      bool nextPressed = false;
+      bool prevPressed = false;
       AppCalendarView view = AppCalendarView.threeDay;
 
       await tester.pumpWidget(buildTestableWidget(
@@ -25,9 +29,9 @@ void main() {
           displayDate: DateTime(2025, 4, 15),
           currentView: AppCalendarView.threeDay,
           onViewChanged: (v) { view = v; },
-          onTodayPressed: () {  },
-          onNextPressed: () {  },
-          onPrevPressed: () {  },
+          onTodayPressed: () { todayPressed = true; },
+          onNextPressed: () { nextPressed = true; },
+          onPrevPressed: () { prevPressed = true; },
           totalEvents: 5,
         ),
       ));

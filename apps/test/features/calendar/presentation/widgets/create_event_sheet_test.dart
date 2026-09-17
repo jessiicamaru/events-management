@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
-import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 
@@ -27,16 +26,11 @@ class MockApiService implements ApiService {
 
 void main() {
   late MockApiService mockApiService;
-  // The sheet reads calendar settings, which come from SharedPreferences. The provider
-  // throws unless it is overridden, so every test here needs a real instance backed by
-  // the in-memory store.
-  late SharedPreferences prefs;
 
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
       overrides: [
         apiServiceProvider.overrideWithValue(mockApiService),
-        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: ShadApp(
         home: Scaffold(
@@ -46,10 +40,8 @@ void main() {
     );
   }
 
-  setUp(() async {
+  setUp(() {
     mockApiService = MockApiService();
-    SharedPreferences.setMockInitialValues({});
-    prefs = await SharedPreferences.getInstance();
   });
 
   final sampleHabits = [

@@ -34,6 +34,8 @@ class CalendarSettingsNotifier extends _$CalendarSettingsNotifier {
   static const _endHourKey = 'calendar_end_hour';
   static const _eventStyleKey = 'calendar_event_style';
 
+  bool _disposed = false;
+
   @override
   CalendarSettings build() {
     final prefs = ref.watch(sharedPreferencesProvider);

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
 
 import '../events_provider.dart';
 
