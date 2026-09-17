@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../providers/calendar_settings_provider.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/calendar_event_style.dart';
 class CalendarSettingsSheet extends ConsumerWidget {
   const CalendarSettingsSheet({super.key});
@@ -125,6 +126,7 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   case CalendarEventStyle.dot: return const Text('Dot');
                   case CalendarEventStyle.colored: return const Text('Colored');
                   case CalendarEventStyle.mixed: return const Text('Mixed');
+                  default: return const Text('Unknown');
                 }
               },
             ),

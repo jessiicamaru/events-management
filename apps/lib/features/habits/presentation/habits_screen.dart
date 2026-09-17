@@ -126,6 +126,15 @@ class HabitsScreen extends ConsumerWidget {
         return ShadDialog(
           title: const Text(AppConstants.addHabit),
           description: const Text('Enter the details for your new habit.'),
+          child: Container(
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxWidth: 500),
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: ShadInput(
+              controller: nameController,
+              placeholder: const Text(AppConstants.habitNameLabel),
+            ),
+          ),
           actions: [
             ShadButton.secondary(
               onPressed: () => Navigator.of(context).pop(),
@@ -146,15 +155,6 @@ class HabitsScreen extends ConsumerWidget {
               child: const Text(AppConstants.add),
             ),
           ],
-          child: Container(
-            width: double.maxFinite,
-            constraints: const BoxConstraints(maxWidth: 500),
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: ShadInput(
-              controller: nameController,
-              placeholder: const Text(AppConstants.habitNameLabel),
-            ),
-          ),
         );
       },
     );
