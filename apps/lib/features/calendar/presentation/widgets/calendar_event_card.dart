@@ -18,7 +18,7 @@ Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails detai
   
   final theme = ShadTheme.of(context);
 
-  final timeString = '${DateFormat.jm().format(event.startTime)} - ${DateFormat.jm().format(event.endTime)}';
+  final timeString = '${DateFormat.jm().format(event.startTime.toLocal())} - ${DateFormat.jm().format(event.endTime.toLocal())}';
 
   if (style == CalendarEventStyle.dot) {
     return Container(

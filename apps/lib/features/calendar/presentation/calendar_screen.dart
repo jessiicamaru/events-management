@@ -160,9 +160,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             if (_calendarKey.currentContext != null) {
                               final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
                               final localOffset = box.globalToLocal(details.offset);
-                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              final centerOffset = localOffset + const Offset(70, 35); // Center of the dragged item
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(centerOffset);
+                              print('DEBUG DROP: globalOffset=${details.offset}, localOffset=$localOffset, centerOffset=$centerOffset, tapDetails=$tapDetails, date=${tapDetails?.date}');
                               if (tapDetails != null && tapDetails.date != null) {
                                 initialDate = tapDetails.date!;
+                              } else {
+                                if (context.mounted) {
+                                  ShadToaster.of(context).show(
+                                    ShadToast.destructive(
+                                      title: const Text('Debug'),
+                                      description: Text('Offset: $centerOffset -> NULL'),
+                                    ),
+                                  );
+                                }
                               }
                             }
                             
@@ -217,6 +228,53 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         key: _calendarKey,
                                         controller: _calendarController,
                                         allowDragAndDrop: true,
+                                        onDragEnd: (AppointmentDragEndDetails details) async {
+                                          if (details.appointment != null && details.droppingTime != null) {
+                                            final event = details.appointment as EventModel;
+                                            final duration = event.endTime.difference(event.startTime);
+                                            final updatedEvent = event.copyWith(
+                                              startTime: details.droppingTime!,
+                                              endTime: details.droppingTime!.add(duration),
+                                            );
+                                            try {
+                                              await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ShadToaster.of(context).show(
+                                                  ShadToast.destructive(
+                                                    title: Text(translations.translate('error')),
+                                                    description: Text(e.toString()),
+                                                  ),
+                                                );
+                                                // Refresh to revert the visual change
+                                                ref.invalidate(eventsProvider);
+                                              }
+                                            }
+                                          }
+                                        },
+                                        allowAppointmentResize: true,
+                                        onAppointmentResizeEnd: (AppointmentResizeEndDetails details) async {
+                                          if (details.appointment != null && details.startTime != null && details.endTime != null) {
+                                            final event = details.appointment as EventModel;
+                                            final updatedEvent = event.copyWith(
+                                              startTime: details.startTime!,
+                                              endTime: details.endTime!,
+                                            );
+                                            try {
+                                              await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                                            } catch (e) {
+                                              if (context.mounted) {
+                                                ShadToaster.of(context).show(
+                                                  ShadToast.destructive(
+                                                    title: Text(translations.translate('error')),
+                                                    description: Text(e.toString()),
+                                                  ),
+                                                );
+                                                ref.invalidate(eventsProvider);
+                                              }
+                                            }
+                                          }
+                                        },
                                         dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId, translations),
                                         onViewChanged: _onViewHeaderChanged,
                                         headerHeight: 0, // Hide default header
@@ -262,12 +320,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                           dayTextStyle: theme.textTheme.small,
                                           dateTextStyle: theme.textTheme.p,
                                         ),
-                                        timeSlotViewSettings: TimeSlotViewSettings(
-                                          startHour: settings.visibleStartHour.toDouble(),
-                                          endHour: settings.visibleEndHour.toDouble(),
-                                          timeIntervalHeight: 50,
-                                          timeFormat: 'h a',
-                                        ),
+                                          timeSlotViewSettings: TimeSlotViewSettings(
+                                            startHour: settings.visibleStartHour.toDouble(),
+                                            endHour: settings.visibleEndHour.toDouble(),
+                                            timeIntervalHeight: 50,
+                                            timeFormat: 'h a',
+                                          ),
                                       );
 
                                       // Wrap calendar in SfCalendarTheme to match dark mode
@@ -311,7 +369,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 child: calendarWidget,
                               );
                             }
-                              return calendarWidget;
+                            return calendarWidget;
                             },
                           );
                         },

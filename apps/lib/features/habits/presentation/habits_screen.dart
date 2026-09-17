@@ -111,10 +111,8 @@ class HabitsScreen extends ConsumerWidget {
                                                     Text('${habit.currentStreak}', style: theme.textTheme.large.copyWith(color: Colors.orange)),
                                                   ],
                                                 ),
-                                              const SizedBox(height: 4),
-                                              Text('${habit.targetDays.length} ${translations.translate('days_week')}', style: theme.textTheme.muted),
-                                            ],
-                                          ),
+                                              ],
+                                            ),
                                           const SizedBox(width: 12),
                                           ShadButton.ghost(
                                             size: ShadButtonSize.sm,
@@ -175,14 +173,6 @@ class HabitsScreen extends ConsumerWidget {
                       );
                       return;
                     }
-                    if (selectedDays.isEmpty) {
-                      ShadToaster.of(context).show(
-                        ShadToast.destructive(
-                          title: const Text('Please select at least one day'),
-                        ),
-                      );
-                      return;
-                    }
                     
                     final newHabit = HabitModel(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -219,13 +209,6 @@ class HabitsScreen extends ConsumerWidget {
                       translations,
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTargetDaysSelector(
-                      context,
-                      translations,
-                      selectedDays,
-                      (val) => setState(() => selectedDays = val),
                     ),
                   ],
                 ),
@@ -281,14 +264,6 @@ class HabitsScreen extends ConsumerWidget {
                       );
                       return;
                     }
-                    if (selectedDays.isEmpty) {
-                      ShadToaster.of(context).show(
-                        ShadToast.destructive(
-                          title: const Text('Please select at least one day'),
-                        ),
-                      );
-                      return;
-                    }
                     
                     final updatedHabit = habit.copyWith(
                       name: name,
@@ -332,13 +307,6 @@ class HabitsScreen extends ConsumerWidget {
                       translations,
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTargetDaysSelector(
-                      context,
-                      translations,
-                      selectedDays,
-                      (val) => setState(() => selectedDays = val),
                     ),
                   ],
                 ),
@@ -426,73 +394,6 @@ class HabitsScreen extends ConsumerWidget {
               return Text(value);
             },
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTargetDaysSelector(
-    BuildContext context,
-    AppTranslations translations,
-    List<int> selectedDays,
-    void Function(List<int>) onChanged,
-  ) {
-    final theme = ShadTheme.of(context);
-    final weekdayKeys = {
-      1: 'mon',
-      2: 'tue',
-      3: 'wed',
-      4: 'thu',
-      5: 'fri',
-      6: 'sat',
-      7: 'sun',
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          translations.translate('target_days'),
-          style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: weekdayKeys.entries.map((entry) {
-            final dayNum = entry.key;
-            final key = entry.value;
-            final isSelected = selectedDays.contains(dayNum);
-            
-            return GestureDetector(
-              onTap: () {
-                final newSelected = List<int>.from(selectedDays);
-                if (isSelected) {
-                  newSelected.remove(dayNum);
-                } else {
-                  newSelected.add(dayNum);
-                }
-                onChanged(newSelected);
-              },
-              child: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: isSelected ? theme.colorScheme.primary : theme.colorScheme.muted,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  translations.translate(key),
-                  style: theme.textTheme.small.copyWith(
-                    color: isSelected 
-                        ? theme.colorScheme.primaryForeground 
-                        : theme.colorScheme.foreground,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );

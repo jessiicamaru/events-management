@@ -22,6 +22,8 @@ public class Events : EndpointGroupBase
         groupBuilder.MapPost("", CreateEvent);
         groupBuilder.MapPut("{id}/toggle", ToggleEvent);
         groupBuilder.MapPut("{id}/complete-session", CompleteSession);
+        groupBuilder.MapDelete("{id}", DeleteEvent);
+        groupBuilder.MapPut("{id}", UpdateEvent);
     }
 
     public async Task<IResult> GetEvents(ISender sender, System.Security.Claims.ClaimsPrincipal user)
@@ -60,6 +62,39 @@ public class Events : EndpointGroupBase
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();
     }
+
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteEvent(ISender sender, Guid id, ClaimsPrincipal user)
+    {
+        var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var result = await sender.Send(new DeleteEventCommand(id, userId));
+        if (!result) return TypedResults.NotFound();
+        return TypedResults.Ok();
+    }
+
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> UpdateEvent(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] UpdateEventRequest request, ClaimsPrincipal user)
+    {
+        var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var command = new UpdateEventCommand
+        {
+            EventId = id,
+            Title = request.Title,
+            StartTime = request.StartTime,
+            EndTime = request.EndTime,
+            HabitId = request.HabitId,
+            TargetDuration = request.TargetDuration,
+            UserId = userId
+        };
+
+        var result = await sender.Send(command);
+        if (!result) return TypedResults.NotFound();
+        return TypedResults.Ok();
+    }
 }
+
+public record UpdateEventRequest(string Title, DateTime StartTime, DateTime EndTime, string HabitId, TimeSpan? TargetDuration);
 
 public record ToggleEventRequest(bool IsCompleted);

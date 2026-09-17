@@ -22,7 +22,7 @@ using (var scope = app.Services.CreateScope())
 {
     var initialiser = scope.ServiceProvider.GetRequiredService<HabitTracker.Infrastructure.Data.ApplicationDbContextInitialiser>();
     await initialiser.InitialiseAsync();
-    await initialiser.SeedAsync();
+    // await initialiser.SeedAsync();
 }
 
 if (app.Environment.IsDevelopment())

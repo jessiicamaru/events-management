@@ -95,6 +95,18 @@ class ApiService {
     );
   }
 
+  Future<void> deleteEvent(String id) async {
+    await _dio.delete('/events/$id');
+  }
+
+  Future<void> updateEvent(String id, Map<String, dynamic> data) async {
+    await _dio.put(
+      '/events/$id',
+      data: data,
+      options: Options(contentType: 'application/json'),
+    );
+  }
+
   Future<void> completeSession(String id, String actualDuration, bool updateCalendar) async {
     await _dio.put(
       '/events/$id/complete-session',

@@ -6,6 +6,8 @@ import '../../../habits/domain/models/habit_model.dart';
 import '../../../../core/localization/locale_provider.dart';
 
 import '../events_provider.dart';
+import '../../../habits/presentation/habits_provider.dart';
+import 'create_event_sheet.dart';
 
 class EventDetailsDialog extends ConsumerWidget {
   final EventModel event;
@@ -80,9 +82,101 @@ class EventDetailsDialog extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ShadButton.outline(
+                      onPressed: () {
+                        final habitsAsyncValue = ref.read(habitsProvider);
+                        final nav = Navigator.of(context);
+                        nav.pop();
+                        showModalBottomSheet(
+                          context: nav.context,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (bottomSheetContext) => Padding(
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+                            ),
+                            child: CreateEventSheet(
+                              habitsAsync: habitsAsyncValue,
+                              eventToEdit: event,
+                              initialHabit: habit,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(LucideIcons.pencil, size: 16),
+                          const SizedBox(width: 8),
+                          Text(translations.translate('edit')),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ShadButton.destructive(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) => ShadDialog(
+                            title: Text(translations.translate('delete_event_confirm_title')),
+                            description: Text(translations.translate('delete_event_confirm_desc')),
+                            actions: [
+                              ShadButton.outline(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: Text(translations.translate('cancel')),
+                              ),
+                              ShadButton.destructive(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: Text(translations.translate('delete')),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true && context.mounted) {
+                          try {
+                            await ref.read(eventsProvider.notifier).deleteEvent(event.id);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              ShadToaster.of(context).show(
+                                ShadToast(
+                                  title: Text(translations.translate('event_deleted_toast')),
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ShadToaster.of(context).show(
+                                ShadToast.destructive(
+                                  title: Text(translations.translate('error')),
+                                  description: Text(e.toString()),
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(LucideIcons.trash2, size: 16),
+                          const SizedBox(width: 8),
+                          Text(translations.translate('delete')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
-                child: ShadButton.outline(
+                child: ShadButton.ghost(
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(translations.translate('close')),
                 ),

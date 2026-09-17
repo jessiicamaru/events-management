@@ -48,10 +48,7 @@ namespace HabitTracker.Infrastructure.Data
         private async Task TrySeedAsync()
         {
             // Default data
-            // Seed Mock Data if empty (Force clear for now)
-            _context.Events.RemoveRange(_context.Events);
-            _context.Habits.RemoveRange(_context.Habits);
-            await _context.SaveChangesAsync();
+            // Seed Mock Data if empty
 
             if (!_context.Habits.Any())
             {
