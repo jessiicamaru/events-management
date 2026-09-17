@@ -273,12 +273,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                           dayTextStyle: theme.textTheme.small,
                                           dateTextStyle: theme.textTheme.p,
                                         ),
-                                        timeSlotViewSettings: TimeSlotViewSettings(
-                                          startHour: settings.visibleStartHour.toDouble(),
-                                          endHour: settings.visibleEndHour.toDouble(),
-                                          timeIntervalHeight: 50,
-                                          timeFormat: 'h a',
-                                        ),
+                                          timeSlotViewSettings: TimeSlotViewSettings(
+                                            startHour: settings.visibleStartHour.toDouble(),
+                                            endHour: settings.visibleEndHour.toDouble(),
+                                            timeIntervalHeight: 50,
+                                            timeFormat: 'h a',
+                                          ),
                                       );
 
                                       // Wrap calendar in SfCalendarTheme to match dark mode
@@ -322,7 +322,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 child: calendarWidget,
                               );
                             }
-                              return calendarWidget;
+                            return calendarWidget;
                             },
                           );
                         },
