@@ -8,10 +8,13 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/shared_preferences_provider.dart';
 import 'features/settings/presentation/providers/app_settings_provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  await initializeDateFormatting('vi', null);
+  await initializeDateFormatting('en_US', null);
   
   runApp(
     ProviderScope(

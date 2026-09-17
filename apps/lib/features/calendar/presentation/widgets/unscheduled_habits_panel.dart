@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/utils/app_constants.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../providers/category_filter_provider.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class UnscheduledHabitsPanel extends ConsumerWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
@@ -21,6 +22,7 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final selectedCategory = ref.watch(categoryFilterProvider);
+    final translations = ref.watch(translationsProvider);
 
     return Container(
       width: isDesktop ? 280 : double.infinity,
@@ -35,7 +37,7 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text('Unscheduled Habits', style: theme.textTheme.h4),
+            child: Text(translations.translate('unscheduled_habits'), style: theme.textTheme.h4),
           ),
           Expanded(
             child: habitsAsync.when(
@@ -45,7 +47,10 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
                     : habits.where((h) => h.category == selectedCategory).toList();
                 
                 if (filteredHabits.isEmpty) {
-                  return const Center(child: Text(AppConstants.noUnscheduledHabitsMessage));
+                  return Center(child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(translations.translate('no_unscheduled_habits'), textAlign: TextAlign.center),
+                  ));
                 }
                 return ListView.builder(
                   scrollDirection: isDesktop ? Axis.vertical : Axis.horizontal,
@@ -53,17 +58,21 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
                   itemCount: filteredHabits.length,
                   itemBuilder: (context, index) {
                     final habit = filteredHabits[index];
+                    String? translatedCategory = habit.category;
+                    if (habit.category == 'Health') translatedCategory = translations.translate('category_health');
+                    if (habit.category == 'Work') translatedCategory = translations.translate('category_work');
+                    if (habit.category == 'Learning') translatedCategory = translations.translate('category_learning');
+                    if (habit.category == 'Wellness') translatedCategory = translations.translate('category_wellness');
+
                     final content = ShadCard(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(habit.name, style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
-                          if (habit.category != null) ...[
-                            const SizedBox(height: 4),
-                            Text(habit.category!, style: TextStyle(fontSize: 10, color: theme.colorScheme.mutedForeground)),
-                          ]
+                          Text(translations.translate(habit.name), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 4),
+                          Text(translatedCategory ?? translations.translate('uncategorized'), style: TextStyle(fontSize: 10, color: theme.colorScheme.mutedForeground), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ],
                       ),
                     );
@@ -90,7 +99,7 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('${AppConstants.errorPrefix}$err')),
+              error: (err, stack) => Center(child: Text('${translations.translate('error_heatmap')} $err')),
             ),
           ),
         ],

@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../providers/calendar_settings_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/calendar_event_style.dart';
+import '../../../../core/localization/locale_provider.dart';
 class CalendarSettingsSheet extends ConsumerWidget {
   const CalendarSettingsSheet({super.key});
 
@@ -11,6 +12,7 @@ class CalendarSettingsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final settings = ref.watch(calendarSettingsProvider);
+    final translations = ref.watch(translationsProvider);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -27,7 +29,7 @@ class CalendarSettingsSheet extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Calendar Settings', style: theme.textTheme.h4),
+                Text(translations.translate('calendar_settings_title'), style: theme.textTheme.h4),
                 IconButton(
                   icon: const Icon(LucideIcons.x, size: 20),
                   onPressed: () => Navigator.of(context).pop(),
@@ -35,10 +37,10 @@ class CalendarSettingsSheet extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text('Visible Hours', style: theme.textTheme.large),
+            Text(translations.translate('visible_hours'), style: theme.textTheme.large),
             const SizedBox(height: 8),
             Text(
-              'Select the time range visible in the calendar grid.',
+              translations.translate('visible_hours_desc'),
               style: theme.textTheme.muted,
             ),
             const SizedBox(height: 16),
@@ -48,10 +50,10 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Start Hour', style: theme.textTheme.small),
+                      Text(translations.translate('start_hour'), style: theme.textTheme.small),
                       const SizedBox(height: 8),
                       ShadSelect<int>(
-                        placeholder: const Text('Start'),
+                        placeholder: Text(translations.translate('start_hour')),
                         initialValue: settings.visibleStartHour,
                         options: List.generate(24, (index) => ShadOption(
                           value: index,
@@ -72,10 +74,10 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('End Hour', style: theme.textTheme.small),
+                      Text(translations.translate('end_hour'), style: theme.textTheme.small),
                       const SizedBox(height: 8),
                       ShadSelect<int>(
-                        placeholder: const Text('End'),
+                        placeholder: Text(translations.translate('end_hour')),
                         initialValue: settings.visibleEndHour,
                         options: List.generate(24, (index) => ShadOption(
                           value: index + 1,
@@ -133,7 +135,7 @@ class CalendarSettingsSheet extends ConsumerWidget {
             const SizedBox(height: 32),
             ShadButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Done'),
+              child: Text(translations.translate('done')),
             ),
           ],
         ),

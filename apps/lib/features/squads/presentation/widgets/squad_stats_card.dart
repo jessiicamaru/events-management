@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../domain/models/squad_model.dart';
+import '../../../../core/localization/locale_provider.dart';
 
-class SquadStatsCard extends StatelessWidget {
+class SquadStatsCard extends ConsumerWidget {
   final SquadModel squad;
 
   const SquadStatsCard({super.key, required this.squad});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
     final level = (squad.totalSquadXP / 1000).floor() + 1;
     final progress = (squad.totalSquadXP % 1000) / 1000.0;
 
@@ -26,7 +29,7 @@ class SquadStatsCard extends StatelessWidget {
           const SizedBox(height: 16),
           Text(squad.name, style: theme.textTheme.h3),
           const SizedBox(height: 8),
-          Text('Total XP: ${squad.totalSquadXP}', style: theme.textTheme.muted),
+          Text('${translations.translate('total_xp')}: ${squad.totalSquadXP}', style: theme.textTheme.muted),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
@@ -36,7 +39,7 @@ class SquadStatsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text('Level $level', style: theme.textTheme.small),
+          Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
         ],
       ),
     );

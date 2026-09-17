@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/localization/locale_provider.dart';
 
-class FriendActivityFeed extends StatelessWidget {
+class FriendActivityFeed extends ConsumerWidget {
   const FriendActivityFeed({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Friend Activity', style: theme.textTheme.h4),
+        Text(translations.translate('friend_activity'), style: theme.textTheme.h4),
         const SizedBox(height: 16),
-        _buildFeedItem(theme, 'Alex completed "Read 20 pages"', '10m ago'),
-        _buildFeedItem(theme, 'Sam reached a 5-day streak on "Morning Jog"!', '1h ago', icon: LucideIcons.flame, color: Colors.orange),
-        _buildFeedItem(theme, 'Taylor joined Alpha Squad', '2h ago', icon: LucideIcons.userPlus),
+        _buildFeedItem(theme, translations.translate('mock_activity_1'), translations.translate('mock_time_1')),
+        _buildFeedItem(theme, translations.translate('mock_activity_2'), translations.translate('mock_time_2'), icon: LucideIcons.flame, color: Colors.orange),
+        _buildFeedItem(theme, translations.translate('mock_activity_3'), translations.translate('mock_time_3'), icon: LucideIcons.userPlus),
       ],
     );
   }

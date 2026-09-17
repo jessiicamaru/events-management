@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/profile/presentation/screens/cosmetics_screen.dart' as habit_tracker_cosmetics;
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
+import '../../../core/localization/locale_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,6 +13,8 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final appSettings = ref.watch(appSettingsProvider);
+    final currentLocale = ref.watch(localeProvider);
+    final translations = ref.watch(translationsProvider);
     
     return Scaffold(
       body: SafeArea(
@@ -21,7 +24,7 @@ class SettingsScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Settings',
+                translations.translate('settings_title'),
                 style: theme.textTheme.h3,
               ),
             ),
@@ -93,8 +96,8 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   ListTile(
                     leading: const Icon(LucideIcons.sparkles),
-                    title: const Text('Cosmetics & Rewards'),
-                    subtitle: const Text('View your level and unlock emojis/colors'),
+                    title: Text(translations.translate('cosmetics_title')),
+                    subtitle: Text(translations.translate('cosmetics_subtitle')),
                     trailing: const Icon(LucideIcons.chevronRight),
                     onTap: () {
                       Navigator.of(context).push(
@@ -104,28 +107,72 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(),
                   ListTile(
-                    leading: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive),
-                    title: Text(
-                      'Log Out',
-                      style: TextStyle(color: theme.colorScheme.destructive),
-                    ),
-                    subtitle: const Text('Sign out of your account'),
+                    leading: const Icon(LucideIcons.languages),
+                    title: Text(translations.translate('language_title')),
+                    subtitle: Text(currentLocale == AppLocale.en ? 'English' : 'Tiếng Việt'),
                     trailing: const Icon(LucideIcons.chevronRight),
                     onTap: () {
                       showDialog(
                         context: context,
                         builder: (ctx) => ShadDialog(
-                          title: const Text('Log Out'),
-                          description: const Text('Are you sure you want to log out?'),
+                          title: Text(translations.translate('select_language_title')),
+                          description: Text(translations.translate('select_language_desc')),
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ListTile(
+                                  title: const Text('English'),
+                                  trailing: currentLocale == AppLocale.en
+                                      ? const Icon(LucideIcons.check, color: Colors.green)
+                                      : null,
+                                  onTap: () {
+                                    ref.read(localeProvider.notifier).setLocale(AppLocale.en);
+                                    Navigator.of(ctx).pop();
+                                  },
+                                ),
+                                ListTile(
+                                  title: const Text('Tiếng Việt'),
+                                  trailing: currentLocale == AppLocale.vi
+                                      ? const Icon(LucideIcons.check, color: Colors.green)
+                                      : null,
+                                  onTap: () {
+                                    ref.read(localeProvider.notifier).setLocale(AppLocale.vi);
+                                    Navigator.of(ctx).pop();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive),
+                    title: Text(
+                      translations.translate('logout_title'),
+                      style: TextStyle(color: theme.colorScheme.destructive),
+                    ),
+                    subtitle: Text(translations.translate('logout_subtitle')),
+                    trailing: const Icon(LucideIcons.chevronRight),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => ShadDialog(
+                          title: Text(translations.translate('logout_confirm_title')),
+                          description: Text(translations.translate('logout_confirm_desc')),
                           actions: [
                             ShadButton.outline(
-                              child: const Text('Cancel'),
+                              child: Text(translations.translate('cancel')),
                               onPressed: () => Navigator.of(ctx).pop(),
                             ),
                             ShadButton(
                               backgroundColor: theme.colorScheme.destructive,
                               hoverBackgroundColor: theme.colorScheme.destructive.withOpacity(0.9),
-                              child: const Text('Log Out'),
+                              child: Text(translations.translate('logout_title')),
                               onPressed: () async {
                                 Navigator.of(ctx).pop();
                                 await ref.read(authProvider.notifier).logout();

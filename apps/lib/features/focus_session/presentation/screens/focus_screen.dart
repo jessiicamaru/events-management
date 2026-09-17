@@ -9,6 +9,7 @@ import 'package:habit_tracker/features/focus_session/domain/models/timer_state.d
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_display.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_controls.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class FocusScreen extends ConsumerStatefulWidget {
   final EventModel event;
@@ -61,6 +62,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
     final state = ref.watch(timerProvider);
+    final translations = ref.watch(translationsProvider);
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
@@ -72,12 +74,12 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
             children: [
               // Header
               Text(
-                'Focus Session',
+                translations.translate('focus_session_title'),
                 style: theme.textTheme.h2,
               ),
               const SizedBox(height: 8),
               Text(
-                widget.event.title,
+                translations.translate(widget.event.title),
                 style: theme.textTheme.large.copyWith(color: theme.colorScheme.mutedForeground),
               ),
               const Spacer(),
@@ -139,5 +141,4 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       ),
     );
   }
-
 }

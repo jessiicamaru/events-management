@@ -6,6 +6,7 @@ import '../../../calendar/domain/models/event_model.dart';
 import '../../../calendar/presentation/events_provider.dart';
 import '../../../habits/presentation/habits_provider.dart';
 import '../../../habits/presentation/providers/heatmap_provider.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class PostSessionDialog extends ConsumerStatefulWidget {
   final EventModel event;
@@ -35,6 +36,7 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
 
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
+    final translations = ref.read(translationsProvider);
     
     try {
       final actualDurationStr = _formatTime(widget.actualSeconds);
@@ -58,7 +60,7 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
       if (mounted) {
         setState(() => _isSubmitting = false);
         ShadToaster.of(context).show(
-          ShadToast.destructive(title: const Text('Error'), description: Text(e.toString())),
+          ShadToast.destructive(title: Text(translations.translate('error_title')), description: Text(e.toString())),
         );
       }
     }
@@ -69,10 +71,11 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
     final theme = ShadTheme.of(context);
     final targetMins = widget.targetSeconds ~/ 60;
     final actualMins = widget.actualSeconds ~/ 60;
+    final translations = ref.watch(translationsProvider);
 
     return ShadDialog(
-      title: const Text('Session Complete!'),
-      description: Text('You focused for $actualMins minutes.'),
+      title: Text(translations.translate('session_complete')),
+      description: Text('${translations.translate('focused_minutes')} $actualMins ${translations.translate('minutes_label')}'),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 24.0),
         child: Column(
@@ -83,8 +86,8 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('Target', '$targetMins m', theme),
-                _buildStat('Actual', '$actualMins m', theme),
+                _buildStat(translations.translate('target'), '$targetMins ${translations.translate('min_suffix')}', theme),
+                _buildStat(translations.translate('actual'), '$actualMins ${translations.translate('min_suffix')}', theme),
               ],
             ),
             const SizedBox(height: 24),
@@ -92,14 +95,14 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
             // Options
             if (widget.actualSeconds > widget.targetSeconds) ...[
               Text(
-                'You went overtime! Do you want to update the calendar to reflect your actual time?',
+                translations.translate('overtime_question'),
                 style: theme.textTheme.small,
               ),
               const SizedBox(height: 12),
               ShadSwitch(
                 value: _updateCalendar,
                 onChanged: (val) => setState(() => _updateCalendar = val),
-                label: const Text('Update Calendar'),
+                label: Text(translations.translate('update_calendar')),
               ),
             ],
 
@@ -110,7 +113,7 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
               backgroundColor: Colors.green.shade600,
               child: _isSubmitting 
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Mark as Complete'),
+                : Text(translations.translate('mark_complete')),
             ),
           ],
         ),

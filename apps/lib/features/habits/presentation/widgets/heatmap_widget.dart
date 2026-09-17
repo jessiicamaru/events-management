@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/localization/locale_provider.dart';
 
-class HeatmapWidget extends StatelessWidget {
+class HeatmapWidget extends ConsumerWidget {
   final Map<DateTime, int> data;
   final int daysToShow = 90; // Last 90 days
 
   const HeatmapWidget({super.key, required this.data});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
     final today = DateTime.now();
     final startDate = today.subtract(Duration(days: daysToShow - 1));
 
@@ -40,7 +43,7 @@ class HeatmapWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Activity (Last 90 Days)',
+          translations.translate('activity_heatmap'),
           style: theme.textTheme.h4,
         ),
         const SizedBox(height: 16),
@@ -55,11 +58,11 @@ class HeatmapWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildDayLabel(''),
-                  _buildDayLabel('Mon'),
+                  _buildDayLabel(translations.translate('mon')),
                   _buildDayLabel(''),
-                  _buildDayLabel('Wed'),
+                  _buildDayLabel(translations.translate('wed')),
                   _buildDayLabel(''),
-                  _buildDayLabel('Fri'),
+                  _buildDayLabel(translations.translate('fri')),
                   _buildDayLabel(''),
                 ],
               ),
@@ -100,7 +103,7 @@ class HeatmapWidget extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Text('Less', style: theme.textTheme.small.copyWith(fontSize: 10)),
+            Text(translations.translate('heatmap_less'), style: theme.textTheme.small.copyWith(fontSize: 10)),
             const SizedBox(width: 4),
             _buildLegendBox(_getColor(0, theme)),
             _buildLegendBox(_getColor(1, theme)),
@@ -108,7 +111,7 @@ class HeatmapWidget extends StatelessWidget {
             _buildLegendBox(_getColor(3, theme)),
             _buildLegendBox(_getColor(4, theme)),
             const SizedBox(width: 4),
-            Text('More', style: theme.textTheme.small.copyWith(fontSize: 10)),
+            Text(translations.translate('heatmap_more'), style: theme.textTheme.small.copyWith(fontSize: 10)),
           ],
         )
       ],

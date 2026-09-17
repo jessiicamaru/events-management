@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/localization/locale_provider.dart';
 
-class TimerDisplay extends StatelessWidget {
+class TimerDisplay extends ConsumerWidget {
   final int remaining;
   final bool isPaused;
   final bool isTargetReached;
@@ -22,8 +24,9 @@ class TimerDisplay extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
 
     if (isTargetReached) {
       return Column(
@@ -31,7 +34,7 @@ class TimerDisplay extends StatelessWidget {
           Icon(LucideIcons.partyPopper, size: 64, color: Colors.green.shade400),
           const SizedBox(height: 16),
           Text(
-            'Target Reached!',
+            translations.translate('target_reached'),
             style: theme.textTheme.h2.copyWith(color: Colors.green.shade400),
           ),
         ],
@@ -49,7 +52,7 @@ class TimerDisplay extends StatelessWidget {
               color: Colors.amber.shade600,
             ),
           ),
-          Text('OVERTIME', style: theme.textTheme.small.copyWith(color: Colors.amber.shade600, letterSpacing: 2)),
+          Text(translations.translate('status_overtime'), style: theme.textTheme.small.copyWith(color: Colors.amber.shade600, letterSpacing: 2)),
         ],
       );
     }
@@ -65,7 +68,7 @@ class TimerDisplay extends StatelessWidget {
           ),
         ),
         if (isPaused)
-          Text('PAUSED', style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground, letterSpacing: 2)),
+          Text(translations.translate('status_paused'), style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground, letterSpacing: 2)),
       ],
     );
   }

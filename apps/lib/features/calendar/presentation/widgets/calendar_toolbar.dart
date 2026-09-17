@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../calendar_screen.dart';
 import '../providers/category_filter_provider.dart';
 import 'calendar_settings_sheet.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class CalendarToolbar extends ConsumerWidget {
   final DateTime displayDate;
@@ -28,8 +30,11 @@ class CalendarToolbar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
-    final monthFormat = DateFormat('MMMM yyyy');
-    final shortMonthFormat = DateFormat('MMM');
+    final currentLocale = ref.watch(localeProvider);
+    final translations = ref.watch(translationsProvider);
+    final localeStr = currentLocale == AppLocale.en ? 'en_US' : 'vi';
+    final monthFormat = DateFormat('MMMM yyyy', localeStr);
+    final shortMonthFormat = DateFormat('MMM', localeStr);
     final selectedCategory = ref.watch(categoryFilterProvider);
 
     return Container(
@@ -88,7 +93,7 @@ class CalendarToolbar extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       ShadBadge.secondary(
-                        child: Text('$totalEvents events'),
+                        child: Text('$totalEvents ${translations.translate('events_count')}'),
                       ),
                     ],
                   ),
@@ -158,19 +163,26 @@ class CalendarToolbar extends ConsumerWidget {
               
               // Category Filter Dropdown
               SizedBox(
-                width: 150,
+                width: 180,
                 child: ShadSelect<String>(
                   initialValue: selectedCategory ?? 'All',
-                  placeholder: const Text('All Categories'),
+                  placeholder: Text(translations.translate('all_categories')),
                   onChanged: (value) => ref.read(categoryFilterProvider.notifier).setCategory(value == 'All' ? null : value),
-                  options: const [
-                    ShadOption(value: 'All', child: Text('All Categories')),
-                    ShadOption(value: 'Health', child: Text('Health')),
-                    ShadOption(value: 'Work', child: Text('Work')),
-                    ShadOption(value: 'Learning', child: Text('Learning')),
-                    ShadOption(value: 'Wellness', child: Text('Wellness')),
+                  options: [
+                    ShadOption(value: 'All', child: Text(translations.translate('all_categories'))),
+                    ShadOption(value: 'Health', child: Text(translations.translate('category_health'))),
+                    ShadOption(value: 'Work', child: Text(translations.translate('category_work'))),
+                    ShadOption(value: 'Learning', child: Text(translations.translate('category_learning'))),
+                    ShadOption(value: 'Wellness', child: Text(translations.translate('category_wellness'))),
                   ],
-                  selectedOptionBuilder: (context, value) => Text(value == 'All' ? 'All Categories' : value),
+                  selectedOptionBuilder: (context, value) {
+                    if (value == 'All') return Text(translations.translate('all_categories'));
+                    if (value == 'Health') return Text(translations.translate('category_health'));
+                    if (value == 'Work') return Text(translations.translate('category_work'));
+                    if (value == 'Learning') return Text(translations.translate('category_learning'));
+                    if (value == 'Wellness') return Text(translations.translate('category_wellness'));
+                    return Text(value);
+                  },
                 ),
               ),
             ],
