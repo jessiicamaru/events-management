@@ -17,6 +17,14 @@ _UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const [],
       avatarBorderColor: json['avatarBorderColor'] as String?,
+      displayName: json['displayName'] as String?,
+      bio: json['bio'] as String?,
+      dateOfBirth: json['dateOfBirth'] == null
+          ? null
+          : DateTime.parse(json['dateOfBirth'] as String),
+      gender: json['gender'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
+      avatar: json['avatar'] as String?,
     );
 
 Map<String, dynamic> _$UserProfileModelToJson(_UserProfileModel instance) =>
@@ -26,4 +34,10 @@ Map<String, dynamic> _$UserProfileModelToJson(_UserProfileModel instance) =>
       'totalXP': instance.totalXP,
       'unlockedEmojis': instance.unlockedEmojis,
       'avatarBorderColor': instance.avatarBorderColor,
+      'displayName': instance.displayName,
+      'bio': instance.bio,
+      'dateOfBirth': instance.dateOfBirth?.toIso8601String(),
+      'gender': instance.gender,
+      'phoneNumber': instance.phoneNumber,
+      'avatar': instance.avatar,
     };

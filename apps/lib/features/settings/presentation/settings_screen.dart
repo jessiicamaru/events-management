@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/profile/presentation/screens/cosmetics_screen.dart' as habit_tracker_cosmetics;
-import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/screens/profile_screen.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/features/settings/presentation/appearance_screen.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import '../../../core/localization/locale_provider.dart';
 
@@ -12,9 +14,9 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
-    final appSettings = ref.watch(appSettingsProvider);
     final currentLocale = ref.watch(localeProvider);
     final translations = ref.watch(translationsProvider);
+    final profileAsync = ref.watch(userProfileProvider);
     
     return Scaffold(
       body: SafeArea(
@@ -32,68 +34,59 @@ class SettingsScreen extends ConsumerWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16.0),
                 children: [
-                  // Appearance Section
-                  Text('Appearance', style: theme.textTheme.large),
+                  // Profile / Account Section
+                  Text(translations.translate('profile_title'), style: theme.textTheme.large),
                   const SizedBox(height: 16),
-                  
-                  // Theme Mode
-                  Text('Theme Mode', style: theme.textTheme.small),
-                  const SizedBox(height: 8),
-                  ShadSelect<ThemeMode>(
-                    placeholder: const Text('Select Theme Mode'),
-                    initialValue: appSettings.themeMode,
-                    options: [
-                      ShadOption(value: ThemeMode.system, child: const Text('System')),
-                      ShadOption(value: ThemeMode.light, child: const Text('Light')),
-                      ShadOption(value: ThemeMode.dark, child: const Text('Dark')),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        ref.read(appSettingsProvider.notifier).updateThemeMode(val);
-                      }
-                    },
-                    selectedOptionBuilder: (context, value) => Text(value.name.toUpperCase()),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Color Theme
-                  Text('Primary Color', style: theme.textTheme.small),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 12,
-                    children: AppColorTheme.values.map((colorTheme) {
-                      final isSelected = appSettings.primaryColor == colorTheme;
-                      final colorValue = _getColorValue(colorTheme);
-                      
-                      return GestureDetector(
-                        onTap: () {
-                          ref.read(appSettingsProvider.notifier).updatePrimaryColor(colorTheme);
-                        },
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: colorValue,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? theme.colorScheme.primary : Colors.transparent,
-                              width: 3,
-                            ),
-                          ),
-                          child: isSelected 
-                              ? Icon(LucideIcons.check, color: theme.colorScheme.primaryForeground, size: 20)
-                              : null,
+                  profileAsync.when(
+                    data: (profile) {
+                      final displayName = profile.displayName ?? translations.translate('profile_title');
+                      final email = profile.email;
+                      final avatar = profile.avatar ?? '👤';
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: theme.colorScheme.muted,
+                          child: Text(avatar, style: const TextStyle(fontSize: 20)),
                         ),
+                        title: Text(displayName),
+                        subtitle: Text(email),
+                        trailing: const Icon(LucideIcons.chevronRight),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                          );
+                        },
                       );
-                    }).toList(),
+                    },
+                    loading: () => const ListTile(
+                      title: Text('Loading profile...'),
+                    ),
+                    error: (err, stack) => ListTile(
+                      title: const Text('Profile Error'),
+                      subtitle: Text(err.toString()),
+                    ),
                   ),
-
-                  const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 16),
 
-                  Text('Account', style: theme.textTheme.large),
+                  // App Settings Section
+                  Text(translations.translate('settings_title'), style: theme.textTheme.large),
                   const SizedBox(height: 16),
+                  
+                  // Appearance Settings Page Tile
+                  ListTile(
+                    leading: const Icon(LucideIcons.palette),
+                    title: Text(translations.translate('appearance_title')),
+                    subtitle: Text(translations.translate('appearance_desc')),
+                    trailing: const Icon(LucideIcons.chevronRight),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AppearanceScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(),
+
+                  // Cosmetics Page Tile
                   ListTile(
                     leading: const Icon(LucideIcons.sparkles),
                     title: Text(translations.translate('cosmetics_title')),
@@ -106,6 +99,8 @@ class SettingsScreen extends ConsumerWidget {
                     },
                   ),
                   const Divider(),
+
+                  // Language Dialog Selector
                   ListTile(
                     leading: const Icon(LucideIcons.languages),
                     title: Text(translations.translate('language_title')),
@@ -117,6 +112,12 @@ class SettingsScreen extends ConsumerWidget {
                         builder: (ctx) => ShadDialog(
                           title: Text(translations.translate('select_language_title')),
                           description: Text(translations.translate('select_language_desc')),
+                          actions: [
+                            ShadButton.secondary(
+                              onPressed: () => Navigator.of(ctx).pop(),
+                              child: Text(translations.translate('close')),
+                            ),
+                          ],
                           child: Material(
                             type: MaterialType.transparency,
                             child: Column(
@@ -150,6 +151,8 @@ class SettingsScreen extends ConsumerWidget {
                     },
                   ),
                   const Divider(),
+
+                  // Log Out Tile
                   ListTile(
                     leading: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive),
                     title: Text(
@@ -190,15 +193,5 @@ class SettingsScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Color _getColorValue(AppColorTheme colorTheme) {
-    switch (colorTheme) {
-      case AppColorTheme.zinc: return const Color(0xFF71717A);
-      case AppColorTheme.blue: return const Color(0xFF3B82F6);
-      case AppColorTheme.green: return const Color(0xFF22C55E);
-      case AppColorTheme.rose: return const Color(0xFFF43F5E);
-      case AppColorTheme.orange: return const Color(0xFFF97316);
-    }
   }
 }
