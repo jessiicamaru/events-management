@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/profile/presentation/screens/cosmetics_screen.dart' as habit_tracker_cosmetics;
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -98,6 +99,40 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (context) => const habit_tracker_cosmetics.CosmeticsScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: Icon(LucideIcons.logOut, color: theme.colorScheme.destructive),
+                    title: Text(
+                      'Log Out',
+                      style: TextStyle(color: theme.colorScheme.destructive),
+                    ),
+                    subtitle: const Text('Sign out of your account'),
+                    trailing: const Icon(LucideIcons.chevronRight),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => ShadDialog(
+                          title: const Text('Log Out'),
+                          description: const Text('Are you sure you want to log out?'),
+                          actions: [
+                            ShadButton.outline(
+                              child: const Text('Cancel'),
+                              onPressed: () => Navigator.of(ctx).pop(),
+                            ),
+                            ShadButton(
+                              backgroundColor: theme.colorScheme.destructive,
+                              hoverBackgroundColor: theme.colorScheme.destructive.withOpacity(0.9),
+                              child: const Text('Log Out'),
+                              onPressed: () async {
+                                Navigator.of(ctx).pop();
+                                await ref.read(authProvider.notifier).logout();
+                              },
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),

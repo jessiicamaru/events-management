@@ -79,7 +79,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  ref.listen(authProvider, (_, __) => router.refresh());
+  ref.listen(authProvider, (_, _) => router.refresh());
 
   return router;
 });
