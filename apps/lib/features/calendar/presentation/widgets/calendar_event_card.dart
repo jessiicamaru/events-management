@@ -6,6 +6,7 @@ import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/calendar_event_style.dart';
+import 'package:intl/intl.dart';
 
 Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, CalendarEventStyle style) {
   final event = details.appointments.first as EventModel;

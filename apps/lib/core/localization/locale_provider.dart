@@ -142,8 +142,18 @@ class AppTranslations {
     'no_habits_yet': {AppLocale.en: 'No habits yet. Tap + to add.', AppLocale.vi: 'Chưa có thói quen nào. Nhấn + để thêm.'},
     'add_habit': {AppLocale.en: 'Add Habit', AppLocale.vi: 'Thêm thói quen'},
     'add_habit_desc': {AppLocale.en: 'Enter the details for your new habit.', AppLocale.vi: 'Nhập thông tin chi tiết cho thói quen mới.'},
+    'edit_habit': {AppLocale.en: 'Edit Habit', AppLocale.vi: 'Chỉnh sửa thói quen'},
+    'edit_habit_desc': {AppLocale.en: 'Modify the details of your habit.', AppLocale.vi: 'Thay đổi thông tin chi tiết của thói quen.'},
+    'delete_habit': {AppLocale.en: 'Delete Habit', AppLocale.vi: 'Xóa thói quen'},
+    'delete_habit_confirm': {AppLocale.en: 'Are you sure you want to delete this habit?', AppLocale.vi: 'Bạn có chắc chắn muốn xóa thói quen này không?'},
     'habit_name_placeholder': {AppLocale.en: 'Habit Name', AppLocale.vi: 'Tên thói quen'},
     'add_btn': {AppLocale.en: 'Add', AppLocale.vi: 'Thêm'},
+    'save_btn': {AppLocale.en: 'Save', AppLocale.vi: 'Lưu'},
+    'delete_btn': {AppLocale.en: 'Delete', AppLocale.vi: 'Xóa'},
+    'target_days': {AppLocale.en: 'Target Days', AppLocale.vi: 'Ngày thực hiện'},
+    'habit_name_empty': {AppLocale.en: 'Habit name cannot be empty', AppLocale.vi: 'Tên thói quen không được để trống'},
+    'habit_updated_toast': {AppLocale.en: 'Habit updated successfully', AppLocale.vi: 'Đã cập nhật thói quen thành công'},
+    'habit_deleted_toast': {AppLocale.en: 'Habit deleted successfully', AppLocale.vi: 'Đã xóa thói quen thành công'},
     'error_heatmap': {AppLocale.en: 'Error loading heatmap:', AppLocale.vi: 'Lỗi khi tải heatmap:'},
 
     // Focus Session (Pomodoro)
