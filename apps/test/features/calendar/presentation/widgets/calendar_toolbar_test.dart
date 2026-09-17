@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_toolbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+late SharedPreferences _prefs;
+
 void main() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
+  });
+
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(_prefs),
+      ],
       child: ShadApp(
         home: Scaffold(body: child),
       ),
@@ -19,9 +31,6 @@ void main() {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
 
-      bool todayPressed = false;
-      bool nextPressed = false;
-      bool prevPressed = false;
       AppCalendarView view = AppCalendarView.threeDay;
 
       await tester.pumpWidget(buildTestableWidget(
@@ -29,9 +38,9 @@ void main() {
           displayDate: DateTime(2025, 4, 15),
           currentView: AppCalendarView.threeDay,
           onViewChanged: (v) { view = v; },
-          onTodayPressed: () { todayPressed = true; },
-          onNextPressed: () { nextPressed = true; },
-          onPrevPressed: () { prevPressed = true; },
+          onTodayPressed: () { },
+          onNextPressed: () { },
+          onPrevPressed: () { },
           totalEvents: 5,
         ),
       ));

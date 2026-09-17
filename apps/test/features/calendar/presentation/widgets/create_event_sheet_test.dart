@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
-import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 
@@ -24,12 +25,20 @@ class MockApiService implements ApiService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+late SharedPreferences _prefs;
+
 void main() {
+  setUpAll(() async {
+    SharedPreferences.setMockInitialValues({});
+    _prefs = await SharedPreferences.getInstance();
+  });
+
   late MockApiService mockApiService;
 
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(_prefs),
         apiServiceProvider.overrideWithValue(mockApiService),
       ],
       child: ShadApp(
