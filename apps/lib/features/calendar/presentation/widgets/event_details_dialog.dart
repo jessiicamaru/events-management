@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:intl/intl.dart';
 import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
-import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
 import '../../../../core/localization/locale_provider.dart';
 
 import '../events_provider.dart';
