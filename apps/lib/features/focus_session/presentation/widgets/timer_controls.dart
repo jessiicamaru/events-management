@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../core/localization/locale_provider.dart';
 
-class TimerControls extends StatelessWidget {
+class TimerControls extends ConsumerWidget {
   final bool isRunning;
   final bool isPaused;
   final bool isTargetReached;
@@ -24,7 +26,9 @@ class TimerControls extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final translations = ref.watch(translationsProvider);
+
     if (isTargetReached) {
       return Column(
         children: [
@@ -32,12 +36,12 @@ class TimerControls extends StatelessWidget {
             width: double.infinity,
             backgroundColor: Colors.green.shade600,
             onPressed: onFinish,
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(LucideIcons.check, size: 18),
-                SizedBox(width: 8),
-                Text('Complete Session'),
+                const Icon(LucideIcons.check, size: 18),
+                const SizedBox(width: 8),
+                Text(translations.translate('complete_session')),
               ],
             ),
           ),
@@ -45,12 +49,12 @@ class TimerControls extends StatelessWidget {
           ShadButton.outline(
             width: double.infinity,
             onPressed: onExpandTime,
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(LucideIcons.plus, size: 18),
-                SizedBox(width: 8),
-                Text('Expand Time'),
+                const Icon(LucideIcons.plus, size: 18),
+                const SizedBox(width: 8),
+                Text(translations.translate('expand_time')),
               ],
             ),
           ),
@@ -63,12 +67,12 @@ class TimerControls extends StatelessWidget {
         width: double.infinity,
         backgroundColor: Colors.amber.shade600,
         onPressed: onFinish,
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.check, size: 18),
-            SizedBox(width: 8),
-            Text('Finish Session'),
+            const Icon(LucideIcons.check, size: 18),
+            const SizedBox(width: 8),
+            Text(translations.translate('finish_session')),
           ],
         ),
       );
@@ -81,12 +85,12 @@ class TimerControls extends StatelessWidget {
           Expanded(
             child: ShadButton.outline(
               onPressed: onPause,
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.pause, size: 18),
-                  SizedBox(width: 8),
-                  Text('Pause'),
+                  const Icon(LucideIcons.pause, size: 18),
+                  const SizedBox(width: 8),
+                  Text(translations.translate('pause')),
                 ],
               ),
             ),
@@ -95,12 +99,12 @@ class TimerControls extends StatelessWidget {
           Expanded(
             child: ShadButton(
               onPressed: onResume,
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.play, size: 18),
-                  SizedBox(width: 8),
-                  Text('Resume'),
+                  const Icon(LucideIcons.play, size: 18),
+                  const SizedBox(width: 8),
+                  Text(translations.translate('resume')),
                 ],
               ),
             ),
@@ -109,12 +113,12 @@ class TimerControls extends StatelessWidget {
         Expanded(
           child: ShadButton(
             onPressed: onFinish,
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(LucideIcons.check, size: 18),
-                SizedBox(width: 8),
-                Text('Finish Now'),
+                const Icon(LucideIcons.check, size: 18),
+                const SizedBox(width: 8),
+                Text(translations.translate('finish_now')),
               ],
             ),
           ),

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserProfileModel {
 
- String get id; String get email; int get totalXP; List<String> get unlockedEmojis; String? get avatarBorderColor;
+ String get id; String get email; int get totalXP; List<String> get unlockedEmojis; String? get avatarBorderColor; String? get displayName; String? get bio; DateTime? get dateOfBirth; String? get gender; String? get phoneNumber; String? get avatar;
 /// Create a copy of UserProfileModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $UserProfileModelCopyWith<UserProfileModel> get copyWith => _$UserProfileModelCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfileModel&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.totalXP, totalXP) || other.totalXP == totalXP)&&const DeepCollectionEquality().equals(other.unlockedEmojis, unlockedEmojis)&&(identical(other.avatarBorderColor, avatarBorderColor) || other.avatarBorderColor == avatarBorderColor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserProfileModel&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.totalXP, totalXP) || other.totalXP == totalXP)&&const DeepCollectionEquality().equals(other.unlockedEmojis, unlockedEmojis)&&(identical(other.avatarBorderColor, avatarBorderColor) || other.avatarBorderColor == avatarBorderColor)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.phoneNumber, phoneNumber) || other.phoneNumber == phoneNumber)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,email,totalXP,const DeepCollectionEquality().hash(unlockedEmojis),avatarBorderColor);
+int get hashCode => Object.hash(runtimeType,id,email,totalXP,const DeepCollectionEquality().hash(unlockedEmojis),avatarBorderColor,displayName,bio,dateOfBirth,gender,phoneNumber,avatar);
 
 @override
 String toString() {
-  return 'UserProfileModel(id: $id, email: $email, totalXP: $totalXP, unlockedEmojis: $unlockedEmojis, avatarBorderColor: $avatarBorderColor)';
+  return 'UserProfileModel(id: $id, email: $email, totalXP: $totalXP, unlockedEmojis: $unlockedEmojis, avatarBorderColor: $avatarBorderColor, displayName: $displayName, bio: $bio, dateOfBirth: $dateOfBirth, gender: $gender, phoneNumber: $phoneNumber, avatar: $avatar)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $UserProfileModelCopyWith<$Res>  {
   factory $UserProfileModelCopyWith(UserProfileModel value, $Res Function(UserProfileModel) _then) = _$UserProfileModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String email, int totalXP, List<String> unlockedEmojis, String? avatarBorderColor
+ String id, String email, int totalXP, List<String> unlockedEmojis, String? avatarBorderColor, String? displayName, String? bio, DateTime? dateOfBirth, String? gender, String? phoneNumber, String? avatar
 });
 
 
@@ -65,13 +65,19 @@ class _$UserProfileModelCopyWithImpl<$Res>
 
 /// Create a copy of UserProfileModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? email = null,Object? totalXP = null,Object? unlockedEmojis = null,Object? avatarBorderColor = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? email = null,Object? totalXP = null,Object? unlockedEmojis = null,Object? avatarBorderColor = freezed,Object? displayName = freezed,Object? bio = freezed,Object? dateOfBirth = freezed,Object? gender = freezed,Object? phoneNumber = freezed,Object? avatar = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,totalXP: null == totalXP ? _self.totalXP : totalXP // ignore: cast_nullable_to_non_nullable
 as int,unlockedEmojis: null == unlockedEmojis ? _self.unlockedEmojis : unlockedEmojis // ignore: cast_nullable_to_non_nullable
 as List<String>,avatarBorderColor: freezed == avatarBorderColor ? _self.avatarBorderColor : avatarBorderColor // ignore: cast_nullable_to_non_nullable
+as String?,displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
+as String?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as DateTime?,gender: freezed == gender ? _self.gender : gender // ignore: cast_nullable_to_non_nullable
+as String?,phoneNumber: freezed == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
+as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -157,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor,  String? displayName,  String? bio,  DateTime? dateOfBirth,  String? gender,  String? phoneNumber,  String? avatar)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserProfileModel() when $default != null:
-return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor);case _:
+return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor,_that.displayName,_that.bio,_that.dateOfBirth,_that.gender,_that.phoneNumber,_that.avatar);case _:
   return orElse();
 
 }
@@ -178,10 +184,10 @@ return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor,  String? displayName,  String? bio,  DateTime? dateOfBirth,  String? gender,  String? phoneNumber,  String? avatar)  $default,) {final _that = this;
 switch (_that) {
 case _UserProfileModel():
-return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor);case _:
+return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor,_that.displayName,_that.bio,_that.dateOfBirth,_that.gender,_that.phoneNumber,_that.avatar);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +204,10 @@ return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String email,  int totalXP,  List<String> unlockedEmojis,  String? avatarBorderColor,  String? displayName,  String? bio,  DateTime? dateOfBirth,  String? gender,  String? phoneNumber,  String? avatar)?  $default,) {final _that = this;
 switch (_that) {
 case _UserProfileModel() when $default != null:
-return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor);case _:
+return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.avatarBorderColor,_that.displayName,_that.bio,_that.dateOfBirth,_that.gender,_that.phoneNumber,_that.avatar);case _:
   return null;
 
 }
@@ -213,7 +219,7 @@ return $default(_that.id,_that.email,_that.totalXP,_that.unlockedEmojis,_that.av
 @JsonSerializable()
 
 class _UserProfileModel implements UserProfileModel {
-  const _UserProfileModel({required this.id, required this.email, required this.totalXP, final  List<String> unlockedEmojis = const [], this.avatarBorderColor}): _unlockedEmojis = unlockedEmojis;
+  const _UserProfileModel({required this.id, required this.email, required this.totalXP, final  List<String> unlockedEmojis = const [], this.avatarBorderColor, this.displayName, this.bio, this.dateOfBirth, this.gender, this.phoneNumber, this.avatar}): _unlockedEmojis = unlockedEmojis;
   factory _UserProfileModel.fromJson(Map<String, dynamic> json) => _$UserProfileModelFromJson(json);
 
 @override final  String id;
@@ -227,6 +233,12 @@ class _UserProfileModel implements UserProfileModel {
 }
 
 @override final  String? avatarBorderColor;
+@override final  String? displayName;
+@override final  String? bio;
+@override final  DateTime? dateOfBirth;
+@override final  String? gender;
+@override final  String? phoneNumber;
+@override final  String? avatar;
 
 /// Create a copy of UserProfileModel
 /// with the given fields replaced by the non-null parameter values.
@@ -241,16 +253,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfileModel&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.totalXP, totalXP) || other.totalXP == totalXP)&&const DeepCollectionEquality().equals(other._unlockedEmojis, _unlockedEmojis)&&(identical(other.avatarBorderColor, avatarBorderColor) || other.avatarBorderColor == avatarBorderColor));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserProfileModel&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.totalXP, totalXP) || other.totalXP == totalXP)&&const DeepCollectionEquality().equals(other._unlockedEmojis, _unlockedEmojis)&&(identical(other.avatarBorderColor, avatarBorderColor) || other.avatarBorderColor == avatarBorderColor)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.dateOfBirth, dateOfBirth) || other.dateOfBirth == dateOfBirth)&&(identical(other.gender, gender) || other.gender == gender)&&(identical(other.phoneNumber, phoneNumber) || other.phoneNumber == phoneNumber)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,email,totalXP,const DeepCollectionEquality().hash(_unlockedEmojis),avatarBorderColor);
+int get hashCode => Object.hash(runtimeType,id,email,totalXP,const DeepCollectionEquality().hash(_unlockedEmojis),avatarBorderColor,displayName,bio,dateOfBirth,gender,phoneNumber,avatar);
 
 @override
 String toString() {
-  return 'UserProfileModel(id: $id, email: $email, totalXP: $totalXP, unlockedEmojis: $unlockedEmojis, avatarBorderColor: $avatarBorderColor)';
+  return 'UserProfileModel(id: $id, email: $email, totalXP: $totalXP, unlockedEmojis: $unlockedEmojis, avatarBorderColor: $avatarBorderColor, displayName: $displayName, bio: $bio, dateOfBirth: $dateOfBirth, gender: $gender, phoneNumber: $phoneNumber, avatar: $avatar)';
 }
 
 
@@ -261,7 +273,7 @@ abstract mixin class _$UserProfileModelCopyWith<$Res> implements $UserProfileMod
   factory _$UserProfileModelCopyWith(_UserProfileModel value, $Res Function(_UserProfileModel) _then) = __$UserProfileModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String email, int totalXP, List<String> unlockedEmojis, String? avatarBorderColor
+ String id, String email, int totalXP, List<String> unlockedEmojis, String? avatarBorderColor, String? displayName, String? bio, DateTime? dateOfBirth, String? gender, String? phoneNumber, String? avatar
 });
 
 
@@ -278,13 +290,19 @@ class __$UserProfileModelCopyWithImpl<$Res>
 
 /// Create a copy of UserProfileModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? email = null,Object? totalXP = null,Object? unlockedEmojis = null,Object? avatarBorderColor = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? email = null,Object? totalXP = null,Object? unlockedEmojis = null,Object? avatarBorderColor = freezed,Object? displayName = freezed,Object? bio = freezed,Object? dateOfBirth = freezed,Object? gender = freezed,Object? phoneNumber = freezed,Object? avatar = freezed,}) {
   return _then(_UserProfileModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,totalXP: null == totalXP ? _self.totalXP : totalXP // ignore: cast_nullable_to_non_nullable
 as int,unlockedEmojis: null == unlockedEmojis ? _self._unlockedEmojis : unlockedEmojis // ignore: cast_nullable_to_non_nullable
 as List<String>,avatarBorderColor: freezed == avatarBorderColor ? _self.avatarBorderColor : avatarBorderColor // ignore: cast_nullable_to_non_nullable
+as String?,displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String?,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
+as String?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as DateTime?,gender: freezed == gender ? _self.gender : gender // ignore: cast_nullable_to_non_nullable
+as String?,phoneNumber: freezed == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
+as String?,avatar: freezed == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../providers/user_profile_provider.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class CosmeticsScreen extends ConsumerWidget {
   const CosmeticsScreen({super.key});
@@ -10,10 +11,11 @@ class CosmeticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final userProfile = ref.watch(userProfileProvider);
+    final translations = ref.watch(translationsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cosmetics & Rewards'),
+        title: Text(translations.translate('cosmetics_title')),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -25,17 +27,17 @@ class CosmeticsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildProfileCard(theme, profile.email, level, profile.totalXP),
+                _buildProfileCard(theme, profile.email, level, profile.totalXP, translations),
                 const SizedBox(height: 32),
-                Text('Emojis', style: theme.textTheme.h4),
+                Text(translations.translate('cosmetics_emojis_title'), style: theme.textTheme.h4),
                 const SizedBox(height: 8),
-                Text('React to squad activities with these emojis.', style: theme.textTheme.muted),
+                Text(translations.translate('cosmetics_emojis_desc'), style: theme.textTheme.muted),
                 const SizedBox(height: 16),
                 _buildEmojiGrid(context, ref, theme, profile.unlockedEmojis, profile.totalXP),
                 const SizedBox(height: 32),
-                Text('Heatmap Colors', style: theme.textTheme.h4),
+                Text(translations.translate('cosmetics_heatmap_colors_title'), style: theme.textTheme.h4),
                 const SizedBox(height: 8),
-                Text('Change your activity heatmap color.', style: theme.textTheme.muted),
+                Text(translations.translate('cosmetics_heatmap_colors_desc'), style: theme.textTheme.muted),
                 const SizedBox(height: 16),
                 _buildColorGrid(context, ref, theme, profile.avatarBorderColor, profile.totalXP),
               ],
@@ -43,12 +45,12 @@ class CosmeticsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(child: Text('${translations.translate('error_heatmap')} $err')),
       ),
     );
   }
 
-  Widget _buildProfileCard(ShadThemeData theme, String email, int level, int xp) {
+  Widget _buildProfileCard(ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
     final progress = (xp % 1000) / 1000.0;
     return Container(
       padding: const EdgeInsets.all(24),
@@ -70,7 +72,7 @@ class CosmeticsScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Level $level', style: theme.textTheme.small),
+              Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
               Text('${xp % 1000} / 1000 XP', style: theme.textTheme.small),
             ],
           ),

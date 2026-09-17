@@ -1,24 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_toolbar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-late SharedPreferences _prefs;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 
 void main() {
-  setUpAll(() async {
-    SharedPreferences.setMockInitialValues({});
-    _prefs = await SharedPreferences.getInstance();
-  });
-
-  Widget buildTestableWidget(Widget child) {
+  Widget buildTestableWidget(Widget child, SharedPreferences prefs) {
     return ProviderScope(
       overrides: [
-        sharedPreferencesProvider.overrideWithValue(_prefs),
+        sharedPreferencesProvider.overrideWithValue(prefs),
       ],
       child: ShadApp(
         home: Scaffold(body: child),
@@ -30,6 +23,9 @@ void main() {
     testWidgets('renders all components correctly', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
+
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
 
       AppCalendarView view = AppCalendarView.threeDay;
 
@@ -43,6 +39,7 @@ void main() {
           onPrevPressed: () { },
           totalEvents: 5,
         ),
+        prefs,
       ));
 
       // Check Date Block text

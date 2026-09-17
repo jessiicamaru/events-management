@@ -7,6 +7,8 @@ import 'package:habit_tracker/features/habits/presentation/habits_provider.dart'
 class MockApiService implements ApiService {
   List<HabitModel> habitsToReturn = [];
   bool syncHabitCalled = false;
+  bool updateHabitCalled = false;
+  bool deleteHabitCalled = false;
 
   @override
   Future<List<HabitModel>> fetchHabits() async => habitsToReturn;
@@ -14,6 +16,16 @@ class MockApiService implements ApiService {
   @override
   Future<void> syncHabit(HabitModel habit) async {
     syncHabitCalled = true;
+  }
+
+  @override
+  Future<void> updateHabit(HabitModel habit) async {
+    updateHabitCalled = true;
+  }
+
+  @override
+  Future<void> deleteHabit(String id) async {
+    deleteHabitCalled = true;
   }
 
   @override
@@ -58,5 +70,29 @@ void main() {
 
     // Verify it called API
     expect(mockApiService.syncHabitCalled, true);
+  });
+
+  test('HabitsNotifier edits habit optimistically and calls api', () async {
+    final mockHabits = [const HabitModel(id: '1', name: 'Test Habit', targetDays: [1, 2])];
+    mockApiService.habitsToReturn = mockHabits;
+
+    await container.read(habitsProvider.future);
+
+    final updatedHabit = const HabitModel(id: '1', name: 'Updated Habit', targetDays: [1, 2, 3]);
+
+    await container.read(habitsProvider.notifier).editHabit(updatedHabit);
+
+    expect(mockApiService.updateHabitCalled, true);
+  });
+
+  test('HabitsNotifier deletes habit optimistically and calls api', () async {
+    final mockHabits = [const HabitModel(id: '1', name: 'Test Habit', targetDays: [1, 2])];
+    mockApiService.habitsToReturn = mockHabits;
+
+    await container.read(habitsProvider.future);
+
+    await container.read(habitsProvider.notifier).deleteHabit('1');
+
+    expect(mockApiService.deleteHabitCalled, true);
   });
 }
