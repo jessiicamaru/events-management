@@ -221,7 +221,6 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     ],
                   ),
                 ),
-                ),
               ],
             ),
           ),
@@ -277,7 +276,6 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                         return Text(value);
                       },
                     ),
-                  ),
                   ),
                   const SizedBox(height: 16),
 
