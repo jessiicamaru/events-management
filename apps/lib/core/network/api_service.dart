@@ -51,6 +51,22 @@ class ApiService {
     }
   }
 
+  Future<void> updateHabit(HabitModel habit) async {
+    try {
+      await _dio.put('/habits/${habit.id}', data: habit.toJson());
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteHabit(String id) async {
+    try {
+      await _dio.delete('/habits/$id');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<List<HabitModel>> fetchHabits() async {
     final response = await _dio.get('/habits');
     final data = response.data as List;
