@@ -89,9 +89,11 @@ class EventDetailsDialog extends ConsumerWidget {
                   Expanded(
                     child: ShadButton.outline(
                       onPressed: () {
-                        Navigator.of(context).pop();
+                        final habitsAsyncValue = ref.read(habitsProvider);
+                        final nav = Navigator.of(context);
+                        nav.pop();
                         showModalBottomSheet(
-                          context: context,
+                          context: nav.context,
                           backgroundColor: Colors.transparent,
                           isScrollControlled: true,
                           builder: (bottomSheetContext) => Padding(
@@ -99,7 +101,7 @@ class EventDetailsDialog extends ConsumerWidget {
                               bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
                             ),
                             child: CreateEventSheet(
-                              habitsAsync: ref.watch(habitsProvider),
+                              habitsAsync: habitsAsyncValue,
                               eventToEdit: event,
                               initialHabit: habit,
                             ),

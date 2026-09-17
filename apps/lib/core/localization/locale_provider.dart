@@ -100,6 +100,7 @@ class AppTranslations {
 
     // Create Event Sheet
     'schedule_event': {AppLocale.en: 'Schedule Event', AppLocale.vi: 'Lên lịch sự kiện'},
+    'update_event': {AppLocale.en: 'Update Event', AppLocale.vi: 'Cập nhật sự kiện'},
     'title': {AppLocale.en: 'Title', AppLocale.vi: 'Tiêu đề'},
     'event_title_placeholder': {AppLocale.en: 'Event title', AppLocale.vi: 'Tiêu đề sự kiện'},
     'category': {AppLocale.en: 'Category', AppLocale.vi: 'Danh mục'},
@@ -109,8 +110,10 @@ class AppTranslations {
     'target_duration': {AppLocale.en: 'Target Duration (mins)', AppLocale.vi: 'Thời lượng mục tiêu (phút)'},
     'duration_placeholder': {AppLocale.en: 'e.g. 45', AppLocale.vi: 'Ví dụ: 45'},
     'create_event_btn': {AppLocale.en: 'Create Event', AppLocale.vi: 'Tạo sự kiện'},
+    'update_event_btn': {AppLocale.en: 'Update', AppLocale.vi: 'Cập nhật'},
     'title_required_toast': {AppLocale.en: 'Title is required', AppLocale.vi: 'Tiêu đề không được để trống'},
     'event_created_toast': {AppLocale.en: 'Event Created', AppLocale.vi: 'Đã tạo sự kiện'},
+    'event_updated_toast': {AppLocale.en: 'Event Updated', AppLocale.vi: 'Đã cập nhật sự kiện'},
     'scheduled_event_toast': {AppLocale.en: 'Scheduled', AppLocale.vi: 'Đã lên lịch'},
 
     // Calendar Settings
@@ -128,6 +131,11 @@ class AppTranslations {
     'mark_pending': {AppLocale.en: 'Mark as Pending', AppLocale.vi: 'Đánh dấu chưa hoàn thành'},
     'start_focus': {AppLocale.en: 'Start Focus Session', AppLocale.vi: 'Bắt đầu tập trung'},
     'close': {AppLocale.en: 'Close', AppLocale.vi: 'Đóng'},
+    'edit': {AppLocale.en: 'Edit', AppLocale.vi: 'Sửa'},
+    'delete': {AppLocale.en: 'Delete', AppLocale.vi: 'Xoá'},
+    'delete_event_confirm_title': {AppLocale.en: 'Delete Event', AppLocale.vi: 'Xoá sự kiện'},
+    'delete_event_confirm_desc': {AppLocale.en: 'Are you sure you want to delete this event?', AppLocale.vi: 'Bạn có chắc chắn muốn xoá sự kiện này không?'},
+    'event_deleted_toast': {AppLocale.en: 'Event deleted', AppLocale.vi: 'Đã xoá sự kiện'},
 
     // Unscheduled Habits Panel
     'unscheduled_habits': {AppLocale.en: 'Unscheduled Habits', AppLocale.vi: 'Thói quen chưa lên lịch'},
