@@ -4,11 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
-import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/settings/presentation/settings_screen.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 
 class FakeAuthNotifier extends Auth {
   bool logoutCalled = false;
@@ -25,37 +23,8 @@ class FakeAuthNotifier extends Auth {
   }
 }
 
-class MockApiService implements ApiService {
-  @override
-  Future<UserProfileModel> fetchMe() async {
-    return const UserProfileModel(
-      id: 'user-123',
-      email: 'test@example.com',
-      totalXP: 100,
-      displayName: 'Test User',
-      avatar: '🐱',
-    );
-  }
-
-  @override
-  Future<void> updateProfile({
-    String? displayName,
-    String? bio,
-    DateTime? dateOfBirth,
-    String? gender,
-    String? phoneNumber,
-    String? avatar,
-  }) async {}
-
-  @override
-  Future<void> changePassword(String currentPassword, String newPassword) async {}
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
 void main() {
-  testWidgets('SettingsScreen, AppearanceScreen, and ProfileScreen render and function correctly', (WidgetTester tester) async {
+  testWidgets('SettingsScreen renders ThemeMode, Color options and triggers logout', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({
       'settings_theme_mode': ThemeMode.light.index,
       'settings_primary_color': AppColorTheme.zinc.index,
@@ -63,14 +32,12 @@ void main() {
     final prefs = await SharedPreferences.getInstance();
     
     final fakeAuth = FakeAuthNotifier();
-    final mockApi = MockApiService();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(prefs),
           authProvider.overrideWith(() => fakeAuth),
-          apiServiceProvider.overrideWithValue(mockApi),
         ],
         child: const ShadApp(
           home: SettingsScreen(),
@@ -80,67 +47,54 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    // Verify profile section displays user details
-    expect(find.text('Test User'), findsOneWidget);
-    expect(find.text('test@example.com'), findsOneWidget);
-
-    // Tap on Profile tile to navigate to ProfileScreen
-    await tester.tap(find.text('Test User'));
-    await tester.pumpAndSettle();
-
-    // Verify ProfileScreen components
-    expect(find.text('Display Name'), findsWidgets);
-    expect(find.text('Bio'), findsWidgets);
-    expect(find.text('Date of Birth'), findsWidgets);
-    expect(find.text('Gender'), findsWidgets);
-    expect(find.text('Phone Number'), findsWidgets);
-    expect(find.text('Change Password'), findsWidgets);
-
-    // Pop back to SettingsScreen
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-
-    // Verify Settings page has Appearance tile
+    // Verify Appearance Section exists
     expect(find.text('Appearance'), findsOneWidget);
-
-    // Tap on Appearance tile to navigate to AppearanceScreen
-    await tester.tap(find.text('Appearance'));
-    await tester.pumpAndSettle();
-
-    // Verify Theme and Color options exist on AppearanceScreen
     expect(find.text('Theme Mode'), findsOneWidget);
     expect(find.text('Primary Color'), findsOneWidget);
+    
+    // Verify Theme options are rendered (ShadSelect shows the selected value 'LIGHT')
     expect(find.text('LIGHT'), findsOneWidget);
 
-    // Pop back to SettingsScreen
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    // Verify tapping on another color doesn't crash
+    expect(find.byType(GestureDetector), findsWidgets);
 
-    // Verify language change dialog
+    // Verify title and tiles are present
+    expect(find.text('Cosmetics & Rewards'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
+    expect(find.text('Log Out'), findsOneWidget);
+
+    // Tap on Language tile to open language selector
     await tester.tap(find.text('Language'));
     await tester.pumpAndSettle();
 
+    // Verify select language dialog appears
     expect(find.text('Select Language'), findsOneWidget);
     expect(find.text('Tiếng Việt'), findsOneWidget);
 
-    // Tap Tiếng Việt
+    // Tap on Tiếng Việt
     await tester.tap(find.text('Tiếng Việt'));
     await tester.pumpAndSettle();
 
-    // Verify translation works
-    expect(find.text('Cài đặt'), findsWidgets); // Settings -> Cài đặt
+    // Verify UI dynamically updated to Vietnamese
+    expect(find.text('Cài đặt'), findsOneWidget); // Settings -> Cài đặt
+    expect(find.text('Trang phục & Phần thưởng'), findsOneWidget); // Cosmetics & Rewards -> Trang phục & Phần thưởng
     expect(find.text('Đăng xuất'), findsOneWidget); // Log Out -> Đăng xuất
 
-    // Tap Log Out (Đăng xuất)
+    // Tap on Log Out tile (now 'Đăng xuất')
     await tester.tap(find.text('Đăng xuất'));
     await tester.pumpAndSettle();
 
-    // Tap final destructive logout button inside confirmation dialog
+    // Verify dialog appears in Vietnamese
+    expect(find.text('Bạn có chắc chắn muốn đăng xuất không?'), findsOneWidget);
+
+    // Tap destructive Log Out button (now 'Đăng xuất') inside dialog
     final logOutButton = find.widgetWithText(ShadButton, 'Đăng xuất');
     expect(logOutButton, findsOneWidget);
+
     await tester.tap(logOutButton);
     await tester.pumpAndSettle();
 
+    // Verify logout logic was invoked
     expect(fakeAuth.logoutCalled, isTrue);
   });
 }

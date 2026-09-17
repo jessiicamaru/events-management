@@ -31,14 +31,8 @@ namespace Infrastructure.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Avatar")
-                        .HasColumnType("text");
-
                     b.Property<string>("AvatarBorderColor")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Bio")
                         .HasColumnType("text");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -48,21 +42,12 @@ namespace Infrastructure.Migrations
                     b.Property<int>("CurrentLevel")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DisplayName")
-                        .HasColumnType("text");
-
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("text");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");

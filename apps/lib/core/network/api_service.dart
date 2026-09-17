@@ -51,22 +51,6 @@ class ApiService {
     }
   }
 
-  Future<void> updateHabit(HabitModel habit) async {
-    try {
-      await _dio.put('/habits/${habit.id}', data: habit.toJson());
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<void> deleteHabit(String id) async {
-    try {
-      await _dio.delete('/habits/$id');
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   Future<List<HabitModel>> fetchHabits() async {
     final response = await _dio.get('/habits');
     final data = response.data as List;
@@ -91,6 +75,18 @@ class ApiService {
     await _dio.put(
       '/events/$id/toggle',
       data: {'isCompleted': isCompleted},
+      options: Options(contentType: 'application/json'),
+    );
+  }
+
+  Future<void> deleteEvent(String id) async {
+    await _dio.delete('/events/$id');
+  }
+
+  Future<void> updateEvent(String id, Map<String, dynamic> data) async {
+    await _dio.put(
+      '/events/$id',
+      data: data,
       options: Options(contentType: 'application/json'),
     );
   }
@@ -140,31 +136,5 @@ class ApiService {
     if (avatarBorderColor != null) data['avatarBorderColor'] = avatarBorderColor;
     
     await _dio.put('/users/me/cosmetics', data: data);
-  }
-
-  Future<void> updateProfile({
-    String? displayName,
-    String? bio,
-    DateTime? dateOfBirth,
-    String? gender,
-    String? phoneNumber,
-    String? avatar,
-  }) async {
-    final data = <String, dynamic>{};
-    if (displayName != null) data['displayName'] = displayName;
-    if (bio != null) data['bio'] = bio;
-    if (dateOfBirth != null) data['dateOfBirth'] = dateOfBirth.toUtc().toIso8601String();
-    if (gender != null) data['gender'] = gender;
-    if (phoneNumber != null) data['phoneNumber'] = phoneNumber;
-    if (avatar != null) data['avatar'] = avatar;
-    
-    await _dio.put('/users/me', data: data);
-  }
-
-  Future<void> changePassword(String currentPassword, String newPassword) async {
-    await _dio.post('/users/me/change-password', data: {
-      'currentPassword': currentPassword,
-      'newPassword': newPassword,
-    });
   }
 }

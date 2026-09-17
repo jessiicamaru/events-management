@@ -160,9 +160,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             if (_calendarKey.currentContext != null) {
                               final box = _calendarKey.currentContext!.findRenderObject() as RenderBox;
                               final localOffset = box.globalToLocal(details.offset);
-                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(localOffset);
+                              final centerOffset = localOffset + const Offset(70, 35); // Center of the dragged item
+                              final tapDetails = _calendarController.getCalendarDetailsAtOffset?.call(centerOffset);
+                              print('DEBUG DROP: globalOffset=${details.offset}, localOffset=$localOffset, centerOffset=$centerOffset, tapDetails=$tapDetails, date=${tapDetails?.date}');
                               if (tapDetails != null && tapDetails.date != null) {
                                 initialDate = tapDetails.date!;
+                              } else {
+                                if (context.mounted) {
+                                  ShadToaster.of(context).show(
+                                    ShadToast.destructive(
+                                      title: const Text('Debug'),
+                                      description: Text('Offset: $centerOffset -> NULL'),
+                                    ),
+                                  );
+                                }
                               }
                             }
                             

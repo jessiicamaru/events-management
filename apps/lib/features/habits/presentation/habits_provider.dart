@@ -30,40 +30,4 @@ class HabitsNotifier extends _$HabitsNotifier {
       rethrow;
     }
   }
-
-  Future<void> editHabit(HabitModel habit) async {
-    final apiService = ref.read(apiServiceProvider);
-    
-    // Optimistic update
-    final previousState = state;
-    if (state.hasValue) {
-      state = AsyncData(state.value!.map((h) => h.id == habit.id ? habit : h).toList());
-    }
-
-    try {
-      await apiService.updateHabit(habit);
-      ref.invalidateSelf();
-    } catch (e) {
-      state = previousState;
-      rethrow;
-    }
-  }
-
-  Future<void> deleteHabit(String habitId) async {
-    final apiService = ref.read(apiServiceProvider);
-    
-    // Optimistic update
-    final previousState = state;
-    if (state.hasValue) {
-      state = AsyncData(state.value!.where((h) => h.id != habitId).toList());
-    }
-
-    try {
-      await apiService.deleteHabit(habitId);
-      ref.invalidateSelf();
-    } catch (e) {
-      state = previousState;
-      rethrow;
-    }
-  }
 }

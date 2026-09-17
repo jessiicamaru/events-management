@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/utils/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../settings/presentation/providers/app_settings_provider.dart';
 import '../../../habits/domain/models/habit_model.dart';
@@ -13,12 +15,14 @@ class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
   final DateTime? initialDate;
   final HabitModel? initialHabit;
+  final EventModel? eventToEdit;
 
   const CreateEventSheet({
     super.key,
     required this.habitsAsync,
     this.initialDate,
     this.initialHabit,
+    this.eventToEdit,
   });
 
   @override
@@ -40,7 +44,18 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialDate != null) {
+    if (widget.eventToEdit != null) {
+      final evt = widget.eventToEdit!;
+      _titleController.text = evt.title;
+      _startDate = evt.startTime.toLocal();
+      _startTime = TimeOfDay.fromDateTime(evt.startTime.toLocal());
+      _endTime = TimeOfDay.fromDateTime(evt.endTime.toLocal());
+      if (evt.targetDuration != null) {
+        _targetDurationController.text = evt.targetDuration.toString();
+      } else {
+        _updateTargetDuration();
+      }
+    } else if (widget.initialDate != null) {
       _startDate = widget.initialDate!;
       _startTime = TimeOfDay.fromDateTime(widget.initialDate!);
       
@@ -51,7 +66,9 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     }
     if (widget.initialHabit != null) {
       _selectedHabit = widget.initialHabit;
-      _titleController.text = widget.initialHabit!.name;
+      if (widget.eventToEdit == null) {
+        _titleController.text = widget.initialHabit!.name;
+      }
       _selectedCategory = widget.initialHabit!.category;
     }
   }
@@ -134,22 +151,30 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     );
 
     final event = EventModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.eventToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: title,
       habitId: _selectedHabit?.id ?? '',
       startTime: start,
       endTime: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
       targetDuration: int.tryParse(_targetDurationController.text),
+      isCompleted: widget.eventToEdit?.isCompleted ?? false,
+      actualDuration: widget.eventToEdit?.actualDuration,
+      createdAt: widget.eventToEdit?.createdAt,
+      userId: widget.eventToEdit?.userId,
     );
 
     try {
-      await ref.read(eventsProvider.notifier).addEvent(event);
+      if (widget.eventToEdit != null) {
+        await ref.read(eventsProvider.notifier).updateEvent(event);
+      } else {
+        await ref.read(eventsProvider.notifier).addEvent(event);
+      }
 
       if (mounted) {
         Navigator.of(context).pop();
         ShadToaster.of(context).show(
           ShadToast(
-            title: Text(translations.translate('event_created_toast')),
+            title: Text(widget.eventToEdit != null ? translations.translate('event_updated_toast') : translations.translate('event_created_toast')),
             description: Text('${translations.translate('scheduled_event_toast')} "$title" at ${_startTime.format(context)}'),
           ),
         );
@@ -207,7 +232,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                   child: Row(
                     children: [
                       Text(
-                        translations.translate('schedule_event'), 
+                        widget.eventToEdit != null ? translations.translate('update_event') : translations.translate('schedule_event'), 
                         style: theme.textTheme.h4.copyWith(color: Colors.white)
                       ),
                       const Spacer(),
@@ -348,7 +373,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     onPressed: _isSubmitting ? null : _submit,
                     child: _isSubmitting
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(translations.translate('create_event_btn')),
+                        : Text(widget.eventToEdit != null ? translations.translate('update_event_btn') : translations.translate('create_event_btn')),
                   ),
                   const SizedBox(height: 8),
                 ],

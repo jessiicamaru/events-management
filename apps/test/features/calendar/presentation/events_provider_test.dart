@@ -16,6 +16,18 @@ class MockApiService implements ApiService {
     syncEventCalled = true;
   }
 
+  bool updateEventCalled = false;
+  @override
+  Future<void> updateEvent(String id, Map<String, dynamic> data) async {
+    updateEventCalled = true;
+  }
+
+  bool deleteEventCalled = false;
+  @override
+  Future<void> deleteEvent(String id) async {
+    deleteEventCalled = true;
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -72,5 +84,49 @@ void main() {
 
     // Verify it called API
     expect(mockApiService.syncEventCalled, true);
+  });
+
+  test('EventsNotifier updates event optimistically and calls api', () async {
+    final mockEvents = <EventModel>[
+      EventModel(
+        id: '1',
+        title: 'Event 1',
+        habitId: 'habit_1',
+        startTime: DateTime(2023, 1, 2, 10),
+        endTime: DateTime(2023, 1, 2, 11),
+      )
+    ];
+    mockApiService.eventsToReturn = mockEvents;
+
+    await container.read(eventsProvider.future);
+
+    final updatedEvent = mockEvents[0].copyWith(title: 'Updated Event');
+
+    await container.read(eventsProvider.notifier).updateEvent(updatedEvent);
+
+    final events = container.read(eventsProvider).value;
+    expect(events?.first.title, 'Updated Event');
+    expect(mockApiService.updateEventCalled, true);
+  });
+
+  test('EventsNotifier deletes event optimistically and calls api', () async {
+    final mockEvents = <EventModel>[
+      EventModel(
+        id: '1',
+        title: 'Event 1',
+        habitId: 'habit_1',
+        startTime: DateTime(2023, 1, 2, 10),
+        endTime: DateTime(2023, 1, 2, 11),
+      )
+    ];
+    mockApiService.eventsToReturn = mockEvents;
+
+    await container.read(eventsProvider.future);
+
+    await container.read(eventsProvider.notifier).deleteEvent('1');
+
+    final events = container.read(eventsProvider).value;
+    expect(events?.isEmpty, true);
+    expect(mockApiService.deleteEventCalled, true);
   });
 }

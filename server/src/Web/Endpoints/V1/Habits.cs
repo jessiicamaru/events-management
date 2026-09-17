@@ -20,8 +20,6 @@ public class Habits : EndpointGroupBase
         groupBuilder.RequireAuthorization();
         groupBuilder.MapGet("", GetHabits);
         groupBuilder.MapPost("", CreateHabit);
-        groupBuilder.MapPut("{id:guid}", UpdateHabit);
-        groupBuilder.MapDelete("{id:guid}", DeleteHabit);
     }
 
     public async Task<Results<Ok<IEnumerable<Habit>>, UnauthorizedHttpResult>> GetHabits(ISender sender, ClaimsPrincipal user)
@@ -41,29 +39,5 @@ public class Habits : EndpointGroupBase
         command.UserId = userId;
         var id = await sender.Send(command);
         return TypedResults.Created($"/api/v1/habits/{id}", id);
-    }
-
-    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> UpdateHabit(Guid id, ISender sender, UpdateHabitCommand command, ClaimsPrincipal user)
-    {
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return TypedResults.Unauthorized();
-
-        command.Id = id;
-        command.UserId = userId;
-        var success = await sender.Send(command);
-        if (!success) return TypedResults.NotFound();
-
-        return TypedResults.Ok();
-    }
-
-    public async Task<Results<NoContent, NotFound, UnauthorizedHttpResult>> DeleteHabit(Guid id, ISender sender, ClaimsPrincipal user)
-    {
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null) return TypedResults.Unauthorized();
-
-        var success = await sender.Send(new DeleteHabitCommand { Id = id, UserId = userId });
-        if (!success) return TypedResults.NotFound();
-
-        return TypedResults.NoContent();
     }
 }

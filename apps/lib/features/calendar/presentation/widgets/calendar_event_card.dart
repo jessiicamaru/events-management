@@ -6,6 +6,7 @@ import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../domain/models/calendar_event_style.dart';
+import 'package:intl/intl.dart';
 
 Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, CalendarEventStyle style) {
   final event = details.appointments.first as EventModel;
@@ -18,7 +19,7 @@ Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails detai
   
   final theme = ShadTheme.of(context);
 
-  final timeString = '${DateFormat.jm().format(event.startTime)} - ${DateFormat.jm().format(event.endTime)}';
+  final timeString = '${DateFormat.jm().format(event.startTime.toLocal())} - ${DateFormat.jm().format(event.endTime.toLocal())}';
 
   if (style == CalendarEventStyle.dot) {
     return Container(

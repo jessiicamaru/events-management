@@ -11,12 +11,6 @@ abstract class UserProfileModel with _$UserProfileModel {
     required int totalXP,
     @Default([]) List<String> unlockedEmojis,
     String? avatarBorderColor,
-    String? displayName,
-    String? bio,
-    DateTime? dateOfBirth,
-    String? gender,
-    String? phoneNumber,
-    String? avatar,
   }) = _UserProfileModel;
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) => _$UserProfileModelFromJson(json);
