@@ -143,15 +143,6 @@ class HabitsScreen extends ConsumerWidget {
         return ShadDialog(
           title: Text(translations.translate('add_habit')),
           description: Text(translations.translate('add_habit_desc')),
-          child: Container(
-            width: double.maxFinite,
-            constraints: const BoxConstraints(maxWidth: 500),
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: ShadInput(
-              controller: nameController,
-              placeholder: Text(translations.translate('habit_name_placeholder')),
-            ),
-          ),
           actions: [
             ShadButton.secondary(
               onPressed: () => Navigator.of(context).pop(),
@@ -172,6 +163,15 @@ class HabitsScreen extends ConsumerWidget {
               child: Text(translations.translate('add_btn')),
             ),
           ],
+          child: Container(
+            width: double.maxFinite,
+            constraints: const BoxConstraints(maxWidth: 500),
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: ShadInput(
+              controller: nameController,
+              placeholder: Text(translations.translate('habit_name_placeholder')),
+            ),
+          ),
         );
       },
     );
