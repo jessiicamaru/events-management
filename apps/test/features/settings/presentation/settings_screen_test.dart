@@ -60,17 +60,35 @@ void main() {
 
     // Verify title and tiles are present
     expect(find.text('Cosmetics & Rewards'), findsOneWidget);
+    expect(find.text('Language'), findsOneWidget);
     expect(find.text('Log Out'), findsOneWidget);
 
-    // Tap on Log Out tile
-    await tester.tap(find.text('Log Out'));
+    // Tap on Language tile to open language selector
+    await tester.tap(find.text('Language'));
     await tester.pumpAndSettle();
 
-    // Verify dialog appears
-    expect(find.text('Are you sure you want to log out?'), findsOneWidget);
+    // Verify select language dialog appears
+    expect(find.text('Select Language'), findsOneWidget);
+    expect(find.text('Tiếng Việt'), findsOneWidget);
 
-    // Tap destructive Log Out button inside dialog
-    final logOutButton = find.widgetWithText(ShadButton, 'Log Out');
+    // Tap on Tiếng Việt
+    await tester.tap(find.text('Tiếng Việt'));
+    await tester.pumpAndSettle();
+
+    // Verify UI dynamically updated to Vietnamese
+    expect(find.text('Cài đặt'), findsOneWidget); // Settings -> Cài đặt
+    expect(find.text('Trang phục & Phần thưởng'), findsOneWidget); // Cosmetics & Rewards -> Trang phục & Phần thưởng
+    expect(find.text('Đăng xuất'), findsOneWidget); // Log Out -> Đăng xuất
+
+    // Tap on Log Out tile (now 'Đăng xuất')
+    await tester.tap(find.text('Đăng xuất'));
+    await tester.pumpAndSettle();
+
+    // Verify dialog appears in Vietnamese
+    expect(find.text('Bạn có chắc chắn muốn đăng xuất không?'), findsOneWidget);
+
+    // Tap destructive Log Out button (now 'Đăng xuất') inside dialog
+    final logOutButton = find.widgetWithText(ShadButton, 'Đăng xuất');
     expect(logOutButton, findsOneWidget);
 
     await tester.tap(logOutButton);

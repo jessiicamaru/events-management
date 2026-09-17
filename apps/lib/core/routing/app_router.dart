@@ -11,6 +11,7 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 
 import '../../features/squads/presentation/screens/squad_dashboard_screen.dart';
+import '../localization/locale_provider.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -84,7 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return router;
 });
 
-class ScaffoldWithNavBar extends StatelessWidget {
+class ScaffoldWithNavBar extends ConsumerWidget {
   const ScaffoldWithNavBar({
     required this.child,
     super.key,
@@ -93,8 +94,9 @@ class ScaffoldWithNavBar extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
     
     return Scaffold(
       body: child,
@@ -111,20 +113,20 @@ class ScaffoldWithNavBar extends StatelessWidget {
           elevation: 0,
         items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.calendarDays),
-            label: 'Calendar',
+            icon: const Icon(LucideIcons.calendarDays),
+            label: translations.translate('nav_calendar'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.listTodo),
-            label: 'Habits',
+            icon: const Icon(LucideIcons.listTodo),
+            label: translations.translate('nav_habits'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.users),
-            label: 'Squad',
+            icon: const Icon(LucideIcons.users),
+            label: translations.translate('nav_squad'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(LucideIcons.settings),
-            label: 'Settings',
+            icon: const Icon(LucideIcons.settings),
+            label: translations.translate('nav_settings'),
           ),
         ],
           currentIndex: _calculateSelectedIndex(context),

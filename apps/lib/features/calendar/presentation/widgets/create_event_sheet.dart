@@ -7,6 +7,7 @@ import '../../../habits/domain/models/habit_model.dart';
 import '../../domain/models/event_model.dart';
 import '../events_provider.dart';
 import 'unscheduled_habits_selector.dart';
+import '../../../../core/localization/locale_provider.dart';
 
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
@@ -112,10 +113,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   }
 
   Future<void> _submit() async {
+    final translations = ref.read(translationsProvider);
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ShadToaster.of(context).show(
-        const ShadToast.destructive(title: Text('Title is required')),
+        ShadToast.destructive(title: Text(translations.translate('title_required_toast'))),
       );
       return;
     }
@@ -147,8 +149,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
         Navigator.of(context).pop();
         ShadToaster.of(context).show(
           ShadToast(
-            title: const Text('Event Created'),
-            description: Text('Scheduled "$title" at ${_startTime.format(context)}'),
+            title: Text(translations.translate('event_created_toast')),
+            description: Text('${translations.translate('scheduled_event_toast')} "$title" at ${_startTime.format(context)}'),
           ),
         );
       }
@@ -157,8 +159,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
         setState(() => _isSubmitting = false);
         ShadToaster.of(context).show(
           ShadToast.destructive(
-            title: const Text('Error'),
-            description: Text('Failed to create event: $e'),
+            title: Text(translations.translate('error')),
+            description: Text('${translations.translate('failed_to_create_event')}: $e'),
           ),
         );
       }
@@ -171,6 +173,9 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     final habits = widget.habitsAsync.value ?? [];
     final appSettings = ref.watch(appSettingsProvider);
     final brandColor = AppTheme.getBrandColor(appSettings.primaryColor);
+    final currentLocale = ref.watch(localeProvider);
+    final translations = ref.watch(translationsProvider);
+    final localeStr = currentLocale == AppLocale.en ? 'en_US' : 'vi';
 
     return Container(
       decoration: BoxDecoration(
@@ -189,20 +194,20 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
             child: Column(
               children: [
                 const SizedBox(height: 12),
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
                   ),
+                ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                   child: Row(
                     children: [
                       Text(
-                        'Schedule Event', 
+                        translations.translate('schedule_event'), 
                         style: theme.textTheme.h4.copyWith(color: Colors.white)
                       ),
                       const Spacer(),
@@ -236,31 +241,44 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                   ),
 
                   // Title field
-                  Text('Title', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('title'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   ShadInput(
                     controller: _titleController,
-                    placeholder: const Text('Event title'),
+                    placeholder: Text(translations.translate('event_title_placeholder')),
                   ),
                   const SizedBox(height: 16),
 
                   // Category
-                  Text('Category', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('category'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,
                     child: ShadSelect<String>(
-                      placeholder: const Text('Select category'),
+                      placeholder: Text(translations.translate('select_category')),
                       initialValue: _selectedCategory,
                       onChanged: (val) => setState(() => _selectedCategory = val),
-                      options: _categories.map((c) => ShadOption(value: c, child: Text(c))).toList(),
-                      selectedOptionBuilder: (context, value) => Text(value),
+                      options: _categories.map((c) {
+                        String translatedName = c;
+                        if (c == 'Health') translatedName = translations.translate('category_health');
+                        if (c == 'Work') translatedName = translations.translate('category_work');
+                        if (c == 'Learning') translatedName = translations.translate('category_learning');
+                        if (c == 'Wellness') translatedName = translations.translate('category_wellness');
+                        return ShadOption(value: c, child: Text(translatedName));
+                      }).toList(),
+                      selectedOptionBuilder: (context, value) {
+                        if (value == 'Health') return Text(translations.translate('category_health'));
+                        if (value == 'Work') return Text(translations.translate('category_work'));
+                        if (value == 'Learning') return Text(translations.translate('category_learning'));
+                        if (value == 'Wellness') return Text(translations.translate('category_wellness'));
+                        return Text(value);
+                      },
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // Date
-                  Text('Date', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('date'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   ShadButton.outline(
                     width: double.infinity,
@@ -269,14 +287,14 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                       children: [
                         const Icon(LucideIcons.calendar, size: 16),
                         const SizedBox(width: 8),
-                        Text(DateFormat('EEEE, MMM d, yyyy').format(_startDate)),
+                        Text(DateFormat('EEEE, MMM d, yyyy', localeStr).format(_startDate)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // Time
-                  Text('Time', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('time'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
@@ -314,11 +332,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                   const SizedBox(height: 16),
 
                   // Target Duration
-                  Text('Target Duration (mins)', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('target_duration'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   ShadInput(
                     controller: _targetDurationController,
-                    placeholder: const Text('e.g. 45'),
+                    placeholder: Text(translations.translate('duration_placeholder')),
                     keyboardType: TextInputType.number,
                   ),
 
@@ -330,7 +348,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     onPressed: _isSubmitting ? null : _submit,
                     child: _isSubmitting
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Create Event'),
+                        : Text(translations.translate('create_event_btn')),
                   ),
                   const SizedBox(height: 8),
                 ],

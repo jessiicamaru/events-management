@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/features/habits/presentation/widgets/heatmap_widget.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
   Widget createWidgetUnderTest(Map<DateTime, int> data) {
-    return ShadApp(
-      home: Scaffold(
-        body: HeatmapWidget(data: data),
+    return ProviderScope(
+      child: ShadApp(
+        home: Scaffold(
+          body: HeatmapWidget(data: data),
+        ),
       ),
     );
   }

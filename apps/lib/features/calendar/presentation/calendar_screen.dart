@@ -17,6 +17,7 @@ import 'widgets/habit_dock.dart';
 import '../../focus_session/presentation/screens/focus_screen.dart';
 import '../../focus_session/presentation/widgets/post_session_dialog.dart';
 import '../../profile/presentation/providers/user_profile_provider.dart';
+import '../../../core/localization/locale_provider.dart';
 import 'providers/calendar_settings_provider.dart';
 
 // Helper enum for custom view selection
@@ -84,6 +85,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final settings = ref.watch(calendarSettingsProvider);
     final theme = ShadTheme.of(context);
     final currentUserId = userProfileAsync.value?.id;
+    final translations = ref.watch(translationsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -111,11 +113,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
-                      _buildFilterPill('All', CalendarSourceFilter.all, theme),
+                      _buildFilterPill(translations.translate('filter_all'), CalendarSourceFilter.all, theme),
                       const SizedBox(width: 8),
-                      _buildFilterPill('Personal', CalendarSourceFilter.personal, theme),
+                      _buildFilterPill(translations.translate('filter_personal'), CalendarSourceFilter.personal, theme),
                       const SizedBox(width: 8),
-                      _buildFilterPill('Squads', CalendarSourceFilter.squads, theme),
+                      _buildFilterPill(translations.translate('filter_squads'), CalendarSourceFilter.squads, theme),
                     ],
                   ),
                 ),
@@ -215,7 +217,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         key: _calendarKey,
                                         controller: _calendarController,
                                         allowDragAndDrop: true,
-                                        dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId),
+                                        dataSource: _EventDataSource(filteredEvents, habits, theme, currentUserId, translations),
                                         onViewChanged: _onViewHeaderChanged,
                                         headerHeight: 0, // Hide default header
                                         view: isThreeDayScrollable ? CalendarView.week : (_currentView == AppCalendarView.day ? CalendarView.day : CalendarView.month),
@@ -228,7 +230,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                             final event = tapDetails.appointments!.first as EventModel;
                                             final habit = habits.firstWhere(
                                               (h) => h.id == event.habitId, 
-                                              orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
+                                              orElse: () => HabitModel(id: '', name: translations.translate('unknown_habit'), targetDays: []),
                                             );
                                             final startFocus = await showDialog<bool>(
                                               context: context,
@@ -424,8 +426,9 @@ class _EventDataSource extends CalendarDataSource {
   final List<HabitModel> _habits;
   final String? _currentUserId;
   final ShadThemeData _theme;
+  final AppTranslations _translations;
 
-  _EventDataSource(List<EventModel> source, this._habits, this._theme, this._currentUserId) {
+  _EventDataSource(List<EventModel> source, this._habits, this._theme, this._currentUserId, this._translations) {
     appointments = source;
   }
 
@@ -443,7 +446,9 @@ class _EventDataSource extends CalendarDataSource {
   String getSubject(int index) {
     final event = appointments![index] as EventModel;
     final isSquadEvent = _currentUserId != null && event.userId != _currentUserId;
-    return isSquadEvent ? '[Squad] ${event.title}' : event.title;
+    final squadPrefix = _translations.translate('filter_squads');
+    final translatedTitle = _translations.translate(event.title);
+    return isSquadEvent ? '[$squadPrefix] $translatedTitle' : translatedTitle;
   }
 
   @override
@@ -455,7 +460,7 @@ class _EventDataSource extends CalendarDataSource {
     
     final habit = _habits.firstWhere(
       (h) => h.id == event.habitId, 
-      orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
+      orElse: () => HabitModel(id: '', name: _translations.translate('unknown_habit'), targetDays: []),
     );
     return AppTheme.getHabitColor(habit.category);
   }

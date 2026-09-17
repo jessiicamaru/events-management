@@ -15,7 +15,7 @@ void main() {
 
     // Initial state check
     expect(find.text('25:00'), findsOneWidget);
-    expect(find.text('Status: INITIAL'), findsOneWidget);
+    expect(find.text('Status: READY'), findsOneWidget);
     
     // Start button should be visible
     expect(find.text('Start'), findsOneWidget);
