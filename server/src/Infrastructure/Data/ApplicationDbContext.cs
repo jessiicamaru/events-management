@@ -9,7 +9,9 @@ namespace HabitTracker.Infrastructure.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<Habit> Habits { get; set; } = null!;
+        public DbSet<HabitTask> HabitTasks { get; set; } = null!;
         public DbSet<Event> Events { get; set; } = null!;
+        public DbSet<EventTask> EventTasks { get; set; } = null!;
 
         public DbSet<Squad> Squads { get; set; } = null!;
         public DbSet<SquadMember> SquadMembers { get; set; } = null!;
@@ -30,6 +32,26 @@ namespace HabitTracker.Infrastructure.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            });
+
+            modelBuilder.Entity<HabitTask>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.HasOne(t => t.Habit)
+                      .WithMany(h => h.Tasks)
+                      .HasForeignKey(t => t.HabitId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<EventTask>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+                entity.HasOne(t => t.Event)
+                      .WithMany(ev => ev.Tasks)
+                      .HasForeignKey(t => t.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:intl/intl.dart';
 import '../../domain/models/event_model.dart';
 import '../../../habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
 import '../../../../core/localization/locale_provider.dart';
+import 'event_tasks_checklist.dart';
 
 import '../events_provider.dart';
 import '../../../habits/presentation/habits_provider.dart';
@@ -44,20 +47,23 @@ class EventDetailsDialog extends ConsumerWidget {
           maxWidth: 400,
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow(context, LucideIcons.calendar, translations.translate('date'), dateFormat.format(event.startTime)),
-              const SizedBox(height: 12),
-              _buildDetailRow(context, LucideIcons.clock, translations.translate('time'), '${timeFormat.format(event.startTime)} - ${timeFormat.format(event.endTime)}'),
-              const SizedBox(height: 12),
-              _buildDetailRow(context, LucideIcons.tag, translations.translate('category'), translatedCategory),
-              const SizedBox(height: 12),
-              _buildDetailRow(context, LucideIcons.checkCircle, translations.translate('status'), event.isCompleted ? translations.translate('completed') : translations.translate('pending')),
-              const SizedBox(height: 24),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow(context, LucideIcons.calendar, translations.translate('date'), dateFormat.format(event.startTime)),
+                const SizedBox(height: 12),
+                _buildDetailRow(context, LucideIcons.clock, translations.translate('time'), '${timeFormat.format(event.startTime)} - ${timeFormat.format(event.endTime)}'),
+                const SizedBox(height: 12),
+                _buildDetailRow(context, LucideIcons.tag, translations.translate('category'), translatedCategory),
+                const SizedBox(height: 12),
+                _buildDetailRow(context, LucideIcons.checkCircle, translations.translate('status'), event.isCompleted ? translations.translate('completed') : translations.translate('pending')),
+                const SizedBox(height: 16),
+                EventTasksChecklist(eventId: event.id),
+                const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ShadButton(
@@ -185,8 +191,9 @@ class EventDetailsDialog extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
     final theme = ShadTheme.of(context);

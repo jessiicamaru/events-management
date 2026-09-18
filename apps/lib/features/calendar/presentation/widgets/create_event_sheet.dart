@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/utils/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../settings/presentation/providers/app_settings_provider.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../domain/models/event_model.dart';
 import '../events_provider.dart';
+import '../../../habits/presentation/habits_provider.dart';
 import 'unscheduled_habits_selector.dart';
 import '../../../../core/localization/locale_provider.dart';
 
 class CreateEventSheet extends ConsumerStatefulWidget {
-  final AsyncValue<List<HabitModel>> habitsAsync;
+  final AsyncValue<List<HabitModel>>? habitsAsync;
   final DateTime? initialDate;
   final HabitModel? initialHabit;
   final EventModel? eventToEdit;
 
   const CreateEventSheet({
     super.key,
-    required this.habitsAsync,
+    this.habitsAsync,
     this.initialDate,
     this.initialHabit,
     this.eventToEdit,
@@ -193,7 +196,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
-    final habits = widget.habitsAsync.value ?? [];
+    final habits = ref.watch(habitsProvider).value ?? [];
     final appSettings = ref.watch(appSettingsProvider);
     final brandColor = AppTheme.getBrandColor(appSettings.primaryColor);
     final currentLocale = ref.watch(localeProvider);

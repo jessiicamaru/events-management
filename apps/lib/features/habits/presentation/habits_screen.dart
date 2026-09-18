@@ -6,6 +6,7 @@ import '../domain/models/habit_model.dart';
 import 'habits_provider.dart';
 import 'providers/heatmap_provider.dart';
 import 'widgets/heatmap_widget.dart';
+import 'widgets/habit_tasks_editor.dart';
 import '../../../core/localization/locale_provider.dart';
 
 class HabitsScreen extends ConsumerWidget {
@@ -203,13 +204,15 @@ class HabitsScreen extends ConsumerWidget {
                       controller: nameController,
                       placeholder: Text(translations.translate('habit_name_placeholder')),
                     ),
-                    const SizedBox(height: 16),
                     _buildCategorySelector(
                       context,
                       translations,
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
                     ),
+                    const SizedBox(height: 16),
+                    // We only show task editor on edit mode, or after habit is created.
+                    // For create mode, they can edit tasks after creation.
                   ],
                 ),
               ),
@@ -301,13 +304,14 @@ class HabitsScreen extends ConsumerWidget {
                       controller: nameController,
                       placeholder: Text(translations.translate('habit_name_placeholder')),
                     ),
-                    const SizedBox(height: 16),
                     _buildCategorySelector(
                       context,
                       translations,
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
                     ),
+                    const SizedBox(height: 24),
+                    HabitTasksEditor(habitId: habit.id),
                   ],
                 ),
               ),

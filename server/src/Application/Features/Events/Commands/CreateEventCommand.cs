@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
+using System.Linq;
 
 namespace HabitTracker.Application.Features.Events.Commands
 {
@@ -20,10 +21,14 @@ namespace HabitTracker.Application.Features.Events.Commands
     public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
     {
         private readonly IEventRepository _repository;
+        private readonly IHabitTaskRepository _habitTaskRepository;
+        private readonly IEventTaskRepository _eventTaskRepository;
 
-        public CreateEventCommandHandler(IEventRepository repository)
+        public CreateEventCommandHandler(IEventRepository repository, IHabitTaskRepository habitTaskRepository, IEventTaskRepository eventTaskRepository)
         {
             _repository = repository;
+            _habitTaskRepository = habitTaskRepository;
+            _eventTaskRepository = eventTaskRepository;
         }
 
         public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
@@ -39,6 +44,27 @@ namespace HabitTracker.Application.Features.Events.Commands
             };
 
             await _repository.AddAsync(ev);
+
+            if (Guid.TryParse(request.HabitId, out var parsedHabitId))
+            {
+                var templateTasks = (await _habitTaskRepository.GetByHabitIdAsync(parsedHabitId)).ToList();
+
+                foreach (var templateTask in templateTasks)
+                {
+                    var eventTask = new EventTask
+                    {
+                        EventId = ev.Id,
+                        Title = templateTask.Title,
+                        Description = templateTask.Description,
+                        Order = templateTask.Order,
+                        Priority = templateTask.Priority,
+                        EstimatedMinutes = templateTask.EstimatedMinutes,
+                        IsCompleted = false
+                    };
+                    await _eventTaskRepository.AddAsync(eventTask);
+                }
+            }
+
             return ev.Id;
         }
     }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
@@ -8,6 +9,7 @@ import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 
 class MockApiService implements ApiService {
   List<EventModel> eventsToReturn = [];
@@ -25,15 +27,30 @@ class MockApiService implements ApiService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// A stub HabitsNotifier that returns a fixed list without calling the API.
+class _StubHabitsNotifier extends HabitsNotifier {
+  final List<HabitModel> habits;
+  _StubHabitsNotifier(this.habits);
+
+  @override
+  Future<List<HabitModel>> build() async => habits;
+}
+
 void main() {
   late MockApiService mockApiService;
   late SharedPreferences prefs;
 
-  Widget buildTestableWidget(Widget child) {
+  final sampleHabits = [
+    HabitModel(id: 'h1', name: 'Morning Run', category: 'Health', targetDays: []),
+    HabitModel(id: 'h2', name: 'Read 10 pages', category: 'Learning', targetDays: []),
+  ];
+
+  Widget buildTestableWidget(Widget child, {List<HabitModel> habits = const []}) {
     return ProviderScope(
       overrides: [
         apiServiceProvider.overrideWithValue(mockApiService),
         sharedPreferencesProvider.overrideWithValue(prefs),
+        habitsProvider.overrideWith(() => _StubHabitsNotifier(habits)),
       ],
       child: ShadApp(
         home: Scaffold(
@@ -49,17 +66,11 @@ void main() {
     prefs = await SharedPreferences.getInstance();
   });
 
-  final sampleHabits = [
-    HabitModel(id: 'h1', name: 'Morning Run', category: 'Health', targetDays: []),
-    HabitModel(id: 'h2', name: 'Read 10 pages', category: 'Learning', targetDays: []),
-  ];
-
   group('CreateEventSheet', () {
     testWidgets('renders form fields correctly', (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableWidget(
-        CreateEventSheet(
-          habitsAsync: AsyncData(sampleHabits),
-        ),
+        const CreateEventSheet(),
+        habits: sampleHabits,
       ));
       await tester.pumpAndSettle();
 
@@ -72,11 +83,10 @@ void main() {
       expect(find.text('Create Event'), findsOneWidget);
     });
 
-    testWidgets('shows habit chips from habitsAsync', (WidgetTester tester) async {
+    testWidgets('shows habit chips from habitsProvider', (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableWidget(
-        CreateEventSheet(
-          habitsAsync: AsyncData(sampleHabits),
-        ),
+        const CreateEventSheet(),
+        habits: sampleHabits,
       ));
       await tester.pumpAndSettle();
 
@@ -86,9 +96,8 @@ void main() {
 
     testWidgets('tapping habit chip fills title field', (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableWidget(
-        CreateEventSheet(
-          habitsAsync: AsyncData(sampleHabits),
-        ),
+        const CreateEventSheet(),
+        habits: sampleHabits,
       ));
       await tester.pumpAndSettle();
 
@@ -102,9 +111,8 @@ void main() {
 
     testWidgets('shows empty state with no habits', (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableWidget(
-        CreateEventSheet(
-          habitsAsync: const AsyncData([]),
-        ),
+        const CreateEventSheet(),
+        habits: const [],
       ));
       await tester.pumpAndSettle();
 
@@ -116,13 +124,11 @@ void main() {
 
     testWidgets('shows validation error when submitting without title', (WidgetTester tester) async {
       await tester.pumpWidget(buildTestableWidget(
-        CreateEventSheet(
-          habitsAsync: const AsyncData([]),
-        ),
+        const CreateEventSheet(),
+        habits: const [],
       ));
       await tester.pumpAndSettle();
 
-      // Tap Create without filling title
       await tester.tap(find.text('Create Event'));
       await tester.pumpAndSettle();
 

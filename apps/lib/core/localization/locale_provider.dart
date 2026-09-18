@@ -159,6 +159,12 @@ class AppTranslations {
     'save_btn': {AppLocale.en: 'Save', AppLocale.vi: 'Lưu'},
     'delete_btn': {AppLocale.en: 'Delete', AppLocale.vi: 'Xóa'},
     'target_days': {AppLocale.en: 'Target Days', AppLocale.vi: 'Ngày thực hiện'},
+    'habit_tasks_title': {AppLocale.en: 'Habit Tasks (Optional)', AppLocale.vi: 'Công việc (Tùy chọn)'},
+    'add_task': {AppLocale.en: 'Add Task', AppLocale.vi: 'Thêm công việc'},
+    'no_tasks_yet': {AppLocale.en: 'No tasks added yet. Add a task to create a checklist for this habit.', AppLocale.vi: 'Chưa có công việc nào. Thêm công việc để tạo danh sách kiểm tra cho thói quen này.'},
+    'tasks_checklist': {AppLocale.en: 'Tasks', AppLocale.vi: 'Danh sách công việc'},
+    'no_tasks_for_event': {AppLocale.en: 'No tasks for this session.', AppLocale.vi: 'Không có công việc nào cho sự kiện này.'},
+    'minutes_short': {AppLocale.en: 'min', AppLocale.vi: 'phút'},
     'habit_name_empty': {AppLocale.en: 'Habit name cannot be empty', AppLocale.vi: 'Tên thói quen không được để trống'},
     'habit_updated_toast': {AppLocale.en: 'Habit updated successfully', AppLocale.vi: 'Đã cập nhật thói quen thành công'},
     'habit_deleted_toast': {AppLocale.en: 'Habit deleted successfully', AppLocale.vi: 'Đã xóa thói quen thành công'},
@@ -166,6 +172,8 @@ class AppTranslations {
 
     // Focus Session (Pomodoro)
     'pomodoro_timer': {AppLocale.en: 'Pomodoro Timer', AppLocale.vi: 'Đồng hồ Pomodoro'},
+    'up_next': {AppLocale.en: 'Up Next', AppLocale.vi: 'Sắp diễn ra'},
+    'start_session': {AppLocale.en: 'Start Session', AppLocale.vi: 'Bắt đầu'},
     'status_label': {AppLocale.en: 'Status', AppLocale.vi: 'Trạng thái'},
     'status_ready': {AppLocale.en: 'READY', AppLocale.vi: 'SẴN SÀNG'},
     'status_running': {AppLocale.en: 'RUNNING', AppLocale.vi: 'ĐANG CHẠY'},
