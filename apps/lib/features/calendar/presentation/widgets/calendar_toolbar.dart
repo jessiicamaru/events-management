@@ -14,6 +14,8 @@ class CalendarToolbar extends ConsumerWidget {
   final VoidCallback onTodayPressed;
   final VoidCallback onNextPressed;
   final VoidCallback onPrevPressed;
+  final VoidCallback onTogglePanel;
+  final bool isPanelVisible;
   final int totalEvents;
 
   const CalendarToolbar({
@@ -24,6 +26,8 @@ class CalendarToolbar extends ConsumerWidget {
     required this.onTodayPressed,
     required this.onNextPressed,
     required this.onPrevPressed,
+    required this.onTogglePanel,
+    required this.isPanelVisible,
     required this.totalEvents,
   });
 
@@ -104,6 +108,16 @@ class CalendarToolbar extends ConsumerWidget {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  ShadButton.outline(
+                    width: 32,
+                    height: 32,
+                    padding: EdgeInsets.zero,
+                    onPressed: onTogglePanel,
+                    backgroundColor: isPanelVisible ? theme.colorScheme.primary : null,
+                    foregroundColor: isPanelVisible ? theme.colorScheme.primaryForeground : null,
+                    child: const Icon(LucideIcons.panelBottom, size: 16),
+                  ),
+                  const SizedBox(width: 8),
                   ShadButton.outline(
                     width: 32,
                     height: 32,

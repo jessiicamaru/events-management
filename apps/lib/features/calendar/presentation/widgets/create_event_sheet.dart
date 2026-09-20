@@ -11,6 +11,7 @@ import '../events_provider.dart';
 import '../../../habits/presentation/habits_provider.dart';
 import 'unscheduled_habits_selector.dart';
 import '../../../../core/localization/locale_provider.dart';
+import '../../../habits/presentation/widgets/habit_tasks_editor.dart';
 
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>>? habitsAsync;
@@ -266,6 +267,23 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     onSelect: _fillFromHabit,
                   ),
 
+                  if (_selectedHabit != null) ...[
+                    const SizedBox(height: 16),
+                    Text(translations.translate('tasks_checklist') ?? 'Tasks', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.colorScheme.border),
+                        borderRadius: theme.radius,
+                      ),
+                      child: SingleChildScrollView(
+                        child: HabitTasksEditor(habitId: _selectedHabit!.id),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
                   // Title field
                   Text(translations.translate('title'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),

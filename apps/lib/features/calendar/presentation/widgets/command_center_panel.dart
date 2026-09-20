@@ -19,24 +19,32 @@ class CommandCenterPanel extends ConsumerWidget {
     final eventsAsync = ref.watch(eventsProvider);
     final habitsAsync = ref.watch(habitsProvider);
     final translations = ref.watch(translationsProvider);
+    final currentLocale = ref.watch(localeProvider);
+    final localeStr = currentLocale == AppLocale.en ? 'en_US' : 'vi';
     final theme = ShadTheme.of(context);
 
-    // Look for current or upcoming event today
+    // Look for current or upcoming event across all days
     final now = DateTime.now();
-    final todayEvents = eventsAsync.value?.where((e) {
-      return e.startTime.year == now.year && e.startTime.month == now.month && e.startTime.day == now.day;
-    }).toList() ?? [];
-
-    todayEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    final allEvents = List<EventModel>.from(eventsAsync.value ?? []);
+    allEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     EventModel? activeEvent;
-    for (var event in todayEvents) {
+    
+    // 1. First, try to find an event that is currently happening
+    for (var event in allEvents) {
       if (now.isAfter(event.startTime) && now.isBefore(event.endTime)) {
         activeEvent = event;
         break;
-      } else if (now.isBefore(event.startTime) && !event.isCompleted) {
-        activeEvent = event;
-        break;
+      }
+    }
+
+    // 2. If no event is currently happening, find the next upcoming event
+    if (activeEvent == null) {
+      for (var event in allEvents) {
+        if (now.isBefore(event.startTime) && !event.isCompleted) {
+          activeEvent = event;
+          break;
+        }
       }
     }
 
@@ -69,18 +77,6 @@ class CommandCenterPanel extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Handle for sliding
-            Center(
-              child: Container(
-                margin: const EdgeInsets.only(top: 8, bottom: 4),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -109,9 +105,18 @@ class CommandCenterPanel extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Text(
-                    '${DateFormat.Hm().format(activeEvent.startTime)} - ${DateFormat.Hm().format(activeEvent.endTime)}',
-                    style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        DateFormat('MMM d', localeStr).format(activeEvent.startTime.toLocal()),
+                        style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground),
+                      ),
+                      Text(
+                        '${DateFormat.Hm().format(activeEvent.startTime.toLocal())} - ${DateFormat.Hm().format(activeEvent.endTime.toLocal())}',
+                        style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/shared_preferences_provider.dart';
 
 enum AppLocale { en, vi }
 
@@ -8,21 +9,17 @@ class LocaleNotifier extends Notifier<AppLocale> {
 
   @override
   AppLocale build() {
-    _loadLocale();
-    return AppLocale.en;
-  }
-
-  Future<void> _loadLocale() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ref.watch(sharedPreferencesProvider);
     final savedLocale = prefs.getString(_localeKey);
     if (savedLocale != null) {
-      state = savedLocale == 'vi' ? AppLocale.vi : AppLocale.en;
+      return savedLocale == 'vi' ? AppLocale.vi : AppLocale.en;
     }
+    return AppLocale.en;
   }
 
   Future<void> setLocale(AppLocale locale) async {
     state = locale;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setString(_localeKey, locale == AppLocale.vi ? 'vi' : 'en');
   }
 }

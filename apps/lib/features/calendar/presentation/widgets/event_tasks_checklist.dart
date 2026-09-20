@@ -87,12 +87,14 @@ class EventTasksChecklist extends ConsumerWidget {
                               ? Border(bottom: BorderSide(color: theme.colorScheme.border))
                               : null,
                         ),
-                        child: ShadCheckbox(
-                          value: task.isCompleted,
-                          onChanged: (val) {
-                            ref.read(eventTasksProvider(eventId).notifier).toggleTask(task.id, val);
-                          },
-                          label: Row(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: ShadCheckbox(
+                            value: task.isCompleted,
+                            onChanged: (val) {
+                              ref.read(eventTasksProvider(eventId).notifier).toggleTask(task.id, val);
+                            },
+                            label: Row(
                             children: [
                               Expanded(
                                 child: Column(
@@ -130,8 +132,9 @@ class EventTasksChecklist extends ConsumerWidget {
                             ],
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    );
+                  },
                   ),
                 ],
               );

@@ -40,6 +40,8 @@ void main() {
           onTodayPressed: () { todayPressed = true; },
           onNextPressed: () { nextPressed = true; },
           onPrevPressed: () { prevPressed = true; },
+          onTogglePanel: () {},
+          isPanelVisible: true,
           totalEvents: 5,
         ),
         prefs,
