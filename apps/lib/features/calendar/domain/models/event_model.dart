@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'event_task_model.dart';
 
 part 'event_model.freezed.dart';
 part 'event_model.g.dart';
@@ -40,6 +41,7 @@ abstract class EventModel with _$EventModel {
     @TimeSpanConverter() int? actualDuration, // Actual duration in minutes
     DateTime? createdAt,
     String? userId, // ID of the user who owns this event
+    @JsonKey(includeIfNull: false) List<EventTaskModel>? tasks,
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);

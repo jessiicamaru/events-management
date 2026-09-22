@@ -193,7 +193,7 @@ class HabitsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       translations.translate('habit_name_placeholder'),
@@ -204,6 +204,7 @@ class HabitsScreen extends ConsumerWidget {
                       controller: nameController,
                       placeholder: Text(translations.translate('habit_name_placeholder')),
                     ),
+                    const SizedBox(height: 16),
                     _buildCategorySelector(
                       context,
                       translations,
@@ -293,7 +294,7 @@ class HabitsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       translations.translate('habit_name_placeholder'),
@@ -304,6 +305,7 @@ class HabitsScreen extends ConsumerWidget {
                       controller: nameController,
                       placeholder: Text(translations.translate('habit_name_placeholder')),
                     ),
+                    const SizedBox(height: 16),
                     _buildCategorySelector(
                       context,
                       translations,

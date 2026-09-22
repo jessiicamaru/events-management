@@ -7,6 +7,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../events_provider.dart';
 import '../../../habits/presentation/habits_provider.dart';
 import '../../domain/models/event_model.dart';
+import '../../../habits/domain/models/habit_model.dart';
 import 'event_tasks_checklist.dart';
 import '../../../focus_session/presentation/screens/focus_screen.dart';
 import '../../../focus_session/presentation/widgets/post_session_dialog.dart';
@@ -54,7 +55,7 @@ class CommandCenterPanel extends ConsumerWidget {
 
     final habit = habitsAsync.value?.firstWhere(
       (h) => h.id == activeEvent!.habitId,
-      orElse: () => throw Exception('Habit not found'),
+      orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
     );
 
     final habitColor = habit != null ? AppTheme.getHabitColor(habit.category) : theme.colorScheme.primary;

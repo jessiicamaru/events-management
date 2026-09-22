@@ -133,6 +133,8 @@ class AppTranslations {
     'delete_event_confirm_title': {AppLocale.en: 'Delete Event', AppLocale.vi: 'Xoá sự kiện'},
     'delete_event_confirm_desc': {AppLocale.en: 'Are you sure you want to delete this event?', AppLocale.vi: 'Bạn có chắc chắn muốn xoá sự kiện này không?'},
     'event_deleted_toast': {AppLocale.en: 'Event deleted', AppLocale.vi: 'Đã xoá sự kiện'},
+    'event_title_empty': {AppLocale.en: 'Please enter an event title', AppLocale.vi: 'Vui lòng nhập tên sự kiện'},
+    'event_tasks_title': {AppLocale.en: 'Tasks', AppLocale.vi: 'Công việc'},
 
     // Unscheduled Habits Panel
     'unscheduled_habits': {AppLocale.en: 'Unscheduled Habits', AppLocale.vi: 'Thói quen chưa lên lịch'},

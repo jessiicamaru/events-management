@@ -132,7 +132,7 @@ void main() {
       await tester.tap(find.text('Create Event'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Title is required'), findsOneWidget);
+      expect(find.text('Please enter an event title'), findsOneWidget);
     });
   });
 }

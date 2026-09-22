@@ -88,7 +88,7 @@ class EventTasksChecklist extends ConsumerWidget {
                               : null,
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
                           child: ShadCheckbox(
                             value: task.isCompleted,
                             onChanged: (val) {

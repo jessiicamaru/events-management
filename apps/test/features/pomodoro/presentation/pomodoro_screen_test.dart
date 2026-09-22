@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/features/pomodoro/presentation/pomodoro_screen.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import '../../../test_utils.dart';
 
 void main() {
   testWidgets('PomodoroScreen displays initial timer and status', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          ...commonTestOverrides,
+        ],
+        child: const MaterialApp(
           home: PomodoroScreen(),
         ),
       ),
@@ -25,8 +30,11 @@ void main() {
 
   testWidgets('PomodoroScreen changes to running status when started', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          ...commonTestOverrides,
+        ],
+        child: const MaterialApp(
           home: PomodoroScreen(),
         ),
       ),

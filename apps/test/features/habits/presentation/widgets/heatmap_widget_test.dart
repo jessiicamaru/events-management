@@ -3,10 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/features/habits/presentation/widgets/heatmap_widget.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 void main() {
   Widget createWidgetUnderTest(Map<DateTime, int> data) {
     return ProviderScope(
+      overrides: [
+        translationsProvider.overrideWithValue(AppTranslations(AppLocale.en)),
+      ],
       child: ShadApp(
         home: Scaffold(
           body: HeatmapWidget(data: data),

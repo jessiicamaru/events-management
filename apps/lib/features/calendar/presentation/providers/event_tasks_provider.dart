@@ -51,4 +51,33 @@ class EventTasks extends _$EventTasks {
       ref.invalidateSelf();
     }
   }
+
+  Future<void> reorderTasks(int oldIndex, int newIndex) async {
+    final currentTasks = state.value;
+    if (currentTasks == null) return;
+
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    final newTasks = List<EventTaskModel>.from(currentTasks);
+    final task = newTasks.removeAt(oldIndex);
+    newTasks.insert(newIndex, task);
+
+    // Optimistic update
+    final updatedTasks = <EventTaskModel>[];
+    for (int i = 0; i < newTasks.length; i++) {
+      updatedTasks.add(newTasks[i].copyWith(order: i));
+    }
+    state = AsyncData(updatedTasks);
+
+    final api = ref.read(apiServiceProvider);
+    try {
+      await Future.wait(
+        updatedTasks.map((t) => api.updateEventTask(eventId, t))
+      );
+    } catch (e) {
+      ref.invalidateSelf();
+    }
+  }
 }

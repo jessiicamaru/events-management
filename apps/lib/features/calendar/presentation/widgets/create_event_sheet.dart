@@ -11,7 +11,10 @@ import '../events_provider.dart';
 import '../../../habits/presentation/habits_provider.dart';
 import 'unscheduled_habits_selector.dart';
 import '../../../../core/localization/locale_provider.dart';
-import '../../../habits/presentation/widgets/habit_tasks_editor.dart';
+import 'event_tasks_editor.dart';
+import '../../domain/models/event_task_model.dart';
+import '../../../habits/presentation/providers/habit_tasks_provider.dart';
+
 
 class CreateEventSheet extends ConsumerStatefulWidget {
   final AsyncValue<List<HabitModel>>? habitsAsync;
@@ -40,6 +43,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   TimeOfDay _startTime = const TimeOfDay(hour: 6, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isSubmitting = false;
+  List<EventTaskModel>? _localTasks;
 
   static const List<String> _categories = ['Health', 'Work', 'Learning', 'Wellness'];
 
@@ -82,12 +86,32 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     super.dispose();
   }
 
-  void _fillFromHabit(HabitModel habit) {
+  void _fillFromHabit(HabitModel habit) async {
     setState(() {
       _selectedHabit = habit;
       _titleController.text = habit.name;
       _selectedCategory = habit.category;
     });
+
+    if (widget.eventToEdit == null) {
+      try {
+        final habitTasks = await ref.read(habitTasksProvider(habit.id).future);
+        setState(() {
+          _localTasks = habitTasks.map((t) => EventTaskModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString() + t.id,
+            eventId: 'temp',
+            title: t.title,
+            description: t.description,
+            order: t.order,
+            priority: t.priority,
+            estimatedMinutes: t.estimatedMinutes,
+            isCompleted: false,
+          )).toList();
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
   Future<void> _pickDate() async {
@@ -135,8 +159,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     final translations = ref.read(translationsProvider);
     final title = _titleController.text.trim();
     if (title.isEmpty) {
+      setState(() => _isSubmitting = false);
       ShadToaster.of(context).show(
-        ShadToast.destructive(title: Text(translations.translate('title_required_toast'))),
+        ShadToast.destructive(
+          title: Text(translations.translate('event_title_empty') ?? 'Please enter an event title'),
+        ),
       );
       return;
     }
@@ -153,13 +180,14 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     );
 
     final event = EventModel(
-      id: widget.eventToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.eventToEdit?.id ?? '',
       title: title,
       habitId: _selectedHabit?.id ?? '',
-      startTime: start,
-      endTime: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+      startTime: start.toUtc(),
+      endTime: (end.isBefore(start) ? start.add(const Duration(hours: 1)) : end).toUtc(),
       targetDuration: int.tryParse(_targetDurationController.text),
       isCompleted: widget.eventToEdit?.isCompleted ?? false,
+      tasks: widget.eventToEdit == null ? _localTasks : null,
       actualDuration: widget.eventToEdit?.actualDuration,
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
@@ -267,19 +295,16 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     onSelect: _fillFromHabit,
                   ),
 
-                  if (_selectedHabit != null) ...[
+                  if (_selectedHabit != null || widget.eventToEdit != null) ...[
                     const SizedBox(height: 16),
-                    Text(translations.translate('tasks_checklist') ?? 'Tasks', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.colorScheme.border),
-                        borderRadius: theme.radius,
-                      ),
-                      child: SingleChildScrollView(
-                        child: HabitTasksEditor(habitId: _selectedHabit!.id),
-                      ),
+                    EventTasksEditor(
+                      eventId: widget.eventToEdit?.id,
+                      localTasks: _localTasks,
+                      onLocalTasksChanged: (tasks) {
+                        setState(() {
+                          _localTasks = tasks;
+                        });
+                      },
                     ),
                   ],
 

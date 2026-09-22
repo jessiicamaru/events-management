@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import '../../../../test_utils.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/unscheduled_habits_panel.dart';
 
 void main() {
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
+      overrides: [
+        ...commonTestOverrides,
+      ],
       child: ShadApp(
         home: Scaffold(body: child),
       ),

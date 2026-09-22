@@ -5,6 +5,7 @@ import 'package:habit_tracker/features/squads/presentation/screens/squad_dashboa
 import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class FakeSquadNotifier extends SquadNotifier {
   @override
@@ -19,6 +20,7 @@ void main() {
       ProviderScope(
         overrides: [
           squadProvider.overrideWith(() => FakeSquadNotifier()),
+          translationsProvider.overrideWithValue(AppTranslations(AppLocale.en)),
         ],
         child: const ShadApp(
           home: SquadDashboardScreen(),
