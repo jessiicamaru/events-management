@@ -160,7 +160,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       setState(() => _isSubmitting = false);
       ShadToaster.of(context).show(
         ShadToast.destructive(
-          title: Text(translations.translate('event_title_empty') ?? 'Please enter an event title'),
+          title: Text(translations.translate('event_title_empty')),
         ),
       );
       return;

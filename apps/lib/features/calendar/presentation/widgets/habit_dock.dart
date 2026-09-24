@@ -72,8 +72,8 @@ class HabitDock extends StatelessWidget {
       width: 140,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: habitColor.withOpacity(0.15),
-        border: Border.all(color: habitColor.withOpacity(0.5)),
+        color: habitColor.withValues(alpha: 0.15),
+        border: Border.all(color: habitColor.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

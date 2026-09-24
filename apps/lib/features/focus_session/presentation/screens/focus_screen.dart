@@ -34,7 +34,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
   }
 
   Future<void> _finishSession(int actualSeconds, int targetSeconds) async {
-    final result = await showDialog<bool>(
+    await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => PostSessionDialog(
@@ -50,11 +50,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
     }
   }
 
-  String _formatTime(int seconds) {
-    final m = (seconds / 60).floor().toString().padLeft(2, '0');
-    final s = (seconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
+
 
   @override
   Widget build(BuildContext context) {

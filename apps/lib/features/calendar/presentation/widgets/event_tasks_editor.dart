@@ -60,7 +60,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              translations.translate('event_tasks_title') ?? 'Tasks',
+              translations.translate('event_tasks_title'),
               style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
             ),
             ShadButton.ghost(
@@ -70,7 +70,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                 children: [
                   const Icon(LucideIcons.plus, size: 16),
                   const SizedBox(width: 4),
-                  Text(translations.translate('add_task') ?? 'Add Task'),
+                  Text(translations.translate('add_task')),
                 ],
               ),
             ),
@@ -121,7 +121,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
       padding: const EdgeInsets.all(16.0),
       child: Center(
         child: Text(
-          translations.translate('no_tasks_yet') ?? 'No tasks added yet.',
+          translations.translate('no_tasks_yet'),
           style: theme.textTheme.muted,
           textAlign: TextAlign.center,
         ),
@@ -189,7 +189,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                         )
                       ),
                       if (task.estimatedMinutes != null)
-                        Text('${task.estimatedMinutes} ${translations.translate('minutes_short') ?? 'min'}', style: theme.textTheme.muted),
+                        Text('${task.estimatedMinutes} ${translations.translate('minutes_short')}', style: theme.textTheme.muted),
                     ],
                   ),
                 ),

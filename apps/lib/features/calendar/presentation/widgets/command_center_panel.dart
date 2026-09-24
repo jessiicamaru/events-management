@@ -65,7 +65,7 @@ class CommandCenterPanel extends ConsumerWidget {
         border: Border(top: BorderSide(color: theme.colorScheme.border)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -95,7 +95,7 @@ class CommandCenterPanel extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          translations.translate('up_next') ?? 'Up Next',
+                          translations.translate('up_next'),
                           style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground),
                         ),
                         Text(
@@ -151,7 +151,7 @@ class CommandCenterPanel extends ConsumerWidget {
                   children: [
                     const Icon(LucideIcons.playCircle, size: 18),
                     const SizedBox(width: 8),
-                    Text(translations.translate('start_session') ?? 'Start Session'),
+                    Text(translations.translate('start_session')),
                   ],
                 ),
               ),

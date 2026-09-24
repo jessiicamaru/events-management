@@ -4,7 +4,6 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
-import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_toolbar.dart';
@@ -39,7 +38,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     super.initState();
     // Default to 3-day view
     _calendarController.view = CalendarView.week;
-    
+
     final prefs = ref.read(sharedPreferencesProvider);
     _isCommandCenterVisible = prefs.getBool('command_center_visible') ?? true;
   }
@@ -81,7 +80,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final userProfileAsync = ref.watch(userProfileProvider);
     final theme = ShadTheme.of(context);
     final currentUserId = userProfileAsync.value?.id;
-    final translations = ref.watch(translationsProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -95,12 +93,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   displayDate: _displayDate,
                   currentView: _currentView,
                   onViewChanged: _onViewChanged,
-                  onTodayPressed: () => _calendarController.displayDate = DateTime.now(),
+                  onTodayPressed: () =>
+                      _calendarController.displayDate = DateTime.now(),
                   onNextPressed: () => _calendarController.forward!(),
                   onPrevPressed: () => _calendarController.backward!(),
                   onTogglePanel: () {
-                    setState(() => _isCommandCenterVisible = !_isCommandCenterVisible);
-                    ref.read(sharedPreferencesProvider).setBool('command_center_visible', _isCommandCenterVisible);
+                    setState(
+                      () => _isCommandCenterVisible = !_isCommandCenterVisible,
+                    );
+                    ref
+                        .read(sharedPreferencesProvider)
+                        .setBool(
+                          'command_center_visible',
+                          _isCommandCenterVisible,
+                        );
                   },
                   isPanelVisible: _isCommandCenterVisible,
                   totalEvents: eventsAsync.value?.length ?? 0,
@@ -110,7 +116,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 // Source Filter Pills
                 CalendarSourceFilters(
                   currentFilter: _sourceFilter,
-                  onFilterChanged: (filter) => setState(() => _sourceFilter = filter),
+                  onFilterChanged: (filter) =>
+                      setState(() => _sourceFilter = filter),
                 ),
                 const Divider(height: 1),
 
@@ -140,10 +147,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 // Habit Dock at the bottom
                 if (habitsAsync.value != null)
                   HabitDock(habits: habitsAsync.value!),
-                  
+
                 // Command Center Panel
-                if (_isCommandCenterVisible)
-                  const CommandCenterPanel(),
+                if (_isCommandCenterVisible) const CommandCenterPanel(),
               ],
             );
           },

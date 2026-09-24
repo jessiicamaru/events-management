@@ -127,7 +127,6 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   case CalendarEventStyle.dot: return const Text('Dot');
                   case CalendarEventStyle.colored: return const Text('Colored');
                   case CalendarEventStyle.mixed: return const Text('Mixed');
-                  default: return const Text('Unknown');
                 }
               },
             ),

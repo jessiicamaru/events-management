@@ -123,7 +123,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     margin: const EdgeInsets.symmetric(horizontal: 6),
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: isSelected ? theme.colorScheme.primary.withOpacity(0.2) : Colors.transparent,
+                                      color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.2) : Colors.transparent,
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isSelected ? theme.colorScheme.primary : Colors.transparent,

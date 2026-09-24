@@ -121,7 +121,7 @@ class CosmeticsScreen extends ConsumerWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : theme.colorScheme.card,
+                color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected ? theme.colorScheme.primary : theme.colorScheme.border,
@@ -173,7 +173,7 @@ class CosmeticsScreen extends ConsumerWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : theme.colorScheme.card,
+                color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected ? theme.colorScheme.primary : theme.colorScheme.border,

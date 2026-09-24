@@ -116,7 +116,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         children: [
           Icon(
             isMet ? LucideIcons.check : LucideIcons.circle,
-            color: isMet ? Colors.green : theme.colorScheme.mutedForeground.withOpacity(0.4),
+            color: isMet ? Colors.green : theme.colorScheme.mutedForeground.withValues(alpha: 0.4),
             size: 14,
           ),
           const SizedBox(width: 8),

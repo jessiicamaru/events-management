@@ -66,7 +66,7 @@ class EventDetailsDialog extends ConsumerWidget {
                 width: double.infinity,
                 child: ShadButton(
                   backgroundColor: event.isCompleted ? theme.colorScheme.destructive : Colors.green,
-                  hoverBackgroundColor: event.isCompleted ? theme.colorScheme.destructive.withOpacity(0.9) : Colors.green.withOpacity(0.9),
+                  hoverBackgroundColor: event.isCompleted ? theme.colorScheme.destructive.withValues(alpha: 0.9) : Colors.green.withValues(alpha: 0.9),
                   onPressed: () {
                     if (event.isCompleted) {
                       ref.read(eventsProvider.notifier).toggleEvent(event.id, false);

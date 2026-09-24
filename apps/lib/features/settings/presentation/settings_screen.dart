@@ -174,7 +174,7 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                             ShadButton(
                               backgroundColor: theme.colorScheme.destructive,
-                              hoverBackgroundColor: theme.colorScheme.destructive.withOpacity(0.9),
+                              hoverBackgroundColor: theme.colorScheme.destructive.withValues(alpha: 0.9),
                               child: Text(translations.translate('logout_title')),
                               onPressed: () async {
                                 Navigator.of(ctx).pop();

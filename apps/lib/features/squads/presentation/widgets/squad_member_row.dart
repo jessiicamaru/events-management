@@ -34,7 +34,7 @@ class SquadMemberRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: theme.colorScheme.accent.withOpacity(0.1),
+        color: theme.colorScheme.accent.withValues(alpha: 0.1),
       ),
       child: Row(
         children: [
