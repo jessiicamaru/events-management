@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../events_provider.dart';
@@ -95,7 +96,7 @@ class CommandCenterPanel extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          translations.translate('up_next'),
+                          translations.translate('up_next') ?? 'Up Next',
                           style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground),
                         ),
                         Text(
@@ -151,7 +152,7 @@ class CommandCenterPanel extends ConsumerWidget {
                   children: [
                     const Icon(LucideIcons.playCircle, size: 18),
                     const SizedBox(width: 8),
-                    Text(translations.translate('start_session')),
+                    Text(translations.translate('start_session') ?? 'Start Session'),
                   ],
                 ),
               ),

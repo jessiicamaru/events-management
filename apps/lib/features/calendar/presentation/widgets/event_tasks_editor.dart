@@ -60,7 +60,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              translations.translate('event_tasks_title'),
+              translations.translate('event_tasks_title') ?? 'Tasks',
               style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
             ),
             ShadButton.ghost(
@@ -70,7 +70,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                 children: [
                   const Icon(LucideIcons.plus, size: 16),
                   const SizedBox(width: 4),
-                  Text(translations.translate('add_task')),
+                  Text(translations.translate('add_task') ?? 'Add Task'),
                 ],
               ),
             ),
@@ -121,7 +121,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
       padding: const EdgeInsets.all(16.0),
       child: Center(
         child: Text(
-          translations.translate('no_tasks_yet'),
+          translations.translate('no_tasks_yet') ?? 'No tasks added yet.',
           style: theme.textTheme.muted,
           textAlign: TextAlign.center,
         ),
@@ -167,6 +167,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                 ShadCheckbox(
                   value: task.isCompleted,
                   onChanged: (val) {
+                    if (val == null) return;
                     if (_isLocalMode) {
                       final updated = _localTasks.map((t) => t.id == task.id ? t.copyWith(isCompleted: val) : t).toList();
                       _updateLocalTasks(updated);
@@ -189,7 +190,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                         )
                       ),
                       if (task.estimatedMinutes != null)
-                        Text('${task.estimatedMinutes} ${translations.translate('minutes_short')}', style: theme.textTheme.muted),
+                        Text('${task.estimatedMinutes} ${translations.translate('minutes_short') ?? 'min'}', style: theme.textTheme.muted),
                     ],
                   ),
                 ),
@@ -279,7 +280,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                     }
 
                     if (isEdit) {
-                      final updated = task.copyWith(
+                      final updated = task!.copyWith(
                         title: titleController.text.trim(),
                         description: descController.text.trim().isEmpty ? null : descController.text.trim(),
                         priority: selectedPriority,
