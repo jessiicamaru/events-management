@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../providers/shared_preferences_provider.dart';
 
 enum AppLocale { en, vi }
 
@@ -8,21 +8,17 @@ class LocaleNotifier extends Notifier<AppLocale> {
 
   @override
   AppLocale build() {
-    _loadLocale();
-    return AppLocale.en;
-  }
-
-  Future<void> _loadLocale() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ref.watch(sharedPreferencesProvider);
     final savedLocale = prefs.getString(_localeKey);
     if (savedLocale != null) {
-      state = savedLocale == 'vi' ? AppLocale.vi : AppLocale.en;
+      return savedLocale == 'vi' ? AppLocale.vi : AppLocale.en;
     }
+    return AppLocale.en;
   }
 
   Future<void> setLocale(AppLocale locale) async {
     state = locale;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setString(_localeKey, locale == AppLocale.vi ? 'vi' : 'en');
   }
 }
@@ -136,6 +132,8 @@ class AppTranslations {
     'delete_event_confirm_title': {AppLocale.en: 'Delete Event', AppLocale.vi: 'Xoá sự kiện'},
     'delete_event_confirm_desc': {AppLocale.en: 'Are you sure you want to delete this event?', AppLocale.vi: 'Bạn có chắc chắn muốn xoá sự kiện này không?'},
     'event_deleted_toast': {AppLocale.en: 'Event deleted', AppLocale.vi: 'Đã xoá sự kiện'},
+    'event_title_empty': {AppLocale.en: 'Please enter an event title', AppLocale.vi: 'Vui lòng nhập tên sự kiện'},
+    'event_tasks_title': {AppLocale.en: 'Tasks', AppLocale.vi: 'Công việc'},
 
     // Unscheduled Habits Panel
     'unscheduled_habits': {AppLocale.en: 'Unscheduled Habits', AppLocale.vi: 'Thói quen chưa lên lịch'},
@@ -159,6 +157,12 @@ class AppTranslations {
     'save_btn': {AppLocale.en: 'Save', AppLocale.vi: 'Lưu'},
     'delete_btn': {AppLocale.en: 'Delete', AppLocale.vi: 'Xóa'},
     'target_days': {AppLocale.en: 'Target Days', AppLocale.vi: 'Ngày thực hiện'},
+    'habit_tasks_title': {AppLocale.en: 'Habit Tasks (Optional)', AppLocale.vi: 'Công việc (Tùy chọn)'},
+    'add_task': {AppLocale.en: 'Add Task', AppLocale.vi: 'Thêm công việc'},
+    'no_tasks_yet': {AppLocale.en: 'No tasks added yet. Add a task to create a checklist for this habit.', AppLocale.vi: 'Chưa có công việc nào. Thêm công việc để tạo danh sách kiểm tra cho thói quen này.'},
+    'tasks_checklist': {AppLocale.en: 'Tasks', AppLocale.vi: 'Danh sách công việc'},
+    'no_tasks_for_event': {AppLocale.en: 'No tasks for this session.', AppLocale.vi: 'Không có công việc nào cho sự kiện này.'},
+    'minutes_short': {AppLocale.en: 'min', AppLocale.vi: 'phút'},
     'habit_name_empty': {AppLocale.en: 'Habit name cannot be empty', AppLocale.vi: 'Tên thói quen không được để trống'},
     'habit_updated_toast': {AppLocale.en: 'Habit updated successfully', AppLocale.vi: 'Đã cập nhật thói quen thành công'},
     'habit_deleted_toast': {AppLocale.en: 'Habit deleted successfully', AppLocale.vi: 'Đã xóa thói quen thành công'},
@@ -166,6 +170,8 @@ class AppTranslations {
 
     // Focus Session (Pomodoro)
     'pomodoro_timer': {AppLocale.en: 'Pomodoro Timer', AppLocale.vi: 'Đồng hồ Pomodoro'},
+    'up_next': {AppLocale.en: 'Up Next', AppLocale.vi: 'Sắp diễn ra'},
+    'start_session': {AppLocale.en: 'Start Session', AppLocale.vi: 'Bắt đầu'},
     'status_label': {AppLocale.en: 'Status', AppLocale.vi: 'Trạng thái'},
     'status_ready': {AppLocale.en: 'READY', AppLocale.vi: 'SẴN SÀNG'},
     'status_running': {AppLocale.en: 'RUNNING', AppLocale.vi: 'ĐANG CHẠY'},

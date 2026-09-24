@@ -17,13 +17,16 @@ namespace HabitTracker.Application.Tests
         {
             // Arrange
             var mockRepo = new Mock<IEventRepository>();
+            var mockHabitTaskRepo = new Mock<IHabitTaskRepository>();
+            var mockEventTaskRepo = new Mock<IEventTaskRepository>();
+
             Event? savedEvent = null;
             
             mockRepo.Setup(r => r.AddAsync(It.IsAny<Event>()))
                 .Callback<Event>(e => savedEvent = e)
                 .Returns(Task.CompletedTask);
 
-            var handler = new CreateEventCommandHandler(mockRepo.Object);
+            var handler = new CreateEventCommandHandler(mockRepo.Object, mockHabitTaskRepo.Object, mockEventTaskRepo.Object);
 
             var command = new CreateEventCommand
             {

@@ -4,9 +4,19 @@ using System.Threading.Tasks;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
+using System.Linq;
 
 namespace HabitTracker.Application.Features.Events.Commands
 {
+    public class CreateEventTaskDto
+    {
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public int Order { get; set; }
+        public Priority Priority { get; set; }
+        public int? EstimatedMinutes { get; set; }
+    }
+
     public class CreateEventCommand : IRequest<Guid>
     {
         public string Title { get; set; } = string.Empty;
@@ -15,15 +25,20 @@ namespace HabitTracker.Application.Features.Events.Commands
         public string HabitId { get; set; } = string.Empty;
         public TimeSpan? TargetDuration { get; set; }
         public string UserId { get; set; } = string.Empty;
+        public List<CreateEventTaskDto>? Tasks { get; set; }
     }
 
     public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
     {
         private readonly IEventRepository _repository;
+        private readonly IHabitTaskRepository _habitTaskRepository;
+        private readonly IEventTaskRepository _eventTaskRepository;
 
-        public CreateEventCommandHandler(IEventRepository repository)
+        public CreateEventCommandHandler(IEventRepository repository, IHabitTaskRepository habitTaskRepository, IEventTaskRepository eventTaskRepository)
         {
             _repository = repository;
+            _habitTaskRepository = habitTaskRepository;
+            _eventTaskRepository = eventTaskRepository;
         }
 
         public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
@@ -39,6 +54,44 @@ namespace HabitTracker.Application.Features.Events.Commands
             };
 
             await _repository.AddAsync(ev);
+
+            if (request.Tasks != null && request.Tasks.Any())
+            {
+                foreach (var taskDto in request.Tasks)
+                {
+                    var eventTask = new EventTask
+                    {
+                        EventId = ev.Id,
+                        Title = taskDto.Title,
+                        Description = taskDto.Description,
+                        Order = taskDto.Order,
+                        Priority = taskDto.Priority,
+                        EstimatedMinutes = taskDto.EstimatedMinutes,
+                        IsCompleted = false
+                    };
+                    await _eventTaskRepository.AddAsync(eventTask);
+                }
+            }
+            else if (Guid.TryParse(request.HabitId, out var parsedHabitId))
+            {
+                var templateTasks = (await _habitTaskRepository.GetByHabitIdAsync(parsedHabitId)).ToList();
+
+                foreach (var templateTask in templateTasks)
+                {
+                    var eventTask = new EventTask
+                    {
+                        EventId = ev.Id,
+                        Title = templateTask.Title,
+                        Description = templateTask.Description,
+                        Order = templateTask.Order,
+                        Priority = templateTask.Priority,
+                        EstimatedMinutes = templateTask.EstimatedMinutes,
+                        IsCompleted = false
+                    };
+                    await _eventTaskRepository.AddAsync(eventTask);
+                }
+            }
+
             return ev.Id;
         }
     }

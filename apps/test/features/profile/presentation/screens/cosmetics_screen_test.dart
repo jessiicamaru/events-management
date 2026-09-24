@@ -4,6 +4,7 @@ import 'package:habit_tracker/features/profile/presentation/screens/cosmetics_sc
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import '../../../../test_utils.dart';
 
 class FakeUserProfileNotifier extends UserProfileNotifier {
   @override
@@ -23,6 +24,7 @@ void main() {
       ProviderScope(
         overrides: [
           userProfileProvider.overrideWith(() => FakeUserProfileNotifier()),
+          ...commonTestOverrides,
         ],
         child: const ShadApp(
           home: CosmeticsScreen(),

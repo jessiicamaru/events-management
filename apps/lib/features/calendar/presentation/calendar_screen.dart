@@ -14,11 +14,13 @@ import 'widgets/calendar_event_card.dart';
 import 'widgets/create_event_sheet.dart';
 import 'widgets/event_details_dialog.dart';
 import 'widgets/habit_dock.dart';
+import 'widgets/command_center_panel.dart';
 import '../../focus_session/presentation/screens/focus_screen.dart';
 import '../../focus_session/presentation/widgets/post_session_dialog.dart';
 import '../../profile/presentation/providers/user_profile_provider.dart';
 import '../../../core/localization/locale_provider.dart';
 import 'providers/calendar_settings_provider.dart';
+import '../../../core/providers/shared_preferences_provider.dart';
 
 // Helper enum for custom view selection
 enum AppCalendarView { day, threeDay, month }
@@ -39,12 +41,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   DateTime _displayDate = DateTime.now();
   CalendarSourceFilter _sourceFilter = CalendarSourceFilter.all;
   EventModel? _hoverEvent;
+  bool _isCommandCenterVisible = true;
 
   @override
   void initState() {
     super.initState();
     // Default to 3-day view
     _calendarController.view = CalendarView.week;
+    
+    final prefs = ref.read(sharedPreferencesProvider);
+    _isCommandCenterVisible = prefs.getBool('command_center_visible') ?? true;
   }
 
   @override
@@ -103,6 +109,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   onTodayPressed: () => _calendarController.displayDate = DateTime.now(),
                   onNextPressed: () => _calendarController.forward!(),
                   onPrevPressed: () => _calendarController.backward!(),
+                  onTogglePanel: () {
+                    setState(() => _isCommandCenterVisible = !_isCommandCenterVisible);
+                    ref.read(sharedPreferencesProvider).setBool('command_center_visible', _isCommandCenterVisible);
+                  },
+                  isPanelVisible: _isCommandCenterVisible,
                   totalEvents: eventsAsync.value?.length ?? 0,
                 ),
                 const Divider(height: 1),
@@ -384,6 +395,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 // Habit Dock at the bottom
                 if (habitsAsync.value != null)
                   HabitDock(habits: habitsAsync.value!),
+                  
+                // Command Center Panel
+                if (_isCommandCenterVisible)
+                  const CommandCenterPanel(),
               ],
             );
           },

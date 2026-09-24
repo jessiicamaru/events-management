@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/network/dio_client.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 
@@ -178,5 +180,53 @@ class ApiService {
       'currentPassword': currentPassword,
       'newPassword': newPassword,
     });
+  }
+
+  // --- Habit Tasks ---
+
+  Future<List<HabitTaskModel>> fetchHabitTasks(String habitId) async {
+    final response = await _dio.get('/habits/$habitId/tasks');
+    final data = response.data as List;
+    return data.map((json) => HabitTaskModel.fromJson(json)).toList();
+  }
+
+  Future<void> createHabitTask(String habitId, HabitTaskModel task) async {
+    await _dio.post('/habits/$habitId/tasks', data: task.toJson());
+  }
+
+  Future<void> updateHabitTask(String habitId, HabitTaskModel task) async {
+    await _dio.put('/habits/$habitId/tasks/${task.id}', data: task.toJson());
+  }
+
+  Future<void> deleteHabitTask(String habitId, String taskId) async {
+    await _dio.delete('/habits/$habitId/tasks/$taskId');
+  }
+
+  Future<void> reorderHabitTasks(String habitId, List<Map<String, dynamic>> orders) async {
+    await _dio.put('/habits/$habitId/tasks/reorder', data: orders);
+  }
+
+  // --- Event Tasks ---
+
+  Future<List<EventTaskModel>> fetchEventTasks(String eventId) async {
+    final response = await _dio.get('/events/$eventId/tasks');
+    final data = response.data as List;
+    return data.map((json) => EventTaskModel.fromJson(json)).toList();
+  }
+
+  Future<void> createEventTask(String eventId, EventTaskModel task) async {
+    await _dio.post('/events/$eventId/tasks', data: task.toJson());
+  }
+
+  Future<void> updateEventTask(String eventId, EventTaskModel task) async {
+    await _dio.put('/events/$eventId/tasks/${task.id}', data: task.toJson());
+  }
+
+  Future<void> deleteEventTask(String eventId, String taskId) async {
+    await _dio.delete('/events/$eventId/tasks/$taskId');
+  }
+
+  Future<void> toggleEventTask(String eventId, String taskId, bool isCompleted) async {
+    await _dio.patch('/events/$eventId/tasks/$taskId/toggle', data: {'isCompleted': isCompleted});
   }
 }

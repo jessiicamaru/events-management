@@ -14,5 +14,6 @@ namespace HabitTracker.Domain.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? UserId { get; set; }
         public ApplicationUser? User { get; set; }
+        public ICollection<HabitTask> Tasks { get; set; } = new List<HabitTask>();
     }
 }

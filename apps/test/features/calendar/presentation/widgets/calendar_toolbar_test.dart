@@ -37,6 +37,8 @@ void main() {
           onTodayPressed: () { },
           onNextPressed: () { },
           onPrevPressed: () { },
+          onTogglePanel: () {},
+          isPanelVisible: true,
           totalEvents: 5,
         ),
         prefs,

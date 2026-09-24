@@ -6,18 +6,23 @@ import '../../../settings/presentation/providers/app_settings_provider.dart';
 import '../../../habits/domain/models/habit_model.dart';
 import '../../domain/models/event_model.dart';
 import '../events_provider.dart';
+import '../../../habits/presentation/habits_provider.dart';
 import 'unscheduled_habits_selector.dart';
 import '../../../../core/localization/locale_provider.dart';
+import 'event_tasks_editor.dart';
+import '../../domain/models/event_task_model.dart';
+import '../../../habits/presentation/providers/habit_tasks_provider.dart';
+
 
 class CreateEventSheet extends ConsumerStatefulWidget {
-  final AsyncValue<List<HabitModel>> habitsAsync;
+  final AsyncValue<List<HabitModel>>? habitsAsync;
   final DateTime? initialDate;
   final HabitModel? initialHabit;
   final EventModel? eventToEdit;
 
   const CreateEventSheet({
     super.key,
-    required this.habitsAsync,
+    this.habitsAsync,
     this.initialDate,
     this.initialHabit,
     this.eventToEdit,
@@ -36,6 +41,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   TimeOfDay _startTime = const TimeOfDay(hour: 6, minute: 0);
   TimeOfDay _endTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isSubmitting = false;
+  List<EventTaskModel>? _localTasks;
 
   static const List<String> _categories = ['Health', 'Work', 'Learning', 'Wellness'];
 
@@ -78,12 +84,32 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     super.dispose();
   }
 
-  void _fillFromHabit(HabitModel habit) {
+  void _fillFromHabit(HabitModel habit) async {
     setState(() {
       _selectedHabit = habit;
       _titleController.text = habit.name;
       _selectedCategory = habit.category;
     });
+
+    if (widget.eventToEdit == null) {
+      try {
+        final habitTasks = await ref.read(habitTasksProvider(habit.id).future);
+        setState(() {
+          _localTasks = habitTasks.map((t) => EventTaskModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString() + t.id,
+            eventId: 'temp',
+            title: t.title,
+            description: t.description,
+            order: t.order,
+            priority: t.priority,
+            estimatedMinutes: t.estimatedMinutes,
+            isCompleted: false,
+          )).toList();
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
   }
 
   Future<void> _pickDate() async {
@@ -131,8 +157,11 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     final translations = ref.read(translationsProvider);
     final title = _titleController.text.trim();
     if (title.isEmpty) {
+      setState(() => _isSubmitting = false);
       ShadToaster.of(context).show(
-        ShadToast.destructive(title: Text(translations.translate('title_required_toast'))),
+        ShadToast.destructive(
+          title: Text(translations.translate('event_title_empty')),
+        ),
       );
       return;
     }
@@ -149,13 +178,14 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     );
 
     final event = EventModel(
-      id: widget.eventToEdit?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: widget.eventToEdit?.id ?? '',
       title: title,
       habitId: _selectedHabit?.id ?? '',
-      startTime: start,
-      endTime: end.isBefore(start) ? start.add(const Duration(hours: 1)) : end,
+      startTime: start.toUtc(),
+      endTime: (end.isBefore(start) ? start.add(const Duration(hours: 1)) : end).toUtc(),
       targetDuration: int.tryParse(_targetDurationController.text),
       isCompleted: widget.eventToEdit?.isCompleted ?? false,
+      tasks: widget.eventToEdit == null ? _localTasks : null,
       actualDuration: widget.eventToEdit?.actualDuration,
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
@@ -193,7 +223,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = ShadTheme.of(context);
-    final habits = widget.habitsAsync.value ?? [];
+    final habits = ref.watch(habitsProvider).value ?? [];
     final appSettings = ref.watch(appSettingsProvider);
     final brandColor = AppTheme.getBrandColor(appSettings.primaryColor);
     final currentLocale = ref.watch(localeProvider);
@@ -263,6 +293,20 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     onSelect: _fillFromHabit,
                   ),
 
+                  if (_selectedHabit != null || widget.eventToEdit != null) ...[
+                    const SizedBox(height: 16),
+                    EventTasksEditor(
+                      eventId: widget.eventToEdit?.id,
+                      localTasks: _localTasks,
+                      onLocalTasksChanged: (tasks) {
+                        setState(() {
+                          _localTasks = tasks;
+                        });
+                      },
+                    ),
+                  ],
+
+                  const SizedBox(height: 16),
                   // Title field
                   Text(translations.translate('title'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),

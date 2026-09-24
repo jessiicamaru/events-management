@@ -22,6 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISquadRepository, SquadRepository>();
+        services.AddScoped<IHabitTaskRepository, HabitTaskRepository>();
+        services.AddScoped<IEventTaskRepository, EventTaskRepository>();
         services.AddScoped<ApplicationDbContextInitialiser>();
 
         return services;

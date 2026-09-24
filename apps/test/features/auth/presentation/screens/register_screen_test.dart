@@ -3,12 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/auth/presentation/screens/register_screen.dart';
+import '../../../../test_utils.dart';
 
 void main() {
   testWidgets('RegisterScreen renders and checks password requirements in real-time', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: ShadApp(
+      ProviderScope(
+        overrides: [
+          ...commonTestOverrides,
+        ],
+        child: const ShadApp(
           home: RegisterScreen(),
         ),
       ),

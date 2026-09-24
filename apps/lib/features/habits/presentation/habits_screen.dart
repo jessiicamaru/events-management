@@ -6,6 +6,7 @@ import '../domain/models/habit_model.dart';
 import 'habits_provider.dart';
 import 'providers/heatmap_provider.dart';
 import 'widgets/heatmap_widget.dart';
+import 'widgets/habit_tasks_editor.dart';
 import '../../../core/localization/locale_provider.dart';
 
 class HabitsScreen extends ConsumerWidget {
@@ -192,7 +193,7 @@ class HabitsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       translations.translate('habit_name_placeholder'),
@@ -210,6 +211,9 @@ class HabitsScreen extends ConsumerWidget {
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
                     ),
+                    const SizedBox(height: 16),
+                    // We only show task editor on edit mode, or after habit is created.
+                    // For create mode, they can edit tasks after creation.
                   ],
                 ),
               ),
@@ -290,7 +294,7 @@ class HabitsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       translations.translate('habit_name_placeholder'),
@@ -308,6 +312,8 @@ class HabitsScreen extends ConsumerWidget {
                       selectedCategory,
                       (val) => setState(() => selectedCategory = val),
                     ),
+                    const SizedBox(height: 24),
+                    HabitTasksEditor(habitId: habit.id),
                   ],
                 ),
               ),
