@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:intl/intl.dart';
-import '../../domain/models/event_model.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
-import '../../../../core/localization/locale_provider.dart';
-import 'event_tasks_checklist.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks_checklist.dart';
 
-import '../events_provider.dart';
-import '../../../habits/presentation/habits_provider.dart';
-import 'create_event_sheet.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
 
 class EventDetailsDialog extends ConsumerWidget {
   final EventModel event;

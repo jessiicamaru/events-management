@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'event_task_model.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 
 part 'event_model.freezed.dart';
 part 'event_model.g.dart';

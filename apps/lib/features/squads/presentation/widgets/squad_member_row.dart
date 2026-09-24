@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../domain/models/squad_model.dart';
+import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 
 class SquadMemberRow extends StatelessWidget {
   final SquadMemberModel member;

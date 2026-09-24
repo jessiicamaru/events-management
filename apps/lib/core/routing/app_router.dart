@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../features/calendar/presentation/calendar_screen.dart';
-import '../../features/habits/presentation/habits_screen.dart';
-import '../../features/settings/presentation/settings_screen.dart';
+import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_screen.dart';
+import 'package:habit_tracker/features/settings/presentation/settings_screen.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/auth/presentation/screens/register_screen.dart';
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:habit_tracker/features/auth/presentation/screens/login_screen.dart';
+import 'package:habit_tracker/features/auth/presentation/screens/register_screen.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
-import '../../features/squads/presentation/screens/squad_dashboard_screen.dart';
-import '../localization/locale_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/screens/squad_dashboard_screen.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -80,7 +80,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  ref.listen(authProvider, (_, __) => router.refresh());
+  ref.listen(authProvider, (_, _) => router.refresh());
 
   return router;
 });

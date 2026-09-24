@@ -8,7 +8,7 @@ import 'package:habit_tracker/features/calendar/domain/models/event_task_model.d
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 final apiServiceProvider = Provider((ref) {
   final dio = DioClient().dio;

@@ -7,7 +7,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../domain/pomodoro_state.dart';
-import 'timer_notifier.dart';
-import '../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/pomodoro/domain/pomodoro_state.dart';
+import 'package:habit_tracker/features/pomodoro/presentation/timer_notifier.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class PomodoroScreen extends ConsumerWidget {
   const PomodoroScreen({super.key});

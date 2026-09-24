@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});

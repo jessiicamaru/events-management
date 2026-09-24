@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
-import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/focus_session/presentation/providers/timer_provider.dart';
 import 'package:habit_tracker/features/focus_session/domain/models/timer_state.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_display.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_controls.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class FocusScreen extends ConsumerStatefulWidget {
   final EventModel event;

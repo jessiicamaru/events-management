@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../../../core/utils/app_constants.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../../domain/models/habit_model.dart';
-import '../habits_provider.dart';
-import 'habit_category_selector.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/habit_category_selector.dart';
 
 class AddHabitDialog extends ConsumerStatefulWidget {
   const AddHabitDialog({super.key});

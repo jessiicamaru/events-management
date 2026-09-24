@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../../domain/models/event_task_model.dart';
-import '../../../habits/domain/models/habit_task_model.dart';
-import '../providers/event_tasks_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_tasks_provider.dart';
 
 class EventTasksEditor extends ConsumerStatefulWidget {
   final String? eventId;
@@ -167,7 +167,6 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                 ShadCheckbox(
                   value: task.isCompleted,
                   onChanged: (val) {
-                    if (val == null) return;
                     if (_isLocalMode) {
                       final updated = _localTasks.map((t) => t.id == task.id ? t.copyWith(isCompleted: val) : t).toList();
                       _updateLocalTasks(updated);
@@ -280,7 +279,7 @@ class _EventTasksEditorState extends ConsumerState<EventTasksEditor> {
                     }
 
                     if (isEdit) {
-                      final updated = task!.copyWith(
+                      final updated = task.copyWith(
                         title: titleController.text.trim(),
                         description: descController.text.trim().isEmpty ? null : descController.text.trim(),
                         priority: selectedPriority,

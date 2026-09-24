@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/network/api_service.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});

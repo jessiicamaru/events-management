@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import '../calendar_screen.dart';
-import '../providers/category_filter_provider.dart';
-import 'calendar_settings_sheet.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/category_filter_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_settings_sheet.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class CalendarToolbar extends ConsumerWidget {
   final DateTime displayDate;

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../core/utils/app_constants.dart';
-import '../domain/models/habit_model.dart';
-import 'habits_provider.dart';
-import 'providers/heatmap_provider.dart';
-import 'widgets/heatmap_widget.dart';
-import 'widgets/add_habit_dialog.dart';
-import 'widgets/edit_habit_dialog.dart';
-import '../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/heatmap_widget.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/add_habit_dialog.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/edit_habit_dialog.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class HabitsScreen extends ConsumerWidget {
   const HabitsScreen({super.key});

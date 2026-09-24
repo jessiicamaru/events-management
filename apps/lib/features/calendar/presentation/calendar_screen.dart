@@ -3,20 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
-import '../../../core/providers/shared_preferences_provider.dart';
-import '../../../core/localization/locale_provider.dart';
-import '../../habits/domain/models/habit_model.dart';
-import '../../habits/presentation/habits_provider.dart';
-import '../domain/models/event_model.dart';
-import 'events_provider.dart';
-import 'widgets/calendar_toolbar.dart';
-import 'widgets/create_event_sheet.dart';
-import 'widgets/habit_dock.dart';
-import 'widgets/command_center_panel.dart';
-import 'widgets/calendar_source_filters.dart';
-import 'widgets/calendar_workspace.dart';
-import '../../profile/presentation/providers/user_profile_provider.dart';
-import 'providers/calendar_settings_provider.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_toolbar.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/habit_dock.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/command_center_panel.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_source_filters.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_workspace.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 
 // Helper enum for custom view selection
 enum AppCalendarView { day, threeDay, month }

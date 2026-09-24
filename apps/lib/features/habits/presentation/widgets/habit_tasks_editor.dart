@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../../domain/models/habit_task_model.dart';
-import '../providers/habit_tasks_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
+import 'package:habit_tracker/features/habits/presentation/providers/habit_tasks_provider.dart';
 
 class HabitTasksEditor extends ConsumerWidget {
   final String habitId;
@@ -184,7 +184,7 @@ class HabitTasksEditor extends ConsumerWidget {
                     }
 
                     if (isEdit) {
-                      final updated = task!.copyWith(
+                      final updated = task.copyWith(
                         title: titleController.text.trim(),
                         description: descController.text.trim().isEmpty ? null : descController.text.trim(),
                         priority: selectedPriority,

@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../utils/app_constants.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 class DioClient {
   final Dio dio;
 

@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
-import '../../domain/models/calendar_event_style.dart';
+import 'package:habit_tracker/features/calendar/domain/models/calendar_event_style.dart';
 
 part 'calendar_settings_provider.g.dart';
 

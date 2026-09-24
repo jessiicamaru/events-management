@@ -1,6 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_service.dart';
-import '../../domain/models/habit_task_model.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'habit_tasks_provider.g.dart';

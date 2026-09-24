@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/models/timer_state.dart';
-import '../../domain/services/wakelock_service.dart';
+import 'package:habit_tracker/features/focus_session/domain/models/timer_state.dart';
+import 'package:habit_tracker/features/focus_session/domain/services/wakelock_service.dart';
 
 class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
   Timer? _timer;

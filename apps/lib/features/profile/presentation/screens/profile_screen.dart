@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/user_profile_provider.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});

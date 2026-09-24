@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import '../domain/pomodoro_state.dart';
+import 'package:habit_tracker/features/pomodoro/domain/pomodoro_state.dart';
 
 part 'timer_notifier.g.dart';
 

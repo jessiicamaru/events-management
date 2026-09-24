@@ -4,19 +4,19 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:syncfusion_flutter_core/theme.dart';
 
-import '../../../../core/utils/app_constants.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import '../../domain/models/event_model.dart';
-import '../calendar_screen.dart'; // For AppCalendarView
-import 'calendar_source_filters.dart'; // For CalendarSourceFilter
-import '../events_provider.dart';
-import 'create_event_sheet.dart';
-import 'event_details_dialog.dart';
-import '../../../focus_session/presentation/screens/focus_screen.dart';
-import '../../../focus_session/presentation/widgets/post_session_dialog.dart';
-import '../providers/calendar_settings_provider.dart';
-import 'calendar_event_card.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart'; // For AppCalendarView
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_source_filters.dart'; // For CalendarSourceFilter
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/event_details_dialog.dart';
+import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
+import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_card.dart';
 
 class CalendarWorkspace extends ConsumerStatefulWidget {
   final CalendarController calendarController;

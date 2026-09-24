@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:dio/dio.dart';
-import '../../../../core/network/api_service.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
