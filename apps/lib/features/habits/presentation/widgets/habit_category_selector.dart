@@ -37,35 +37,20 @@ class HabitCategorySelector extends ConsumerWidget {
                 style: theme.textTheme.small.copyWith(color: theme.colorScheme.mutedForeground),
               );
             }
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: categories.map((cat) {
-                final isSelected = selectedCategoryId == cat.id;
-                return GestureDetector(
-                  onTap: () {
-                     if (isSelected) {
-                         onCategoryChanged(null); // allow deselecting
-                     } else {
-                         onCategoryChanged(cat.id);
-                     }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected ? theme.colorScheme.primary : theme.colorScheme.muted,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      cat.name,
-                      style: theme.textTheme.small.copyWith(
-                        color: isSelected ? theme.colorScheme.primaryForeground : theme.colorScheme.foreground,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
+            return ShadSelect<String>(
+              placeholder: Text(translations.translate('select_category')),
+              initialValue: selectedCategoryId,
+              onChanged: onCategoryChanged,
+              options: categories.map((cat) {
+                return ShadOption(
+                  value: cat.id,
+                  child: Text(cat.name),
                 );
               }).toList(),
+              selectedOptionBuilder: (context, value) {
+                final cat = categories.firstWhere((c) => c.id == value, orElse: () => categories.first);
+                return Text(cat.name);
+              },
             );
           },
           loading: () => const CircularProgressIndicator(),

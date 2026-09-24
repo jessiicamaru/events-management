@@ -8,8 +8,17 @@ part 'habit_tasks_provider.g.dart';
 class HabitTasks extends _$HabitTasks {
   @override
   Future<List<HabitTaskModel>> build(String habitId) async {
+    // If habitId is not a UUID (e.g. local timestamp), the backend won't recognize it.
+    if (!RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$').hasMatch(habitId)) {
+      return [];
+    }
+
     final api = ref.watch(apiServiceProvider);
-    return await api.fetchHabitTasks(habitId);
+    try {
+      return await api.fetchHabitTasks(habitId);
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<void> addTask(HabitTaskModel task) async {

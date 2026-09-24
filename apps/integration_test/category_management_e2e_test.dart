@@ -56,7 +56,7 @@ void main() {
     expect(find.text('Category Management'), findsOneWidget);
 
     // 4. Add a new category
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.text('Add Category'));
     await tester.pumpAndSettle();
 
     expect(find.text('New Category'), findsOneWidget);
