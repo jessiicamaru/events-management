@@ -276,6 +276,10 @@ class AppTranslations {
     'change_password_success': {AppLocale.en: 'Password changed successfully', AppLocale.vi: 'Đổi mật khẩu thành công'},
     'change_password_error': {AppLocale.en: 'Failed to change password', AppLocale.vi: 'Đổi mật khẩu thất bại'},
     'save_profile': {AppLocale.en: 'Save Changes', AppLocale.vi: 'Lưu thay đổi'},
+    'current_password_empty': {AppLocale.en: 'Please enter your current password.', AppLocale.vi: 'Vui lòng nhập mật khẩu hiện tại.'},
+    'new_password_empty': {AppLocale.en: 'Please enter your new password.', AppLocale.vi: 'Vui lòng nhập mật khẩu mới.'},
+    'confirm_password_empty': {AppLocale.en: 'Please confirm your new password.', AppLocale.vi: 'Vui lòng xác nhận mật khẩu mới.'},
+    'new_password_invalid': {AppLocale.en: 'New password does not meet security requirements.', AppLocale.vi: 'Mật khẩu mới không đáp ứng đủ yêu cầu bảo mật.'},
   };
 
   final AppLocale locale;
@@ -286,6 +290,9 @@ class AppTranslations {
   }
 
   String translateBackendError(String error) {
+    if (error.contains("PasswordMismatch") || error.contains("Incorrect password")) {
+      return locale == AppLocale.vi ? "Mật khẩu hiện tại không chính xác." : "Incorrect current password.";
+    }
     if (error.contains("at least one digit") || error.contains("RequiresDigit")) {
       return locale == AppLocale.vi ? "Mật khẩu phải có ít nhất một chữ số ('0'-'9')." : "Passwords must have at least one digit ('0'-'9').";
     }
