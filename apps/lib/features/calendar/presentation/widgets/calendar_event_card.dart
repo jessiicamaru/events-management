@@ -6,15 +6,24 @@ import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/core/theme/app_theme.dart';
 import 'package:habit_tracker/features/calendar/domain/models/calendar_event_style.dart';
+import 'package:habit_tracker/features/calendar/models/event_category.dart';
+import 'package:habit_tracker/features/settings/presentation/category_management_screen.dart';
 
-Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, CalendarEventStyle style) {
+Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, List<EventCategory> categories, CalendarEventStyle style) {
   final event = details.appointments.first as EventModel;
   
   final habit = habits.firstWhere(
     (h) => h.id == event.habitId, 
     orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
   );
-  final color = AppTheme.getHabitColor(habit.category);
+  
+  Color color;
+  if (event.categoryId != null) {
+    final cat = categories.firstWhere((c) => c.id == event.categoryId, orElse: () => const EventCategory(id: '', name: '', colorPreset: 'Slate'));
+    color = colorPalette[cat.colorPreset] ?? Colors.blueGrey;
+  } else {
+    color = AppTheme.getHabitColor(habit.category);
+  }
   
   final theme = ShadTheme.of(context);
 

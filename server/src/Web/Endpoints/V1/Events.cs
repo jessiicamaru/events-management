@@ -85,6 +85,7 @@ public class Events : EndpointGroupBase
             StartTime = request.StartTime,
             EndTime = request.EndTime,
             HabitId = request.HabitId,
+            CategoryId = request.CategoryId,
             TargetDuration = request.TargetDuration,
             UserId = userId
         };
@@ -95,6 +96,6 @@ public class Events : EndpointGroupBase
     }
 }
 
-public record UpdateEventRequest(string Title, DateTime StartTime, DateTime EndTime, string HabitId, TimeSpan? TargetDuration);
+public record UpdateEventRequest(string Title, DateTime StartTime, DateTime EndTime, string HabitId, Guid? CategoryId, TimeSpan? TargetDuration);
 
 public record ToggleEventRequest(bool IsCompleted);

@@ -93,6 +93,7 @@ class EventsNotifier extends _$EventsNotifier {
         'startTime': event.startTime.toUtc().toIso8601String(),
         'endTime': event.endTime.toUtc().toIso8601String(),
         'habitId': event.habitId,
+        'categoryId': event.categoryId,
         'targetDuration': const TimeSpanConverter().toJson(event.targetDuration),
       });
       ref.invalidate(habitsProvider);

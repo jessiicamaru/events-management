@@ -17,6 +17,7 @@ import 'package:habit_tracker/features/focus_session/presentation/screens/focus_
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_card.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 
 class CalendarWorkspace extends ConsumerStatefulWidget {
   final CalendarController calendarController;
@@ -95,6 +96,7 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
     final theme = ShadTheme.of(context);
     final translations = ref.watch(translationsProvider);
     final settings = ref.watch(calendarSettingsProvider);
+    final categories = ref.watch(eventCategoriesProvider(squadId: null)).value ?? [];
 
     return DragTarget<HabitModel>(
       onMove: (details) {
@@ -246,7 +248,7 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                     viewNavigationMode: isThreeDayScrollable ? ViewNavigationMode.none : ViewNavigationMode.snap,
                     firstDayOfWeek: 1,
                     specialRegions: _getSpecialRegions(theme),
-                    appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits, settings.eventStyle),
+                    appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits, categories, settings.eventStyle),
                     onTap: (CalendarTapDetails tapDetails) async {
                       if (tapDetails.targetElement == CalendarElement.appointment) {
                         final event = tapDetails.appointments!.first as EventModel;

@@ -13,6 +13,7 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
   endTime: DateTime.parse(json['endTime'] as String),
   habitId: json['habitId'] as String,
   isCompleted: json['isCompleted'] as bool? ?? false,
+  categoryId: json['categoryId'] as String?,
   targetDuration: const TimeSpanConverter().fromJson(
     json['targetDuration'] as String?,
   ),
@@ -37,6 +38,7 @@ Map<String, dynamic> _$EventModelToJson(
   'endTime': instance.endTime.toIso8601String(),
   'habitId': instance.habitId,
   'isCompleted': instance.isCompleted,
+  'categoryId': instance.categoryId,
   'targetDuration': const TimeSpanConverter().toJson(instance.targetDuration),
   'actualDuration': const TimeSpanConverter().toJson(instance.actualDuration),
   'createdAt': instance.createdAt?.toIso8601String(),

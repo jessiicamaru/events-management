@@ -33,7 +33,7 @@ final class EventsNotifierProvider
   EventsNotifier create() => EventsNotifier();
 }
 
-String _$eventsNotifierHash() => r'91697664d3be0ff4a9f50cf0b79ce7d26121e546';
+String _$eventsNotifierHash() => r'a97be2e4f3369745b1f095106f3b03bd2e2f5652';
 
 abstract class _$EventsNotifier extends $AsyncNotifier<List<EventModel>> {
   FutureOr<List<EventModel>> build();

@@ -5,6 +5,7 @@ import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
+import 'package:habit_tracker/features/calendar/models/event_category.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 
@@ -228,5 +229,31 @@ class ApiService {
 
   Future<void> toggleEventTask(String eventId, String taskId, bool isCompleted) async {
     await _dio.patch('/events/$eventId/tasks/$taskId/toggle', data: {'isCompleted': isCompleted});
+  }
+
+  // --- Event Categories ---
+
+  Future<List<EventCategory>> fetchEventCategories({String? squadId}) async {
+    final queryParameters = <String, dynamic>{};
+    if (squadId != null) queryParameters['squadId'] = squadId;
+    
+    final response = await _dio.get('/event-categories', queryParameters: queryParameters);
+    final data = response.data as List;
+    return data.map((json) => EventCategory.fromJson(json)).toList();
+  }
+
+  Future<EventCategory> createEventCategory(EventCategory category) async {
+    final response = await _dio.post('/event-categories', data: category.toJson());
+    // The backend might only return the ID, but we want the full object if possible. 
+    // Assuming we construct the object locally or fetch it.
+    return category.copyWith(id: response.data.toString());
+  }
+
+  Future<void> updateEventCategory(EventCategory category) async {
+    await _dio.put('/event-categories/${category.id}', data: category.toJson());
+  }
+
+  Future<void> deleteEventCategory(String id) async {
+    await _dio.delete('/event-categories/$id');
   }
 }

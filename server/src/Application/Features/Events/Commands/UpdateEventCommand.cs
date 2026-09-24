@@ -15,6 +15,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public string HabitId { get; set; } = string.Empty;
         public TimeSpan? TargetDuration { get; set; }
         public string? UserId { get; set; } // Set by endpoint from ClaimsPrincipal
+        public Guid? CategoryId { get; set; }
     }
 
     public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
@@ -44,6 +45,7 @@ namespace HabitTracker.Application.Features.Events.Commands
             existingEvent.StartTime = request.StartTime.ToUniversalTime();
             existingEvent.EndTime = request.EndTime.ToUniversalTime();
             existingEvent.HabitId = request.HabitId;
+            existingEvent.CategoryId = request.CategoryId;
             existingEvent.TargetDuration = request.TargetDuration ?? (request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime());
 
             await _eventRepository.UpdateAsync(existingEvent);

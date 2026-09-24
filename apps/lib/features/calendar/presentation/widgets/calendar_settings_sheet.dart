@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/domain/models/calendar_event_style.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/settings/presentation/category_management_screen.dart';
 class CalendarSettingsSheet extends ConsumerWidget {
   const CalendarSettingsSheet({super.key});
 
@@ -130,7 +131,16 @@ class CalendarSettingsSheet extends ConsumerWidget {
                 }
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            ShadButton.outline(
+              onPressed: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => const CategoryManagementScreen(),
+                ));
+              },
+              child: const Text('Manage Categories'),
+            ),
+            const SizedBox(height: 16),
             ShadButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(translations.translate('done')),
