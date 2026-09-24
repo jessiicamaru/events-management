@@ -188,6 +188,29 @@ class CategoryManagementScreen extends ConsumerWidget {
                     width: 32,
                     height: 32,
                     padding: EdgeInsets.zero,
+                    child: const Icon(LucideIcons.pencil, size: 16),
+                    onPressed: () {
+                      final habits = ref.read(habitsProvider).value ?? [];
+                      final events = ref.read(eventsProvider).value ?? [];
+                      
+                      final affectedHabitsCount = habits.where((h) => h.categoryId == category.id).length;
+                      final affectedEventsCount = events.where((e) => e.categoryId == category.id).length;
+
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => _EditCategoryDialog(
+                          category: category,
+                          affectedHabitsCount: affectedHabitsCount,
+                          affectedEventsCount: affectedEventsCount,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  ShadButton.ghost(
+                    width: 32,
+                    height: 32,
+                    padding: EdgeInsets.zero,
                     hoverBackgroundColor: theme.colorScheme.destructive,
                     hoverForegroundColor: theme.colorScheme.destructiveForeground,
                     child: const Icon(LucideIcons.trash2, size: 16),
@@ -298,6 +321,159 @@ class CategoryManagementScreen extends ConsumerWidget {
   }
 }
 
+class _EditCategoryDialog extends ConsumerStatefulWidget {
+  final EventCategory category;
+  final int affectedHabitsCount;
+  final int affectedEventsCount;
+
+  const _EditCategoryDialog({
+    required this.category,
+    required this.affectedHabitsCount,
+    required this.affectedEventsCount,
+  });
+
+  @override
+  ConsumerState<_EditCategoryDialog> createState() => _EditCategoryDialogState();
+}
+
+class _EditCategoryDialogState extends ConsumerState<_EditCategoryDialog> {
+  late String name;
+  late String selectedColor;
+  bool _isLoading = false;
+  bool _showWarning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    name = widget.category.name;
+    selectedColor = widget.category.colorPreset;
+  }
+
+  Future<void> _performUpdate() async {
+    setState(() => _isLoading = true);
+    try {
+      final updatedCategory = widget.category.copyWith(
+        name: name.trim(),
+        colorPreset: selectedColor,
+      );
+      
+      await ref.read(eventCategoriesProvider(squadId: widget.category.squadId).notifier)
+         .updateCategory(updatedCategory);
+      ref.invalidate(habitsProvider);
+      ref.invalidate(eventsProvider);
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
+    final isSquad = widget.category.squadId != null;
+
+    if (_showWarning) {
+      return ShadDialog(
+        title: Text(translations.translate('edit_category')),
+        description: Text(
+          '${translations.translate('delete_category_desc_1')}${widget.affectedEventsCount}${translations.translate('delete_category_desc_2')}${widget.affectedHabitsCount}${translations.translate('delete_category_desc_3')}',
+        ),
+        actions: [
+          ShadButton.outline(
+            child: Text(translations.translate('cancel')),
+            onPressed: () => setState(() => _showWarning = false),
+          ),
+          ShadButton(
+            onPressed: _isLoading ? null : () => _performUpdate(),
+            child: _isLoading 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text(translations.translate('save_btn')),
+          ),
+        ],
+      );
+    }
+
+    return ShadDialog(
+      title: Text(translations.translate('edit_category')),
+      description: Text(isSquad ? translations.translate('edit_category_desc_squad') : translations.translate('edit_category_desc_personal')),
+      actions: [
+        ShadButton.outline(
+          onPressed: () => Navigator.pop(context),
+          child: Text(translations.translate('cancel')),
+        ),
+        ShadButton(
+          onPressed: () {
+            if (name.trim().isNotEmpty) {
+              if (widget.affectedHabitsCount > 0 || widget.affectedEventsCount > 0) {
+                setState(() => _showWarning = true);
+              } else {
+                _performUpdate();
+              }
+            }
+          },
+          child: Text(translations.translate('save_btn')),
+        ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(translations.translate('name'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            ShadInput(
+              initialValue: name,
+              placeholder: const Text('e.g. Work, Health, etc.'),
+              onChanged: (val) => name = val,
+            ),
+            const SizedBox(height: 16),
+            Text(translations.translate('color'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: colorPalette.entries.map((entry) {
+                final colorName = entry.key;
+                final color = entry.value;
+                final isSelected = selectedColor == colorName;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedColor = colorName;
+                    });
+                  },
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _DeleteCategoryDialog extends ConsumerStatefulWidget {
   final EventCategory category;
   final int affectedHabitsCount;
@@ -325,6 +501,8 @@ class _DeleteCategoryDialogState extends ConsumerState<_DeleteCategoryDialog> {
     try {
       await ref.read(eventCategoriesProvider(squadId: widget.category.squadId).notifier)
          .deleteCategory(widget.category.id, replacementCategoryId: replacementId);
+      ref.invalidate(habitsProvider);
+      ref.invalidate(eventsProvider);
       if (mounted) {
         Navigator.of(context).pop();
       }
