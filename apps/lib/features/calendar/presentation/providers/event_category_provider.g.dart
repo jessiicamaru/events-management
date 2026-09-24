@@ -53,7 +53,7 @@ final class EventCategoriesNotifierProvider
 }
 
 String _$eventCategoriesNotifierHash() =>
-    r'4314c3fe76fdf90b5880812a8fffbe3caafb13b7';
+    r'2072937f0bfa3eba8ca6e368aabb61d3f08b3934';
 
 final class EventCategoriesNotifierFamily extends $Family
     with
