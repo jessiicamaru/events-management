@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/squad_provider.dart';
-import '../widgets/friend_activity_feed.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/widgets/friend_activity_feed.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
-import '../widgets/squad_empty_state.dart';
-import '../widgets/squad_stats_card.dart';
-import '../widgets/squad_member_row.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/widgets/squad_empty_state.dart';
+import 'package:habit_tracker/features/squads/presentation/widgets/squad_stats_card.dart';
+import 'package:habit_tracker/features/squads/presentation/widgets/squad_member_row.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class SquadDashboardScreen extends ConsumerWidget {
   const SquadDashboardScreen({super.key});

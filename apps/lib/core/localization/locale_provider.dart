@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/shared_preferences_provider.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 
 enum AppLocale { en, vi }
 

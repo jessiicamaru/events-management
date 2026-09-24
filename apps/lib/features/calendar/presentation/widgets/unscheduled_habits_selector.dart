@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class UnscheduledHabitsSelector extends ConsumerWidget {
   final List<HabitModel> habits;

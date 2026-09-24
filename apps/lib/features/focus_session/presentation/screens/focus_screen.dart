@@ -7,7 +7,7 @@ import 'package:habit_tracker/features/focus_session/domain/models/timer_state.d
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_display.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/timer_controls.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class FocusScreen extends ConsumerStatefulWidget {
   final EventModel event;
@@ -49,6 +49,7 @@ class _FocusScreenState extends ConsumerState<FocusScreen> {
       Navigator.of(context).pop();
     }
   }
+
 
 
   @override

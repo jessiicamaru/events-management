@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/routing/app_router.dart';
-import 'core/theme/app_theme.dart';
+import 'package:habit_tracker/core/routing/app_router.dart';
+import 'package:habit_tracker/core/theme/app_theme.dart';
 
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'core/providers/shared_preferences_provider.dart';
-import 'features/settings/presentation/providers/app_settings_provider.dart';
+import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
+import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {

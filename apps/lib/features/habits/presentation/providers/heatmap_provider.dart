@@ -1,5 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../../core/network/api_service.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
 
 part 'heatmap_provider.g.dart';
 

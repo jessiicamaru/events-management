@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/localization/locale_provider.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../events_provider.dart';
-import '../../../habits/presentation/habits_provider.dart';
-import '../../domain/models/event_model.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import 'event_tasks_checklist.dart';
-import '../../../focus_session/presentation/screens/focus_screen.dart';
-import '../../../focus_session/presentation/widgets/post_session_dialog.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/theme/app_theme.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks_checklist.dart';
+import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
+import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 
 class CommandCenterPanel extends ConsumerWidget {
   const CommandCenterPanel({super.key});
@@ -65,7 +65,7 @@ class CommandCenterPanel extends ConsumerWidget {
         border: Border(top: BorderSide(color: theme.colorScheme.border)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

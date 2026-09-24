@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/calendar_settings_provider.dart';
-import '../../domain/models/calendar_event_style.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
+import 'package:habit_tracker/features/calendar/domain/models/calendar_event_style.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 class CalendarSettingsSheet extends ConsumerWidget {
   const CalendarSettingsSheet({super.key});
 

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/user_profile_provider.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class CosmeticsScreen extends ConsumerWidget {
   const CosmeticsScreen({super.key});
@@ -121,7 +121,7 @@ class CosmeticsScreen extends ConsumerWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : theme.colorScheme.card,
+                color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected ? theme.colorScheme.primary : theme.colorScheme.border,
@@ -173,7 +173,7 @@ class CosmeticsScreen extends ConsumerWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isSelected ? theme.colorScheme.primary.withOpacity(0.1) : theme.colorScheme.card,
+                color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.1) : theme.colorScheme.card,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: isSelected ? theme.colorScheme.primary : theme.colorScheme.border,

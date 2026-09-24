@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class HeatmapWidget extends ConsumerWidget {
   final Map<DateTime, int> data;
@@ -142,9 +142,9 @@ class HeatmapWidget extends ConsumerWidget {
 
   Color _getColor(int count, ShadThemeData theme) {
     if (count == 0) return theme.colorScheme.muted;
-    if (count == 1) return Colors.green.withOpacity(0.3);
-    if (count == 2) return Colors.green.withOpacity(0.5);
-    if (count == 3) return Colors.green.withOpacity(0.7);
+    if (count == 1) return Colors.green.withValues(alpha: 0.3);
+    if (count == 2) return Colors.green.withValues(alpha: 0.5);
+    if (count == 3) return Colors.green.withValues(alpha: 0.7);
     return Colors.green;
   }
 }

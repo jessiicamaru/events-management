@@ -1,5 +1,5 @@
-import '../../../../core/network/api_service.dart';
-import '../../domain/models/event_task_model.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'event_tasks_provider.g.dart';

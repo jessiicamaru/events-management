@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../domain/models/squad_model.dart';
+import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 
 class SquadMemberRow extends StatelessWidget {
   final SquadMemberModel member;
@@ -34,7 +34,7 @@ class SquadMemberRow extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: theme.colorScheme.accent.withOpacity(0.1),
+        color: theme.colorScheme.accent.withValues(alpha: 0.1),
       ),
       child: Row(
         children: [

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import '../../../../core/theme/app_theme.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/theme/app_theme.dart';
 
 class HabitDock extends StatelessWidget {
   final List<HabitModel> habits;
@@ -72,8 +72,8 @@ class HabitDock extends StatelessWidget {
       width: 140,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: habitColor.withOpacity(0.15),
-        border: Border.all(color: habitColor.withOpacity(0.5)),
+        color: habitColor.withValues(alpha: 0.15),
+        border: Border.all(color: habitColor.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

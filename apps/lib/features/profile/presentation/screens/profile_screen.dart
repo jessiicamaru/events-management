@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../providers/user_profile_provider.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -123,7 +123,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                     margin: const EdgeInsets.symmetric(horizontal: 6),
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: isSelected ? theme.colorScheme.primary.withOpacity(0.2) : Colors.transparent,
+                                      color: isSelected ? theme.colorScheme.primary.withValues(alpha: 0.2) : Colors.transparent,
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: isSelected ? theme.colorScheme.primary : Colors.transparent,

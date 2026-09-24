@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
-import '../../domain/models/event_model.dart';
-import '../../../habits/domain/models/habit_model.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../domain/models/calendar_event_style.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/theme/app_theme.dart';
+import 'package:habit_tracker/features/calendar/domain/models/calendar_event_style.dart';
 
 Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, CalendarEventStyle style) {
   final event = details.appointments.first as EventModel;

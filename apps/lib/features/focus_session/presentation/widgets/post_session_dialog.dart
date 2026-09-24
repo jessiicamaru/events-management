@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import '../../../../core/network/api_service.dart';
-import '../../../calendar/domain/models/event_model.dart';
-import '../../../calendar/presentation/events_provider.dart';
-import '../../../habits/presentation/habits_provider.dart';
-import '../../../habits/presentation/providers/heatmap_provider.dart';
-import '../../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class PostSessionDialog extends ConsumerStatefulWidget {
   final EventModel event;

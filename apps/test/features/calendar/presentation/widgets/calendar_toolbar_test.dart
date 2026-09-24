@@ -27,6 +27,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
 
+
       AppCalendarView view = AppCalendarView.threeDay;
 
       await tester.pumpWidget(buildTestableWidget(
@@ -34,9 +35,9 @@ void main() {
           displayDate: DateTime(2025, 4, 15),
           currentView: AppCalendarView.threeDay,
           onViewChanged: (v) { view = v; },
-          onTodayPressed: () { },
-          onNextPressed: () { },
-          onPrevPressed: () { },
+          onTodayPressed: () {},
+          onNextPressed: () {},
+          onPrevPressed: () {},
           onTogglePanel: () {},
           isPanelVisible: true,
           totalEvents: 5,

@@ -6,7 +6,7 @@ import 'package:habit_tracker/features/profile/presentation/screens/profile_scre
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/appearance_screen.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
-import '../../../core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -174,7 +174,7 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                             ShadButton(
                               backgroundColor: theme.colorScheme.destructive,
-                              hoverBackgroundColor: theme.colorScheme.destructive.withOpacity(0.9),
+                              hoverBackgroundColor: theme.colorScheme.destructive.withValues(alpha: 0.9),
                               child: Text(translations.translate('logout_title')),
                               onPressed: () async {
                                 Navigator.of(ctx).pop();
