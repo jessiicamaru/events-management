@@ -59,5 +59,16 @@ namespace HabitTracker.Infrastructure.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task ReassignCategoryAsync(Guid oldCategoryId, Guid newCategoryId)
+        {
+            await _context.Habits
+                .Where(h => h.CategoryId == oldCategoryId)
+                .ExecuteUpdateAsync(s => s.SetProperty(h => h.CategoryId, newCategoryId));
+
+            await _context.Events
+                .Where(e => e.CategoryId == oldCategoryId)
+                .ExecuteUpdateAsync(s => s.SetProperty(e => e.CategoryId, newCategoryId));
+        }
     }
 }

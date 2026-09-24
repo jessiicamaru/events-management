@@ -57,7 +57,7 @@ class EventCategoriesNotifier extends _$EventCategoriesNotifier {
     }
   }
 
-  Future<void> deleteCategory(String id) async {
+  Future<void> deleteCategory(String id, {String? replacementCategoryId}) async {
     final apiService = ref.read(apiServiceProvider);
     
     final previousState = state;
@@ -67,7 +67,7 @@ class EventCategoriesNotifier extends _$EventCategoriesNotifier {
     }
 
     try {
-      await apiService.deleteEventCategory(id);
+      await apiService.deleteEventCategory(id, replacementCategoryId: replacementCategoryId);
       ref.invalidateSelf();
     } catch (e) {
       state = previousState;

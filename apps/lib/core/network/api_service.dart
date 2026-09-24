@@ -253,7 +253,11 @@ class ApiService {
     await _dio.put('/event-categories/${category.id}', data: category.toJson());
   }
 
-  Future<void> deleteEventCategory(String id) async {
-    await _dio.delete('/event-categories/$id');
+  Future<void> deleteEventCategory(String id, {String? replacementCategoryId}) async {
+    final queryParams = <String, dynamic>{};
+    if (replacementCategoryId != null) {
+      queryParams['replacementCategoryId'] = replacementCategoryId;
+    }
+    await _dio.delete('/event-categories/$id', queryParameters: queryParams);
   }
 }

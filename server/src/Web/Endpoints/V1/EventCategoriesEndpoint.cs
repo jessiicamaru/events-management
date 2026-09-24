@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using System.Security.Claims;
 
@@ -71,7 +72,7 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         return TypedResults.Ok();
     }
 
-    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteCategory(ISender sender, Guid id, ClaimsPrincipal user, Guid? squadId)
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteCategory(ISender sender, Guid id, ClaimsPrincipal user, Guid? squadId, [FromQuery] Guid? replacementCategoryId)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
@@ -80,7 +81,8 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         {
             Id = id,
             UserId = userId,
-            SquadId = squadId
+            SquadId = squadId,
+            ReplacementCategoryId = replacementCategoryId
         };
 
         var result = await sender.Send(command);

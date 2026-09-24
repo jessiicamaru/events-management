@@ -13,5 +13,6 @@ namespace HabitTracker.Domain.Interfaces
         Task<EventCategory> AddAsync(EventCategory category);
         Task UpdateAsync(EventCategory category);
         Task DeleteAsync(Guid id);
+        Task ReassignCategoryAsync(Guid oldCategoryId, Guid newCategoryId);
     }
 }

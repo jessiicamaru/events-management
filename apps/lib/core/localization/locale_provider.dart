@@ -276,6 +276,29 @@ class AppTranslations {
     'change_password_success': {AppLocale.en: 'Password changed successfully', AppLocale.vi: 'Đổi mật khẩu thành công'},
     'change_password_error': {AppLocale.en: 'Failed to change password', AppLocale.vi: 'Đổi mật khẩu thất bại'},
     'save_profile': {AppLocale.en: 'Save Changes', AppLocale.vi: 'Lưu thay đổi'},
+
+    // Category Management
+    'category_management': {AppLocale.en: 'Category Management', AppLocale.vi: 'Quản lý danh mục'},
+    'my_categories': {AppLocale.en: 'My Categories', AppLocale.vi: 'Danh mục của tôi'},
+    'squad_categories': {AppLocale.en: 'Squad Categories', AppLocale.vi: 'Danh mục nhóm'},
+    'no_personal_categories': {AppLocale.en: 'No personal categories found.', AppLocale.vi: 'Không tìm thấy danh mục cá nhân nào.'},
+    'no_squad_categories': {AppLocale.en: 'No squad categories found.', AppLocale.vi: 'Không tìm thấy danh mục nhóm nào.'},
+    'create_category_prompt': {AppLocale.en: 'Create one to organize your events.', AppLocale.vi: 'Hãy tạo một danh mục để sắp xếp sự kiện.'},
+    'add_category': {AppLocale.en: 'Add Category', AppLocale.vi: 'Thêm danh mục'},
+    'add_squad_category': {AppLocale.en: 'Add Squad Category', AppLocale.vi: 'Thêm danh mục nhóm'},
+    'new_category': {AppLocale.en: 'New Category', AppLocale.vi: 'Danh mục mới'},
+    'create_squad_category_desc': {AppLocale.en: 'Create a category for your squad.', AppLocale.vi: 'Tạo danh mục cho nhóm của bạn.'},
+    'create_personal_category_desc': {AppLocale.en: 'Create a personal category.', AppLocale.vi: 'Tạo danh mục cá nhân.'},
+    'category_name_placeholder': {AppLocale.en: 'Category Name', AppLocale.vi: 'Tên danh mục'},
+    'delete_category': {AppLocale.en: 'Delete Category', AppLocale.vi: 'Xóa danh mục'},
+    'delete_category_desc_1': {AppLocale.en: 'This action affects ', AppLocale.vi: 'Hành động này ảnh hưởng đến '},
+    'delete_category_desc_2': {AppLocale.en: ' events and ', AppLocale.vi: ' sự kiện và '},
+    'delete_category_desc_3': {AppLocale.en: ' habits.', AppLocale.vi: ' thói quen.'},
+    'select_replacement_category': {AppLocale.en: 'Select a category to replace with:', AppLocale.vi: 'Chọn danh mục để thay thế:'},
+    'replace_items': {AppLocale.en: 'Replace items', AppLocale.vi: 'Thay thế'},
+    'confirm_replace_delete': {AppLocale.en: 'Confirm Replace & Delete', AppLocale.vi: 'Xác nhận thay thế & xóa'},
+    'failed_to_delete_category': {AppLocale.en: 'Failed to delete category: ', AppLocale.vi: 'Xóa danh mục thất bại: '},
+    'no_categories_yet': {AppLocale.en: 'No categories yet', AppLocale.vi: 'Chưa có danh mục nào'},
   };
 
   final AppLocale locale;
