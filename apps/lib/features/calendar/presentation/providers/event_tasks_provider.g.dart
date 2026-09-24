@@ -50,7 +50,7 @@ final class EventTasksProvider
   }
 }
 
-String _$eventTasksHash() => r'1e4508fe2932cb37bd64b3055e8ce3adbd45e1b6';
+String _$eventTasksHash() => r'168518d5764353a413d90bd509af4e7ddb11c752';
 
 final class EventTasksFamily extends $Family
     with

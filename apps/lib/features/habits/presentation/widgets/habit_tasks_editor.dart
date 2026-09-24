@@ -23,7 +23,7 @@ class HabitTasksEditor extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              translations.translate('habit_tasks_title') ?? 'Habit Tasks (Optional)',
+              translations.translate('habit_tasks_title'),
               style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
             ),
             ShadButton.ghost(
@@ -33,7 +33,7 @@ class HabitTasksEditor extends ConsumerWidget {
                 children: [
                   const Icon(LucideIcons.plus, size: 16),
                   const SizedBox(width: 4),
-                  Text(translations.translate('add_task') ?? 'Add Task'),
+                  Text(translations.translate('add_task')),
                 ],
               ),
             ),
@@ -52,7 +52,7 @@ class HabitTasksEditor extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Center(
                     child: Text(
-                      translations.translate('no_tasks_yet') ?? 'No tasks added yet. Add a task to create a checklist for this habit.',
+                      translations.translate('no_tasks_yet'),
                       style: theme.textTheme.muted,
                       textAlign: TextAlign.center,
                     ),
@@ -88,7 +88,7 @@ class HabitTasksEditor extends ConsumerWidget {
                               children: [
                                 Text(task.title, style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w500)),
                                 if (task.estimatedMinutes != null)
-                                  Text('${task.estimatedMinutes} ${translations.translate('minutes_short') ?? 'min'}', style: theme.textTheme.muted),
+                                  Text('${task.estimatedMinutes} ${translations.translate('minutes_short')}', style: theme.textTheme.muted),
                               ],
                             ),
                           ),
@@ -184,7 +184,7 @@ class HabitTasksEditor extends ConsumerWidget {
                     }
 
                     if (isEdit) {
-                      final updated = task!.copyWith(
+                      final updated = task.copyWith(
                         title: titleController.text.trim(),
                         description: descController.text.trim().isEmpty ? null : descController.text.trim(),
                         priority: selectedPriority,

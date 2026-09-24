@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/auth/presentation/screens/register_screen.dart';
-import 'package:habit_tracker/core/localization/locale_provider.dart';
 import '../../../../test_utils.dart';
 
 void main() {

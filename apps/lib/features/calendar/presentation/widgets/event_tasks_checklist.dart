@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/localization/locale_provider.dart';
-import '../../domain/models/event_task_model.dart';
 import '../providers/event_tasks_provider.dart';
 
 class EventTasksChecklist extends ConsumerWidget {
@@ -21,7 +20,7 @@ class EventTasksChecklist extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          translations.translate('tasks_checklist') ?? 'Tasks',
+          translations.translate('tasks_checklist'),
           style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
@@ -37,7 +36,7 @@ class EventTasksChecklist extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Center(
                     child: Text(
-                      translations.translate('no_tasks_for_event') ?? 'No tasks for this session.',
+                      translations.translate('no_tasks_for_event'),
                       style: theme.textTheme.muted,
                     ),
                   ),

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
-import 'package:intl/intl.dart';
-import '../../../../core/utils/app_constants.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../settings/presentation/providers/app_settings_provider.dart';
 import '../../../habits/domain/models/habit_model.dart';
@@ -162,7 +160,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       setState(() => _isSubmitting = false);
       ShadToaster.of(context).show(
         ShadToast.destructive(
-          title: Text(translations.translate('event_title_empty') ?? 'Please enter an event title'),
+          title: Text(translations.translate('event_title_empty')),
         ),
       );
       return;
