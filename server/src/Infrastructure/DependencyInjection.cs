@@ -20,6 +20,7 @@ public static class DependencyInjection
 
         services.AddScoped<IHabitRepository, HabitRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
+        services.AddScoped<IEventCategoryRepository, EventCategoryRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISquadRepository, SquadRepository>();
         services.AddScoped<IHabitTaskRepository, HabitTaskRepository>();

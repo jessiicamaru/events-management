@@ -12,9 +12,9 @@ namespace HabitTracker.Application.Features.Habits.Commands
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
         public List<int> TargetDays { get; set; } = new();
         public string UserId { get; set; } = string.Empty;
+        public Guid? CategoryId { get; set; }
     }
 
     public class UpdateHabitCommandHandler : IRequestHandler<UpdateHabitCommand, bool>
@@ -35,8 +35,8 @@ namespace HabitTracker.Application.Features.Habits.Commands
             }
 
             habit.Name = request.Name;
-            habit.Category = request.Category;
             habit.TargetDays = request.TargetDays;
+            habit.CategoryId = request.CategoryId;
 
             await _repository.UpdateAsync(habit);
             return true;

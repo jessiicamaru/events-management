@@ -11,7 +11,9 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
     // Inject no-op wakelock to avoid native channel errors in tests
-    container.read(timerProvider.notifier).setWakelockService(NoOpWakelockService());
+    container
+        .read(timerProvider.notifier)
+        .setWakelockService(NoOpWakelockService());
     return container;
   }
 

@@ -125,6 +125,9 @@ namespace Infrastructure.Migrations
                     b.Property<TimeSpan?>("ActualDuration")
                         .HasColumnType("interval");
 
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -154,9 +157,44 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("HabitTracker.Domain.Entities.EventCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ColorPreset")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("SquadId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SquadId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("EventCategories");
                 });
 
             modelBuilder.Entity("HabitTracker.Domain.Entities.EventTask", b =>
@@ -204,9 +242,8 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -230,6 +267,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("UserId");
 
@@ -456,9 +495,33 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("HabitTracker.Domain.Entities.Event", b =>
                 {
+                    b.HasOne("HabitTracker.Domain.Entities.EventCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("HabitTracker.Domain.Entities.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("HabitTracker.Domain.Entities.EventCategory", b =>
+                {
+                    b.HasOne("HabitTracker.Domain.Entities.Squad", "Squad")
+                        .WithMany()
+                        .HasForeignKey("SquadId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("HabitTracker.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Squad");
 
                     b.Navigation("User");
                 });
@@ -476,9 +539,16 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("HabitTracker.Domain.Entities.Habit", b =>
                 {
+                    b.HasOne("HabitTracker.Domain.Entities.EventCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("HabitTracker.Domain.Entities.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
+
+                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });

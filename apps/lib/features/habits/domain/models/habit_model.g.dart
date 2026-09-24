@@ -12,7 +12,7 @@ _HabitModel _$HabitModelFromJson(Map<String, dynamic> json) => _HabitModel(
   targetDays: (json['targetDays'] as List<dynamic>)
       .map((e) => (e as num).toInt())
       .toList(),
-  category: json['category'] as String?,
+  categoryId: json['categoryId'] as String?,
   currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
   longestStreak: (json['longestStreak'] as num?)?.toInt() ?? 0,
   heatmapData:
@@ -27,7 +27,7 @@ Map<String, dynamic> _$HabitModelToJson(_HabitModel instance) =>
       'id': instance.id,
       'name': instance.name,
       'targetDays': instance.targetDays,
-      'category': instance.category,
+      'categoryId': instance.categoryId,
       'currentStreak': instance.currentStreak,
       'longestStreak': instance.longestStreak,
       'heatmapData': instance.heatmapData.map(

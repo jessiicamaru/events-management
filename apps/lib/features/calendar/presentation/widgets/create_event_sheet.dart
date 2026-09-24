@@ -12,6 +12,7 @@ import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks_editor.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/habit_tasks_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 
 
 class CreateEventSheet extends ConsumerStatefulWidget {
@@ -35,7 +36,7 @@ class CreateEventSheet extends ConsumerStatefulWidget {
 class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   final _titleController = TextEditingController();
   final _targetDurationController = TextEditingController();
-  String? _selectedCategory;
+  String? _selectedCategoryId;
   HabitModel? _selectedHabit;
   DateTime _startDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 6, minute: 0);
@@ -43,14 +44,13 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   bool _isSubmitting = false;
   List<EventTaskModel>? _localTasks;
 
-  static const List<String> _categories = ['Health', 'Work', 'Learning', 'Wellness'];
-
   @override
   void initState() {
     super.initState();
     if (widget.eventToEdit != null) {
       final evt = widget.eventToEdit!;
       _titleController.text = evt.title;
+      _selectedCategoryId = evt.categoryId;
       _startDate = evt.startTime.toLocal();
       _startTime = TimeOfDay.fromDateTime(evt.startTime.toLocal());
       _endTime = TimeOfDay.fromDateTime(evt.endTime.toLocal());
@@ -68,12 +68,13 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       _endTime = TimeOfDay.fromDateTime(endDateTime);
       _updateTargetDuration();
     }
+    
     if (widget.initialHabit != null) {
-      _selectedHabit = widget.initialHabit;
       if (widget.eventToEdit == null) {
-        _titleController.text = widget.initialHabit!.name;
+        _fillFromHabit(widget.initialHabit!);
+      } else {
+        _selectedHabit = widget.initialHabit;
       }
-      _selectedCategory = widget.initialHabit!.category;
     }
   }
 
@@ -88,12 +89,13 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     setState(() {
       _selectedHabit = habit;
       _titleController.text = habit.name;
-      _selectedCategory = habit.category;
+      _selectedCategoryId = habit.categoryId;
     });
 
     if (widget.eventToEdit == null) {
       try {
         final habitTasks = await ref.read(habitTasksProvider(habit.id).future);
+        if (!mounted) return;
         setState(() {
           _localTasks = habitTasks.map((t) => EventTaskModel(
             id: DateTime.now().millisecondsSinceEpoch.toString() + t.id,
@@ -189,6 +191,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       actualDuration: widget.eventToEdit?.actualDuration,
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
+      categoryId: _selectedCategoryId,
     );
 
     try {
@@ -229,6 +232,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     final currentLocale = ref.watch(localeProvider);
     final translations = ref.watch(translationsProvider);
     final localeStr = currentLocale == AppLocale.en ? 'en_US' : 'vi';
+    final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
 
     return Container(
       decoration: BoxDecoration(
@@ -316,31 +320,26 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Category
                   Text(translations.translate('category'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ShadSelect<String>(
-                      placeholder: Text(translations.translate('select_category')),
-                      initialValue: _selectedCategory,
-                      onChanged: (val) => setState(() => _selectedCategory = val),
-                      options: _categories.map((c) {
-                        String translatedName = c;
-                        if (c == 'Health') translatedName = translations.translate('category_health');
-                        if (c == 'Work') translatedName = translations.translate('category_work');
-                        if (c == 'Learning') translatedName = translations.translate('category_learning');
-                        if (c == 'Wellness') translatedName = translations.translate('category_wellness');
-                        return ShadOption(value: c, child: Text(translatedName));
-                      }).toList(),
-                      selectedOptionBuilder: (context, value) {
-                        if (value == 'Health') return Text(translations.translate('category_health'));
-                        if (value == 'Work') return Text(translations.translate('category_work'));
-                        if (value == 'Learning') return Text(translations.translate('category_learning'));
-                        if (value == 'Wellness') return Text(translations.translate('category_wellness'));
-                        return Text(value);
-                      },
+                  categoriesAsync.when(
+                    data: (categories) => SizedBox(
+                      width: double.infinity,
+                      child: ShadSelect<String>(
+                        placeholder: Text(translations.translate('select_category')),
+                        initialValue: _selectedCategoryId,
+                        onChanged: (val) => setState(() => _selectedCategoryId = val),
+                        options: categories.map((c) {
+                          return ShadOption(value: c.id, child: Text(c.name));
+                        }).toList(),
+                        selectedOptionBuilder: (context, value) {
+                          final cat = categories.firstWhere((c) => c.id == value, orElse: () => categories.first);
+                          return Text(cat.name);
+                        },
+                      ),
                     ),
+                    loading: () => const CircularProgressIndicator(),
+                    error: (_, __) => const Text('Error loading categories'),
                   ),
                   const SizedBox(height: 16),
 

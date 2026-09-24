@@ -9,7 +9,7 @@ abstract class HabitModel with _$HabitModel {
     required String id,
     required String name,
     required List<int> targetDays,
-    String? category,
+    String? categoryId,
     @Default(0) int currentStreak,
     @Default(0) int longestStreak,
     @Default({}) Map<DateTime, int> heatmapData,

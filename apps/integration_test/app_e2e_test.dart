@@ -83,7 +83,7 @@ void main() {
     await tester.tap(addHabitButton);
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Habit'), findsOneWidget);
+    expect(find.text('Add Habit'), findsWidgets);
     
     // Create a new Habit
     final habitName = 'Read E2E Test Book';
@@ -91,9 +91,19 @@ void main() {
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    // Verify habit was added successfully by waiting for the API to resolve
-    // Since it's a SliverList, it might be off-screen. As a smoke test, ensuring no crash is enough.
+    // Verify habit was added successfully
     expect(find.byType(ShadCard), findsWidgets);
+
+    // Edit the habit to verify it doesn't crash (404 tasks error)
+    await tester.tap(find.byIcon(LucideIcons.pencil).first);
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    
+    // Verify Edit Habit dialog opened successfully
+    expect(find.text('Edit Habit'), findsOneWidget);
+
+    // Save or Close the dialog
+    await tester.tap(find.text('Save').last);
+    await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // --- 4. SQUADS FLOW ---
     // Tap on Squads tab

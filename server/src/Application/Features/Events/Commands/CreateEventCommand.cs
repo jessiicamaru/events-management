@@ -25,6 +25,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public string HabitId { get; set; } = string.Empty;
         public TimeSpan? TargetDuration { get; set; }
         public string UserId { get; set; } = string.Empty;
+        public Guid? CategoryId { get; set; }
         public List<CreateEventTaskDto>? Tasks { get; set; }
     }
 
@@ -50,7 +51,8 @@ namespace HabitTracker.Application.Features.Events.Commands
                 EndTime = request.EndTime.ToUniversalTime(),
                 HabitId = request.HabitId,
                 TargetDuration = request.TargetDuration ?? request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime(),
-                UserId = request.UserId
+                UserId = request.UserId,
+                CategoryId = request.CategoryId
             };
 
             await _repository.AddAsync(ev);

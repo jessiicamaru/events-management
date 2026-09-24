@@ -20,7 +20,7 @@ void main() {
                   {
                     'id': '123',
                     'name': 'Test Habit',
-                    'category': 'Health',
+                    'categoryId': 'Health',
                     'targetDays': [1, 2]
                   }
                 ],
@@ -49,7 +49,7 @@ void main() {
       expect(habits, isA<List<HabitModel>>());
       expect(habits.length, 1);
       expect(habits.first.name, 'Test Habit');
-      expect(habits.first.category, 'Health');
+      expect(habits.first.categoryId, 'Health');
     });
 
     test('syncHabit completes successfully without throwing', () async {

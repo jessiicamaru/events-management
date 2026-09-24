@@ -25,11 +25,13 @@ namespace HabitTracker.Application.Tests
                 .Returns(Task.CompletedTask);
 
             var handler = new CreateHabitCommandHandler(mockRepo.Object);
+            var categoryId = Guid.NewGuid();
 
             var command = new CreateHabitCommand
             {
                 Name = "Daily Workout",
-                TargetDays = new List<int> { 1, 3, 5 }
+                TargetDays = new List<int> { 1, 3, 5 },
+                CategoryId = categoryId
             };
 
             // Act
@@ -41,8 +43,7 @@ namespace HabitTracker.Application.Tests
             savedHabit!.Name.Should().Be("Daily Workout");
             savedHabit.TargetDays.Should().BeEquivalentTo(new[] { 1, 3, 5 });
             
-            // "Workout" should be categorized as Health by our mock AI logic
-            savedHabit.Category.Should().Be("Health");
+            savedHabit.CategoryId.Should().Be(categoryId);
             
             mockRepo.Verify(r => r.AddAsync(It.IsAny<Habit>()), Times.Once);
         }

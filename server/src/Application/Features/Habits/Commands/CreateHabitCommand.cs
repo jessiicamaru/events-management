@@ -12,6 +12,7 @@ namespace HabitTracker.Application.Features.Habits.Commands
     {
         public string Name { get; set; } = string.Empty;
         public List<int> TargetDays { get; set; } = new();
+        public Guid? CategoryId { get; set; }
         public string UserId { get; set; } = string.Empty;
     }
 
@@ -26,17 +27,11 @@ namespace HabitTracker.Application.Features.Habits.Commands
 
         public async Task<Guid> Handle(CreateHabitCommand request, CancellationToken cancellationToken)
         {
-            // AI Categorization Mock Logic
-            string category = "General";
-            var lowerName = request.Name.ToLower();
-            if (lowerName.Contains("read") || lowerName.Contains("study")) category = "Learning";
-            else if (lowerName.Contains("workout") || lowerName.Contains("run")) category = "Health";
-
             var habit = new Habit
             {
                 Name = request.Name,
                 TargetDays = request.TargetDays,
-                Category = category,
+                CategoryId = request.CategoryId,
                 UserId = request.UserId
             };
 

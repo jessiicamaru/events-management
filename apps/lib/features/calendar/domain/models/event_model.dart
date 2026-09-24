@@ -37,6 +37,7 @@ abstract class EventModel with _$EventModel {
     required DateTime endTime,
     required String habitId,
     @Default(false) bool isCompleted,
+    String? categoryId,
     @TimeSpanConverter() int? targetDuration, // Target duration in minutes
     @TimeSpanConverter() int? actualDuration, // Actual duration in minutes
     DateTime? createdAt,
