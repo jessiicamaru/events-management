@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/core/theme/app_theme.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/models/event_category.dart';
+import 'package:habit_tracker/features/settings/presentation/category_management_screen.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 
-class HabitDock extends StatelessWidget {
+class HabitDock extends ConsumerWidget {
   final List<HabitModel> habits;
 
   const HabitDock({super.key, required this.habits});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
+    final translations = ref.watch(translationsProvider);
+    final categories = ref.watch(eventCategoriesProvider(squadId: null)).value ?? [];
 
     if (habits.isEmpty) {
       return Container(
@@ -55,7 +62,7 @@ class HabitDock extends StatelessWidget {
                 final habit = habits[index];
                 return Padding(
                   padding: const EdgeInsets.only(right: 12.0),
-                  child: _buildDraggableHabit(context, habit, theme),
+                  child: _buildDraggableHabit(context, habit, theme, categories, translations),
                 );
               },
             ),
@@ -65,8 +72,20 @@ class HabitDock extends StatelessWidget {
     );
   }
 
-  Widget _buildDraggableHabit(BuildContext context, HabitModel habit, ShadThemeData theme) {
-    final habitColor = AppTheme.getHabitColor(null);
+  Widget _buildDraggableHabit(BuildContext context, HabitModel habit, ShadThemeData theme, List<EventCategory> categories, dynamic translations) {
+    Color habitColor = AppTheme.getHabitColor(null);
+    String categoryName = translations.translate('uncategorized');
+
+    if (habit.categoryId != null) {
+      final category = categories.firstWhere(
+        (c) => c.id == habit.categoryId,
+        orElse: () => const EventCategory(id: '', name: 'Uncategorized', colorPreset: 'Slate'),
+      );
+      if (category.id.isNotEmpty) {
+        habitColor = colorPalette[category.colorPreset] ?? Colors.blueGrey;
+        categoryName = category.name;
+      }
+    }
 
     final habitCard = Container(
       width: 140,
@@ -91,11 +110,13 @@ class HabitDock extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Uncategorized',
+            categoryName,
             style: theme.textTheme.small.copyWith(
               color: theme.colorScheme.mutedForeground,
               fontSize: 10,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

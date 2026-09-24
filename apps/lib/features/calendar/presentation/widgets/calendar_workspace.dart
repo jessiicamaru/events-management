@@ -358,10 +358,10 @@ class EventDataSource extends CalendarDataSource {
   }
 
   @override
-  DateTime getStartTime(int index) => (appointments![index] as EventModel).startTime;
+  DateTime getStartTime(int index) => (appointments![index] as EventModel).startTime.toLocal();
 
   @override
-  DateTime getEndTime(int index) => (appointments![index] as EventModel).endTime;
+  DateTime getEndTime(int index) => (appointments![index] as EventModel).endTime.toLocal();
 
   @override
   String getSubject(int index) => (appointments![index] as EventModel).title;

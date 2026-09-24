@@ -293,12 +293,12 @@ class AppTranslations {
 
     // Unscheduled Habits Panel
     'unscheduled_habits': {
-      AppLocale.en: 'Unscheduled Habits',
-      AppLocale.vi: 'Thói quen chưa lên lịch',
+      AppLocale.en: 'Habits',
+      AppLocale.vi: 'Thói quen',
     },
     'unscheduled_habits_desc': {
-      AppLocale.en: 'Unscheduled Habits (Drag to Calendar)',
-      AppLocale.vi: 'Thói quen chưa lên lịch (Kéo vào Lịch)',
+      AppLocale.en: 'Habits (Drag to Calendar)',
+      AppLocale.vi: 'Thói quen (Kéo vào Lịch)',
     },
     'no_unscheduled_habits': {
       AppLocale.en: 'No habits yet. Go to Habits tab to create one.',

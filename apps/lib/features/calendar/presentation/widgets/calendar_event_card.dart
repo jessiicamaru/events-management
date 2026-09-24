@@ -12,11 +12,6 @@ import 'package:habit_tracker/features/settings/presentation/category_management
 Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails details, List<HabitModel> habits, List<EventCategory> categories, CalendarEventStyle style) {
   final event = details.appointments.first as EventModel;
   
-  final habit = habits.firstWhere(
-    (h) => h.id == event.habitId, 
-    orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
-  );
-  
   Color color;
   if (event.categoryId != null) {
     final cat = categories.firstWhere((c) => c.id == event.categoryId, orElse: () => const EventCategory(id: '', name: '', colorPreset: 'Slate'));
@@ -26,149 +21,118 @@ Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails detai
   }
   
   final theme = ShadTheme.of(context);
-
   final timeString = '${DateFormat.jm().format(event.startTime.toLocal())} - ${DateFormat.jm().format(event.endTime.toLocal())}';
 
-  if (style == CalendarEventStyle.dot) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.background,
-        border: Border.all(color: theme.colorScheme.border),
-        borderRadius: BorderRadius.circular(6),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+  Widget buildCard({
+    required Color backgroundColor,
+    required Color borderColor,
+    required Color textColor,
+    required Color timeColor,
+    required bool showDot,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isCompact = constraints.maxHeight < 40;
+        final bool isTiny = constraints.maxHeight < 25;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            border: Border.all(color: borderColor),
+            borderRadius: BorderRadius.circular(6),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 2, right: 6),
-            child: Container(
-              width: 8, height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
+          padding: EdgeInsets.symmetric(
+            horizontal: 6,
+            vertical: isTiny ? 2 : (isCompact ? 4 : 6),
           ),
-          Expanded(
+          clipBehavior: Clip.hardEdge,
+          child: OverflowBox(
+            alignment: Alignment.topLeft,
+            maxHeight: double.infinity,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  event.title,
-                  style: theme.textTheme.small.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                Row(
+                  children: [
+                    if (showDot) ...[
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        event.title,
+                        style: theme.textTheme.small.copyWith(
+                          color: textColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (event.isCompleted)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: Icon(LucideIcons.checkCircle2, size: 14, color: textColor),
+                      ),
+                  ],
                 ),
-                Text(
-                  timeString,
-                  style: theme.textTheme.small.copyWith(
-                    fontSize: 10,
-                    color: theme.colorScheme.mutedForeground,
+                if (!isCompact) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    timeString,
+                    style: theme.textTheme.small.copyWith(
+                      fontSize: 12,
+                      height: 1.2,
+                      color: timeColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
+                ],
               ],
             ),
           ),
-          if (event.isCompleted)
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Icon(LucideIcons.checkCircle2, size: 14, color: color),
-            ),
-        ],
-      ),
+        );
+      },
+    );
+  }
+
+  if (style == CalendarEventStyle.dot) {
+    return buildCard(
+      backgroundColor: theme.colorScheme.card,
+      borderColor: theme.colorScheme.border,
+      textColor: theme.colorScheme.foreground,
+      timeColor: theme.colorScheme.mutedForeground,
+      showDot: true,
     );
   }
 
   if (style == CalendarEventStyle.colored) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  event.title,
-                  style: theme.textTheme.small.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (event.isCompleted)
-                Icon(LucideIcons.checkCircle2, size: 14, color: color),
-            ],
-          ),
-          Text(
-            timeString,
-            style: theme.textTheme.small.copyWith(
-              fontSize: 10,
-              color: color,
-            ),
-          ),
-        ],
-      ),
+    return buildCard(
+      backgroundColor: color.withValues(alpha: 0.1),
+      borderColor: color.withValues(alpha: 0.2),
+      textColor: color,
+      timeColor: color.withValues(alpha: 0.9),
+      showDot: false,
     );
   }
 
   // Mixed style
-  return Container(
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.05),
-      border: Border(
-        left: BorderSide(color: color, width: 4),
-        top: BorderSide(color: theme.colorScheme.border),
-        right: BorderSide(color: theme.colorScheme.border),
-        bottom: BorderSide(color: theme.colorScheme.border),
-      ),
-    ),
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                event.title,
-                style: theme.textTheme.small.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                timeString,
-                style: theme.textTheme.small.copyWith(
-                  fontSize: 10,
-                  color: theme.colorScheme.mutedForeground,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (event.isCompleted)
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Icon(LucideIcons.checkCircle2, size: 14, color: color),
-          ),
-      ],
-    ),
+  return buildCard(
+    backgroundColor: color.withValues(alpha: 0.1),
+    borderColor: color.withValues(alpha: 0.2),
+    textColor: color,
+    timeColor: color.withValues(alpha: 0.9),
+    showDot: true,
   );
 }

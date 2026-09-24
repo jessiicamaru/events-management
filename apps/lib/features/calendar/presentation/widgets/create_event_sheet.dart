@@ -50,6 +50,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     if (widget.eventToEdit != null) {
       final evt = widget.eventToEdit!;
       _titleController.text = evt.title;
+      _selectedCategoryId = evt.categoryId;
       _startDate = evt.startTime.toLocal();
       _startTime = TimeOfDay.fromDateTime(evt.startTime.toLocal());
       _endTime = TimeOfDay.fromDateTime(evt.endTime.toLocal());
@@ -67,13 +68,13 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       _endTime = TimeOfDay.fromDateTime(endDateTime);
       _updateTargetDuration();
     }
+    
     if (widget.initialHabit != null) {
-      _selectedHabit = widget.initialHabit;
       if (widget.eventToEdit == null) {
-        _titleController.text = widget.initialHabit!.name;
+        _fillFromHabit(widget.initialHabit!);
+      } else {
+        _selectedHabit = widget.initialHabit;
       }
-      // Note: habit.category is currently a string like 'Health'. If we move to GUIDs, this might need mapping.
-      // For now, we leave it null or try to match by name if we fetch categories.
     }
   }
 
@@ -94,6 +95,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     if (widget.eventToEdit == null) {
       try {
         final habitTasks = await ref.read(habitTasksProvider(habit.id).future);
+        if (!mounted) return;
         setState(() {
           _localTasks = habitTasks.map((t) => EventTaskModel(
             id: DateTime.now().millisecondsSinceEpoch.toString() + t.id,
