@@ -40,8 +40,8 @@ void main() {
   late SharedPreferences prefs;
 
   final sampleHabits = [
-    HabitModel(id: 'h1', name: 'Morning Run', category: 'Health', targetDays: []),
-    HabitModel(id: 'h2', name: 'Read 10 pages', category: 'Learning', targetDays: []),
+    HabitModel(id: 'h1', name: 'Morning Run', categoryId: 'cat1', targetDays: []),
+    HabitModel(id: 'h2', name: 'Read 10 pages', categoryId: 'cat2', targetDays: []),
   ];
 
   Widget buildTestableWidget(Widget child, {List<HabitModel> habits = const []}) {

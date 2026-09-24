@@ -22,14 +22,14 @@ class EditHabitDialog extends ConsumerStatefulWidget {
 
 class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
   late final TextEditingController _nameController;
-  late String _selectedCategory;
+  String? _selectedCategoryId;
   late List<int> _selectedDays;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.habit.name);
-    _selectedCategory = widget.habit.category ?? 'Uncategorized';
+    _selectedCategoryId = widget.habit.categoryId;
     _selectedDays = List<int>.from(widget.habit.targetDays);
   }
 
@@ -90,7 +90,7 @@ class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
     
     final updatedHabit = widget.habit.copyWith(
       name: name,
-      category: _selectedCategory,
+      categoryId: _selectedCategoryId,
       targetDays: _selectedDays,
     );
     Navigator.of(context).pop();
@@ -115,7 +115,6 @@ class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
       actions: [
         ShadButton.destructive(
           onPressed: () {
-            Navigator.of(context).pop();
             _showDeleteConfirmation(context, ref, widget.habit.id);
           },
           child: Row(
@@ -155,8 +154,8 @@ class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
             ),
             const SizedBox(height: 16),
             HabitCategorySelector(
-              selectedCategory: _selectedCategory,
-              onCategoryChanged: (val) => setState(() => _selectedCategory = val),
+              selectedCategoryId: _selectedCategoryId,
+              onCategoryChanged: (val) => setState(() => _selectedCategoryId = val),
             ),
             const SizedBox(height: 24),
             HabitTasksEditor(habitId: widget.habit.id),

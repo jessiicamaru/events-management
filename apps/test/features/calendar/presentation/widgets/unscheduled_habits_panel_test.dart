@@ -5,12 +5,19 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import '../../../../test_utils.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/unscheduled_habits_panel.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+
+class MockApiService implements ApiService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future.value([]);
+}
 
 void main() {
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
       overrides: [
         ...commonTestOverrides,
+        apiServiceProvider.overrideWithValue(MockApiService()),
       ],
       child: ShadApp(
         home: Scaffold(body: child),
@@ -41,8 +48,8 @@ void main() {
 
     testWidgets('shows habits list', (WidgetTester tester) async {
       final habits = [
-        HabitModel(id: '1', name: 'Exercise', category: 'Health', targetDays: []),
-        HabitModel(id: '2', name: 'Reading', category: 'Learning', targetDays: []),
+        HabitModel(id: '1', name: 'Exercise', categoryId: 'cat1', targetDays: []),
+        HabitModel(id: '2', name: 'Reading', categoryId: 'cat2', targetDays: []),
       ];
 
       await tester.pumpWidget(buildTestableWidget(
@@ -53,13 +60,12 @@ void main() {
 
       expect(find.text('Exercise'), findsOneWidget);
       expect(find.text('Reading'), findsOneWidget);
-      expect(find.text('Health'), findsOneWidget);
-      expect(find.text('Learning'), findsOneWidget);
+      expect(find.text('Uncategorized'), findsNWidgets(2));
     });
 
     testWidgets('triggers onHabitTapped when a habit is tapped', (WidgetTester tester) async {
       final habits = [
-        HabitModel(id: '1', name: 'Exercise', category: 'Health', targetDays: []),
+        HabitModel(id: '1', name: 'Exercise', categoryId: 'cat1', targetDays: []),
       ];
 
       HabitModel? tappedHabit;

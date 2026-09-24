@@ -7,6 +7,7 @@ import 'package:habit_tracker/features/habits/presentation/widgets/heatmap_widge
 import 'package:habit_tracker/features/habits/presentation/widgets/add_habit_dialog.dart';
 import 'package:habit_tracker/features/habits/presentation/widgets/edit_habit_dialog.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 
 class HabitsScreen extends ConsumerWidget {
   const HabitsScreen({super.key});
@@ -31,24 +32,14 @@ class HabitsScreen extends ConsumerWidget {
                     translations.translate('nav_habits'),
                     style: theme.textTheme.h3,
                   ),
-                  ShadButton.outline(
-                    child: const Icon(LucideIcons.plus, size: 16),
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (context) => const AddHabitDialog(),
-                    ),
-                  ),
                 ],
               ),
             ),
             Expanded(
               child: habitsAsync.when(
                 data: (habits) {
-                  if (habits.isEmpty) {
-                    return Center(child: Text(translations.translate('no_habits_yet')));
-                  }
-                  
                   final heatmapAsync = ref.watch(heatmapProvider);
+                  final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
                   
                   return CustomScrollView(
                      slivers: [
@@ -62,6 +53,14 @@ class HabitsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
+                      if (habits.isEmpty)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 32.0),
+                            child: Center(child: Text(translations.translate('no_habits_yet'))),
+                          ),
+                        )
+                      else
                       SliverPadding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         sliver: SliverList(
@@ -69,11 +68,15 @@ class HabitsScreen extends ConsumerWidget {
                             (context, index) {
                               final habit = habits[index];
                               
-                              String categoryText = habit.category ?? translations.translate('uncategorized');
-                              if (habit.category == 'Health') categoryText = translations.translate('category_health');
-                              if (habit.category == 'Work') categoryText = translations.translate('category_work');
-                              if (habit.category == 'Learning') categoryText = translations.translate('category_learning');
-                              if (habit.category == 'Wellness') categoryText = translations.translate('category_wellness');
+                              String categoryText = translations.translate('uncategorized');
+                              if (habit.categoryId != null) {
+                                categoriesAsync.whenData((categories) {
+                                  final cat = categories.where((c) => c.id == habit.categoryId).firstOrNull;
+                                  if (cat != null) {
+                                    categoryText = cat.name;
+                                  }
+                                });
+                              }
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
@@ -133,6 +136,26 @@ class HabitsScreen extends ConsumerWidget {
                               );
                             },
                             childCount: habits.length,
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: ShadButton(
+                            width: double.infinity,
+                            onPressed: () => showDialog(
+                              context: context,
+                              builder: (context) => const AddHabitDialog(),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(LucideIcons.plus, size: 16),
+                                const SizedBox(width: 8),
+                                Text(translations.translate('add_habit')),
+                              ],
+                            ),
                           ),
                         ),
                       ),

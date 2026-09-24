@@ -22,7 +22,7 @@ Widget buildCalendarEvent(BuildContext context, CalendarAppointmentDetails detai
     final cat = categories.firstWhere((c) => c.id == event.categoryId, orElse: () => const EventCategory(id: '', name: '', colorPreset: 'Slate'));
     color = colorPalette[cat.colorPreset] ?? Colors.blueGrey;
   } else {
-    color = AppTheme.getHabitColor(habit.category);
+    color = AppTheme.getHabitColor(null);
   }
   
   final theme = ShadTheme.of(context);

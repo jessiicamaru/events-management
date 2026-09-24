@@ -63,7 +63,7 @@ void main() {
       const HabitModel(
         id: '1',
         name: 'Morning Run',
-        category: 'Health',
+        categoryId: 'cat1',
         targetDays: [1, 2, 3],
       ),
     ];
@@ -74,7 +74,7 @@ void main() {
 
     // Verify habit renders
     expect(find.text('Morning Run'), findsOneWidget);
-    expect(find.text('Health'), findsOneWidget);
+    expect(find.text('Uncategorized'), findsOneWidget);
 
     // Find pencil icon button and tap it
     final editButton = find.byIcon(LucideIcons.pencil);
@@ -104,7 +104,7 @@ void main() {
       const HabitModel(
         id: '1',
         name: 'Morning Run',
-        category: 'Health',
+        categoryId: 'cat1',
         targetDays: [1, 2, 3],
       ),
     ];
@@ -118,8 +118,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap Delete button inside dialog
-    final deleteButton = find.widgetWithText(ShadButton, 'Delete');
-    expect(deleteButton, findsOneWidget);
+    final deleteButton = find.widgetWithText(ShadButton, 'Delete').first;
     await tester.tap(deleteButton);
     await tester.pumpAndSettle();
 
@@ -127,7 +126,7 @@ void main() {
     expect(find.text('Are you sure you want to delete this habit?'), findsOneWidget);
 
     // Tap confirm delete
-    final confirmDeleteButton = find.widgetWithText(ShadButton, 'Delete');
+    final confirmDeleteButton = find.widgetWithText(ShadButton, 'Delete').last;
     await tester.tap(confirmDeleteButton);
     await tester.pumpAndSettle();
 

@@ -17,7 +17,7 @@ class AddHabitDialog extends ConsumerStatefulWidget {
 
 class _AddHabitDialogState extends ConsumerState<AddHabitDialog> {
   final _nameController = TextEditingController();
-  String _selectedCategory = 'Uncategorized';
+  String? _selectedCategoryId;
   final List<int> _selectedDays = List<int>.from(AppConstants.defaultTargetDays);
 
   @override
@@ -41,7 +41,7 @@ class _AddHabitDialogState extends ConsumerState<AddHabitDialog> {
     final newHabit = HabitModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
-      category: _selectedCategory,
+      categoryId: _selectedCategoryId,
       targetDays: _selectedDays,
     );
     Navigator.of(context).pop();
@@ -84,8 +84,8 @@ class _AddHabitDialogState extends ConsumerState<AddHabitDialog> {
             ),
             const SizedBox(height: 16),
             HabitCategorySelector(
-              selectedCategory: _selectedCategory,
-              onCategoryChanged: (val) => setState(() => _selectedCategory = val),
+              selectedCategoryId: _selectedCategoryId,
+              onCategoryChanged: (val) => setState(() => _selectedCategoryId = val),
             ),
             const SizedBox(height: 16),
           ],

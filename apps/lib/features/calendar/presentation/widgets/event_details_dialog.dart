@@ -9,6 +9,7 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 
 class EventDetailsDialog extends ConsumerWidget {
   final EventModel event;
@@ -30,11 +31,17 @@ class EventDetailsDialog extends ConsumerWidget {
     final timeFormat = DateFormat('h:mm a', localeStr);
     final theme = ShadTheme.of(context);
 
-    String translatedCategory = habit.category ?? translations.translate('uncategorized');
-    if (habit.category == 'Health') translatedCategory = translations.translate('category_health');
-    if (habit.category == 'Work') translatedCategory = translations.translate('category_work');
-    if (habit.category == 'Learning') translatedCategory = translations.translate('category_learning');
-    if (habit.category == 'Wellness') translatedCategory = translations.translate('category_wellness');
+    final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
+    String translatedCategory = translations.translate('uncategorized');
+    
+    if (habit.categoryId != null) {
+      categoriesAsync.whenData((categories) {
+        final cat = categories.where((c) => c.id == habit.categoryId).firstOrNull;
+        if (cat != null) {
+          translatedCategory = cat.name;
+        }
+      });
+    }
 
     return ShadDialog(
       title: Text(translations.translate(event.title)),

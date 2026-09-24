@@ -8,6 +8,7 @@ import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/event_details_dialog.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/models/event_category.dart';
 
 /// A mock ApiService that returns empty data so no real network calls occur.
 class _MockApiService implements ApiService {
@@ -15,7 +16,12 @@ class _MockApiService implements ApiService {
   Future<List<EventTaskModel>> fetchEventTasks(String eventId) async => [];
 
   @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+  Future<List<EventCategory>> fetchEventCategories({String? squadId}) async => [
+    const EventCategory(id: 'cat1', name: 'Health', colorPreset: 'Rose'),
+  ];
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future.value([]);
 }
 
 class MockLocaleNotifier extends LocaleNotifier {
@@ -55,7 +61,7 @@ void main() {
     final habit = HabitModel(
       id: 'habit-1',
       name: 'Running',
-      category: 'Health',
+      categoryId: 'cat1',
       targetDays: [1, 2, 3],
     );
 
@@ -81,7 +87,7 @@ void main() {
     final habit = HabitModel(
       id: 'habit-1',
       name: 'Running',
-      category: 'Health',
+      categoryId: 'cat1',
       targetDays: [1, 2, 3],
     );
 

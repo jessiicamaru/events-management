@@ -57,7 +57,7 @@ class CommandCenterPanel extends ConsumerWidget {
       orElse: () => HabitModel(id: '', name: 'Unknown', targetDays: []),
     );
 
-    final habitColor = habit != null ? AppTheme.getHabitColor(habit.category) : theme.colorScheme.primary;
+    final habitColor = habit != null ? AppTheme.getHabitColor(null) : theme.colorScheme.primary;
 
     return Container(
       decoration: BoxDecoration(

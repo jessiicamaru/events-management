@@ -52,12 +52,19 @@ namespace HabitTracker.Infrastructure.Data
 
             if (!_context.Habits.Any())
             {
-                var habit1 = new Habit { Id = Guid.NewGuid(), Name = "Morning Run", Category = "Health", TargetDays = new List<int> { 1, 3, 5 } };
-                var habit2 = new Habit { Id = Guid.NewGuid(), Name = "Read 10 pages", Category = "Learning", TargetDays = new List<int> { 1, 2, 3, 4, 5, 6, 7 } };
-                var habit3 = new Habit { Id = Guid.NewGuid(), Name = "Team Standup", Category = "Work", TargetDays = new List<int> { 1, 2, 3, 4, 5 } };
-                var habit4 = new Habit { Id = Guid.NewGuid(), Name = "Meditation", Category = "Wellness", TargetDays = new List<int> { 1, 3, 5, 7 } };
-                var habit5 = new Habit { Id = Guid.NewGuid(), Name = "Gym Workout", Category = "Health", TargetDays = new List<int> { 2, 4, 6 } };
-                var habit6 = new Habit { Id = Guid.NewGuid(), Name = "Deep Work", Category = "Work", TargetDays = new List<int> { 2, 4 } };
+                var healthCategory = new EventCategory { Id = Guid.NewGuid(), Name = "Health", ColorPreset = "Red" };
+                var learningCategory = new EventCategory { Id = Guid.NewGuid(), Name = "Learning", ColorPreset = "Blue" };
+                var workCategory = new EventCategory { Id = Guid.NewGuid(), Name = "Work", ColorPreset = "Green" };
+                var wellnessCategory = new EventCategory { Id = Guid.NewGuid(), Name = "Wellness", ColorPreset = "Purple" };
+                
+                _context.EventCategories.AddRange(healthCategory, learningCategory, workCategory, wellnessCategory);
+
+                var habit1 = new Habit { Id = Guid.NewGuid(), Name = "Morning Run", CategoryId = healthCategory.Id, TargetDays = new List<int> { 1, 3, 5 } };
+                var habit2 = new Habit { Id = Guid.NewGuid(), Name = "Read 10 pages", CategoryId = learningCategory.Id, TargetDays = new List<int> { 1, 2, 3, 4, 5, 6, 7 } };
+                var habit3 = new Habit { Id = Guid.NewGuid(), Name = "Team Standup", CategoryId = workCategory.Id, TargetDays = new List<int> { 1, 2, 3, 4, 5 } };
+                var habit4 = new Habit { Id = Guid.NewGuid(), Name = "Meditation", CategoryId = wellnessCategory.Id, TargetDays = new List<int> { 1, 3, 5, 7 } };
+                var habit5 = new Habit { Id = Guid.NewGuid(), Name = "Gym Workout", CategoryId = healthCategory.Id, TargetDays = new List<int> { 2, 4, 6 } };
+                var habit6 = new Habit { Id = Guid.NewGuid(), Name = "Deep Work", CategoryId = workCategory.Id, TargetDays = new List<int> { 2, 4 } };
                 
                 _context.Habits.AddRange(habit1, habit2, habit3, habit4, habit5, habit6);
 

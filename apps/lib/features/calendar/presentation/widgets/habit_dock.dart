@@ -28,7 +28,7 @@ class HabitDock extends StatelessWidget {
     }
 
     return Container(
-      height: 100,
+      height: 120,
       decoration: BoxDecoration(
         color: theme.colorScheme.card,
         border: Border(top: BorderSide(color: theme.colorScheme.border)),
@@ -66,7 +66,7 @@ class HabitDock extends StatelessWidget {
   }
 
   Widget _buildDraggableHabit(BuildContext context, HabitModel habit, ShadThemeData theme) {
-    final habitColor = AppTheme.getHabitColor(habit.category);
+    final habitColor = AppTheme.getHabitColor(null);
 
     final habitCard = Container(
       width: 140,
@@ -91,7 +91,7 @@ class HabitDock extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            habit.category ?? 'Uncategorized',
+            'Uncategorized',
             style: theme.textTheme.small.copyWith(
               color: theme.colorScheme.mutedForeground,
               fontSize: 10,

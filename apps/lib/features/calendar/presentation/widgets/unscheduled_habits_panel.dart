@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/category_filter_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class UnscheduledHabitsPanel extends ConsumerWidget {
@@ -43,7 +44,7 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
               data: (habits) {
                 final filteredHabits = selectedCategory == null 
                     ? habits 
-                    : habits.where((h) => h.category == selectedCategory).toList();
+                    : habits.where((h) => h.categoryId == selectedCategory).toList();
                 
                 if (filteredHabits.isEmpty) {
                   return Center(child: Padding(
@@ -57,11 +58,16 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
                   itemCount: filteredHabits.length,
                   itemBuilder: (context, index) {
                     final habit = filteredHabits[index];
-                    String? translatedCategory = habit.category;
-                    if (habit.category == 'Health') translatedCategory = translations.translate('category_health');
-                    if (habit.category == 'Work') translatedCategory = translations.translate('category_work');
-                    if (habit.category == 'Learning') translatedCategory = translations.translate('category_learning');
-                    if (habit.category == 'Wellness') translatedCategory = translations.translate('category_wellness');
+                    final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
+                    String? translatedCategory = translations.translate('uncategorized');
+                    if (habit.categoryId != null) {
+                       categoriesAsync.whenData((categories) {
+                          final cat = categories.where((c) => c.id == habit.categoryId).firstOrNull;
+                          if (cat != null) {
+                             translatedCategory = cat.name;
+                          }
+                       });
+                    }
 
                     final content = ShadCard(
                       padding: const EdgeInsets.all(12),

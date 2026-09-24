@@ -4,20 +4,41 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/habit_dock.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/core/network/api_service.dart';
+import '../../test_utils.dart';
+
+class MockApiService implements ApiService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => Future.value([]);
+}
 
 void main() {
-  testWidgets('HabitDock renders draggable habits', (WidgetTester tester) async {
+  testWidgets('HabitDock renders draggable habits', (
+    WidgetTester tester,
+  ) async {
     final habits = [
-      HabitModel(id: '1', name: 'Test Habit 1', category: 'Health', targetDays: [1]),
-      HabitModel(id: '2', name: 'Test Habit 2', category: 'Work', targetDays: [2]),
+      HabitModel(
+        id: '1',
+        name: 'Test Habit 1',
+        categoryId: 'cat1',
+        targetDays: [1],
+      ),
+      HabitModel(
+        id: '2',
+        name: 'Test Habit 2',
+        categoryId: 'cat2',
+        targetDays: [2],
+      ),
     ];
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          ...commonTestOverrides,
+          apiServiceProvider.overrideWithValue(MockApiService()),
+        ],
         child: ShadApp(
-          home: Scaffold(
-            body: HabitDock(habits: habits),
-          ),
+          home: Scaffold(body: HabitDock(habits: habits)),
         ),
       ),
     );
@@ -33,7 +54,12 @@ void main() {
   testWidgets('DragTarget accepts HabitModel', (WidgetTester tester) async {
     HabitModel? droppedHabit;
 
-    final habit = HabitModel(id: '1', name: 'Test Habit 1', category: 'Health', targetDays: [1]);
+    final habit = HabitModel(
+      id: '1',
+      name: 'Test Habit 1',
+      categoryId: 'cat1',
+      targetDays: [1],
+    );
 
     await tester.pumpWidget(
       ShadApp(

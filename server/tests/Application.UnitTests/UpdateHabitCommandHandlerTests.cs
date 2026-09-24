@@ -24,7 +24,7 @@ namespace HabitTracker.Application.Tests
             {
                 Id = habitId,
                 Name = "Old Name",
-                Category = "Learning",
+                CategoryId = Guid.NewGuid(),
                 TargetDays = new List<int> { 1, 2 },
                 UserId = userId
             };
@@ -41,7 +41,7 @@ namespace HabitTracker.Application.Tests
             {
                 Id = habitId,
                 Name = "New Name",
-                Category = "Health",
+                CategoryId = Guid.NewGuid(),
                 TargetDays = new List<int> { 1, 2, 3 },
                 UserId = userId
             };
@@ -52,7 +52,7 @@ namespace HabitTracker.Application.Tests
             // Assert
             result.Should().BeTrue();
             habit.Name.Should().Be("New Name");
-            habit.Category.Should().Be("Health");
+            habit.CategoryId.Should().Be(command.CategoryId);
             habit.TargetDays.Should().BeEquivalentTo(new[] { 1, 2, 3 });
             mockRepo.Verify(r => r.UpdateAsync(habit), Times.Once);
         }

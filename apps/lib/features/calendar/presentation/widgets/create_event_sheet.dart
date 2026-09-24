@@ -36,7 +36,7 @@ class CreateEventSheet extends ConsumerStatefulWidget {
 class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   final _titleController = TextEditingController();
   final _targetDurationController = TextEditingController();
-  String? _selectedCategory;
+  String? _selectedCategoryId;
   HabitModel? _selectedHabit;
   DateTime _startDate = DateTime.now();
   TimeOfDay _startTime = const TimeOfDay(hour: 6, minute: 0);
@@ -88,7 +88,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     setState(() {
       _selectedHabit = habit;
       _titleController.text = habit.name;
-      _selectedCategory = habit.category;
+      _selectedCategoryId = habit.categoryId;
     });
 
     if (widget.eventToEdit == null) {
@@ -189,7 +189,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       actualDuration: widget.eventToEdit?.actualDuration,
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
-      categoryId: _selectedCategory,
+      categoryId: _selectedCategoryId,
     );
 
     try {
@@ -325,8 +325,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                       width: double.infinity,
                       child: ShadSelect<String>(
                         placeholder: Text(translations.translate('select_category')),
-                        initialValue: _selectedCategory,
-                        onChanged: (val) => setState(() => _selectedCategory = val),
+                        initialValue: _selectedCategoryId,
+                        onChanged: (val) => setState(() => _selectedCategoryId = val),
                         options: categories.map((c) {
                           return ShadOption(value: c.id, child: Text(c.name));
                         }).toList(),

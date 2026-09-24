@@ -7,7 +7,8 @@ namespace HabitTracker.Domain.Entities
     {
         public Guid Id { get; set; } = Guid.NewGuid();
         public string Name { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty; // AI categorized
+        public Guid? CategoryId { get; set; }
+        public EventCategory? Category { get; set; }
         public List<int> TargetDays { get; set; } = new(); // 1=Monday...7=Sunday
         public int CurrentStreak { get; set; } = 0;
         public int LongestStreak { get; set; } = 0;
