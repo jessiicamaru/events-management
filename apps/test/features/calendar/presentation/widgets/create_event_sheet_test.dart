@@ -7,7 +7,6 @@ import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
-import 'package:habit_tracker/features/calendar/presentation/widgets/unscheduled_habits_selector.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 
@@ -75,15 +74,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Schedule Event'), findsOneWidget);
-      // The selector's own heading, found through the widget rather than by its English
-      // text: the string is translated, and 'Habits' is not unique on this sheet.
-      expect(
-        find.descendant(
-          of: find.byType(UnscheduledHabitsSelector),
-          matching: find.text('Habits'),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Unscheduled Habits'), findsOneWidget);
       expect(find.text('Title'), findsOneWidget);
       expect(find.text('Category'), findsOneWidget);
       expect(find.text('Date'), findsOneWidget);
@@ -124,14 +115,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // The selector renders nothing at all without habits, so the heading is absent.
-      expect(
-        find.descendant(
-          of: find.byType(UnscheduledHabitsSelector),
-          matching: find.text('Habits'),
-        ),
-        findsNothing,
-      );
+      // Unscheduled Habits section should not appear
+      expect(find.text('Unscheduled Habits'), findsNothing);
       // But the form should still show
       expect(find.text('Title'), findsOneWidget);
     });
