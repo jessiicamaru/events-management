@@ -5,6 +5,7 @@ import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/category_filter_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/habit_card.dart';
 
 class UnscheduledHabitsPanel extends ConsumerWidget {
   final AsyncValue<List<HabitModel>> habitsAsync;
@@ -60,26 +61,22 @@ class UnscheduledHabitsPanel extends ConsumerWidget {
                     final habit = filteredHabits[index];
                     final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
                     String? translatedCategory = translations.translate('uncategorized');
+                    String? categoryPreset;
                     if (habit.categoryId != null) {
                        categoriesAsync.whenData((categories) {
                           final cat = categories.where((c) => c.id == habit.categoryId).firstOrNull;
                           if (cat != null) {
                              translatedCategory = cat.name;
+                             categoryPreset = cat.colorPreset;
                           }
                        });
                     }
 
-                    final content = ShadCard(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(translations.translate(habit.name), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 4),
-                          Text(translatedCategory ?? translations.translate('uncategorized'), style: TextStyle(fontSize: 10, color: theme.colorScheme.mutedForeground), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
+                    final content = HabitCard(
+                      habit: habit,
+                      categoryName: translatedCategory ?? translations.translate('uncategorized'),
+                      categoryColorPreset: categoryPreset,
+                      compact: true,
                     );
 
                     return Padding(

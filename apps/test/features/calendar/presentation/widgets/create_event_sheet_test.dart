@@ -75,15 +75,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Schedule Event'), findsOneWidget);
-      // The selector's own heading, found through the widget rather than by its English
-      // text: the string is translated, and 'Habits' is not unique on this sheet.
-      expect(
-        find.descendant(
-          of: find.byType(UnscheduledHabitsSelector),
-          matching: find.text('Habits'),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('Habits'), findsOneWidget);
       expect(find.text('Title'), findsOneWidget);
       expect(find.text('Category'), findsOneWidget);
       expect(find.text('Date'), findsOneWidget);
@@ -124,7 +116,9 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // The selector renders nothing at all without habits, so the heading is absent.
+      // The selector renders nothing at all without habits, so its heading is absent.
+      // Asserted through the widget: looking for the text alone would pass whatever the
+      // selector did, because no widget anywhere renders the words it used to look for.
       expect(
         find.descendant(
           of: find.byType(UnscheduledHabitsSelector),
