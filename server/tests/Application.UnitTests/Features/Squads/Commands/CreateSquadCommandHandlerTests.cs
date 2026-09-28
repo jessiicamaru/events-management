@@ -21,28 +21,28 @@ namespace HabitTracker.Application.UnitTests.Features.Squads.Commands
             _handler = new CreateSquadCommandHandler(_repositoryMock.Object);
         }
 
-        [Fact]
-        public async Task Handle_UserAlreadyInSquad_ThrowsException()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(11)]
+        public async Task Handle_InvalidMaxMembers_ThrowsException(int maxMembers)
         {
             // Arrange
-            var command = new CreateSquadCommand { Name = "Test", IsBuddyMode = true, AdminUserId = "user1" };
-            _repositoryMock.Setup(repo => repo.IsUserInAnySquadAsync("user1")).ReturnsAsync(true);
+            var command = new CreateSquadCommand { Name = "Test", MaxMembers = maxMembers, RequireApproval = false, AdminUserId = "user1" };
 
             // Act
             Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            await act.Should().ThrowAsync<Exception>().WithMessage("Already in a squad");
+            await act.Should().ThrowAsync<Exception>().WithMessage("Max members must be between 2 and 10");
         }
 
         [Fact]
         public async Task Handle_ValidRequest_CreatesSquad()
         {
             // Arrange
-            var command = new CreateSquadCommand { Name = "Test", IsBuddyMode = true, AdminUserId = "user1" };
-            _repositoryMock.Setup(repo => repo.IsUserInAnySquadAsync("user1")).ReturnsAsync(false);
+            var command = new CreateSquadCommand { Name = "Test", MaxMembers = 5, RequireApproval = true, AdminUserId = "user1" };
             
-            var expectedSquad = new Squad { Id = Guid.NewGuid(), Name = "Test", IsBuddyMode = true };
+            var expectedSquad = new Squad { Id = Guid.NewGuid(), Name = "Test", MaxMembers = 5, RequireApproval = true };
             _repositoryMock.Setup(repo => repo.CreateSquadAsync(It.IsAny<Squad>(), "user1")).ReturnsAsync(expectedSquad);
 
             // Act
@@ -50,7 +50,7 @@ namespace HabitTracker.Application.UnitTests.Features.Squads.Commands
 
             // Assert
             result.Should().BeEquivalentTo(expectedSquad);
-            _repositoryMock.Verify(repo => repo.CreateSquadAsync(It.Is<Squad>(s => s.Name == "Test" && s.IsBuddyMode == true), "user1"), Times.Once);
+            _repositoryMock.Verify(repo => repo.CreateSquadAsync(It.Is<Squad>(s => s.Name == "Test" && s.MaxMembers == 5 && s.RequireApproval == true), "user1"), Times.Once);
         }
     }
 }

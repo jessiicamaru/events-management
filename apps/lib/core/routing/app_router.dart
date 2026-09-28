@@ -10,7 +10,7 @@ import 'package:habit_tracker/features/auth/presentation/screens/login_screen.da
 import 'package:habit_tracker/features/auth/presentation/screens/register_screen.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
-import 'package:habit_tracker/features/squads/presentation/screens/squad_dashboard_screen.dart';
+import 'package:habit_tracker/features/squads/presentation/screens/squads_list_screen.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -69,7 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/squad',
-            builder: (context, state) => const SquadDashboardScreen(),
+            builder: (context, state) => const SquadsListScreen(),
           ),
           GoRoute(
             path: '/settings',

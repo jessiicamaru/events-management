@@ -15,6 +15,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public Guid EventId { get; set; }
         public TimeSpan ActualDuration { get; set; }
         public bool UpdateCalendar { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 
     public class CompleteEventSessionCommandHandler : IRequestHandler<CompleteEventSessionCommand, bool>
@@ -39,7 +40,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public async Task<bool> Handle(CompleteEventSessionCommand request, CancellationToken cancellationToken)
         {
             var ev = await _eventRepository.GetByIdAsync(request.EventId);
-            if (ev == null)
+            if (ev == null || ev.UserId != request.UserId)
             {
                 return false;
             }
@@ -60,6 +61,7 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             if (!wasCompleted)
             {
+                int xpGained = 10;
                 if (Guid.TryParse(ev.HabitId, out Guid habitId))
                 {
                     var habit = await _habitRepository.GetByIdAsync(habitId);
@@ -67,23 +69,30 @@ namespace HabitTracker.Application.Features.Events.Commands
                     {
                         await RecalculateStreaks(habit);
                         await _habitRepository.UpdateAsync(habit);
+                        
+                        int streak = habit.CurrentStreak;
+                        xpGained = 10 + Math.Max(0, (streak - 1) * 2);
                     }
                 }
 
-                // Add XP (e.g. 10 XP per completion)
+                // Add XP (e.g. base 10 XP + streak bonus)
                 if (!string.IsNullOrEmpty(ev.UserId))
                 {
                     var user = await _userRepository.GetByIdAsync(ev.UserId);
                     if (user != null)
                     {
-                        user.TotalXP += 10;
+                        user.TotalXP += xpGained;
                         await _userRepository.UpdateAsync(user);
 
-                        var squad = await _squadRepository.GetSquadByUserIdAsync(user.Id);
-                        if (squad != null)
+                        var squads = await _squadRepository.GetSquadsByUserIdAsync(user.Id);
+                        foreach (var squad in squads)
                         {
-                            squad.TotalSquadXP += 10;
-                            await _squadRepository.UpdateAsync(squad);
+                            var membership = await _squadRepository.GetMembershipAsync(squad.Id, user.Id);
+                            if (membership != null && membership.XpContributionEnabled && membership.IsApproved)
+                            {
+                                squad.TotalSquadXP += xpGained;
+                                await _squadRepository.UpdateAsync(squad);
+                            }
                         }
                     }
                 }

@@ -35,12 +35,13 @@ namespace HabitTracker.Application.Tests
                 Id = eventId,
                 HabitId = habitId.ToString(),
                 IsCompleted = false,
-                StartTime = DateTime.UtcNow.AddDays(-1)
+                StartTime = DateTime.UtcNow.AddDays(-1),
+                UserId = "user123"
             };
 
             var eventsList = new List<Event>
             {
-                new Event { Id = Guid.NewGuid(), HabitId = habitId.ToString(), IsCompleted = true, StartTime = DateTime.UtcNow.AddDays(-2) },
+                new Event { Id = Guid.NewGuid(), HabitId = habitId.ToString(), IsCompleted = true, StartTime = DateTime.UtcNow.AddDays(-2), UserId = "user123" },
                 evt
             };
 
@@ -49,7 +50,7 @@ namespace HabitTracker.Application.Tests
             mockHabitRepo.Setup(r => r.GetByIdAsync(habitId)).ReturnsAsync(habit);
 
             var handler = new ToggleEventCommandHandler(mockEventRepo.Object, mockHabitRepo.Object);
-            var command = new ToggleEventCommand(eventId, true);
+            var command = new ToggleEventCommand(eventId, true, "user123");
 
             // Act
             var result = await handler.Handle(command, CancellationToken.None);
@@ -76,7 +77,35 @@ namespace HabitTracker.Application.Tests
             mockEventRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((Event?)null);
 
             var handler = new ToggleEventCommandHandler(mockEventRepo.Object, mockHabitRepo.Object);
-            var command = new ToggleEventCommand(Guid.NewGuid(), true);
+            var command = new ToggleEventCommand(Guid.NewGuid(), true, "user123");
+
+            // Act
+            var result = await handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.Should().BeFalse();
+            mockEventRepo.Verify(r => r.UpdateAsync(It.IsAny<Event>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldReturnFalse_WhenUserIdMismatch()
+        {
+            // Arrange
+            var mockEventRepo = new Mock<IEventRepository>();
+            var mockHabitRepo = new Mock<IHabitRepository>();
+
+            var eventId = Guid.NewGuid();
+            var evt = new Event
+            {
+                Id = eventId,
+                UserId = "user123",
+                IsCompleted = false
+            };
+
+            mockEventRepo.Setup(r => r.GetByIdAsync(eventId)).ReturnsAsync(evt);
+
+            var handler = new ToggleEventCommandHandler(mockEventRepo.Object, mockHabitRepo.Object);
+            var command = new ToggleEventCommand(eventId, true, "different_user");
 
             // Act
             var result = await handler.Handle(command, CancellationToken.None);

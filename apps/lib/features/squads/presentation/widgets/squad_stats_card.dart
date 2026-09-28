@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/level_system.dart';
+import 'package:habit_tracker/core/widgets/xp_progress_bar.dart';
 
 class SquadStatsCard extends ConsumerWidget {
   final SquadModel squad;
@@ -13,8 +15,7 @@ class SquadStatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final translations = ref.watch(translationsProvider);
-    final level = (squad.totalSquadXP / 1000).floor() + 1;
-    final progress = (squad.totalSquadXP % 1000) / 1000.0;
+    final level = LevelSystem.getLevel(squad.totalSquadXP);
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -31,14 +32,8 @@ class SquadStatsCard extends ConsumerWidget {
           const SizedBox(height: 8),
           Text('${translations.translate('total_xp')}: ${squad.totalSquadXP}', style: theme.textTheme.muted),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 8),
+          XpProgressBar(totalXp: squad.totalSquadXP),
+          const SizedBox(height: 12),
           Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
         ],
       ),

@@ -10,7 +10,11 @@ namespace HabitTracker.Domain.Entities
         public string UserId { get; set; } = string.Empty;
         public ApplicationUser? User { get; set; }
 
-        public string Role { get; set; } = "Member"; // "Admin", "Member"
+        public string Role { get; set; } = "Member"; // "Leader", "Member"
+        public string? Nickname { get; set; }
+        public bool IsMuted { get; set; } = false;
+        public bool XpContributionEnabled { get; set; } = true;
+        public bool IsApproved { get; set; } = true;
         public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
     }
 }

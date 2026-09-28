@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/level_system.dart';
+import 'package:habit_tracker/core/widgets/xp_progress_bar.dart';
 
 class CosmeticsScreen extends ConsumerWidget {
   const CosmeticsScreen({super.key});
@@ -21,13 +23,13 @@ class CosmeticsScreen extends ConsumerWidget {
       ),
       body: userProfile.when(
         data: (profile) {
-          final level = (profile.totalXP / 1000).floor() + 1;
+          final level = LevelSystem.getLevel(profile.totalXP);
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildProfileCard(theme, profile.email, level, profile.totalXP, translations),
+                _buildProfileCard(context, theme, profile.email, level, profile.totalXP, translations),
                 const SizedBox(height: 32),
                 Text(translations.translate('cosmetics_emojis_title'), style: theme.textTheme.h4),
                 const SizedBox(height: 8),
@@ -50,8 +52,7 @@ class CosmeticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileCard(ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
-    final progress = (xp % 1000) / 1000.0;
+  Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -70,19 +71,81 @@ class CosmeticsScreen extends ConsumerWidget {
           Text(email, style: theme.textTheme.h4),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
-              Text('${xp % 1000} / 1000 XP', style: theme.textTheme.small),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _showLevelTableDialog(context, translations),
+                child: Icon(
+                  LucideIcons.info,
+                  size: 14,
+                  color: theme.colorScheme.mutedForeground,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-            ),
+          const SizedBox(height: 16),
+          XpProgressBar(totalXp: xp),
+        ],
+      ),
+    );
+  }
+
+  void _showLevelTableDialog(BuildContext context, AppTranslations translations) {
+    final theme = ShadTheme.of(context);
+    showDialog(
+      context: context,
+      builder: (ctx) => ShadDialog(
+        title: const Text('Bảng yêu cầu cấp độ (XP)'),
+        description: const Text('Kinh nghiệm tích lũy để thăng cấp tiếp theo:'),
+        actions: [
+          ShadButton(
+            child: const Text('Đóng'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+        child: Material(
+          color: Colors.transparent,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              _buildLevelRow('Cấp 1 ➔ Cấp 2', '100 XP', 'Tổng: 100 XP'),
+              _buildLevelRow('Cấp 2 ➔ Cấp 3', '200 XP', 'Tổng: 300 XP'),
+              _buildLevelRow('Cấp 3 ➔ Cấp 4', '300 XP', 'Tổng: 600 XP'),
+              _buildLevelRow('Cấp 4 ➔ Cấp 5', '500 XP', 'Tổng: 1100 XP'),
+              _buildLevelRow('Cấp 5 ➔ Cấp 6', '800 XP', 'Tổng: 1900 XP'),
+              _buildLevelRow('Cấp 6 ➔ Cấp 7', '1300 XP', 'Tổng: 3200 XP'),
+              _buildLevelRow('Cấp 7 ➔ Cấp 8', '2100 XP', 'Tổng: 5300 XP'),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: Divider(),
+              ),
+              Text(
+                'Từ cấp 8 trở lên, kinh nghiệm thăng cấp tăng nhanh theo dãy Fibonacci tiếp theo (thử thách cực độ).',
+                style: theme.textTheme.muted.copyWith(fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLevelRow(String title, String xpNeeded, String cumulative) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(xpNeeded, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(cumulative, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            ],
           ),
         ],
       ),
