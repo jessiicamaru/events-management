@@ -8,6 +8,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -33,9 +35,21 @@ class HabitTrackerApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final appSettings = ref.watch(appSettingsProvider);
+    final appLocale = ref.watch(localeProvider);
+    final locale = appLocale == AppLocale.vi ? const Locale('vi', 'VN') : const Locale('en', 'US');
 
     return ShadApp.router(
       title: 'Habit Tracker',
+      locale: locale,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('vi', 'VN'),
+      ],
       theme: AppTheme.lightTheme(appSettings.primaryColor),
       darkTheme: AppTheme.darkTheme(appSettings.primaryColor),
       themeMode: appSettings.themeMode,

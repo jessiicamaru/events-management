@@ -27,7 +27,10 @@ class HabitDock extends ConsumerWidget {
           color: theme.colorScheme.card,
           border: Border(top: BorderSide(color: theme.colorScheme.border)),
         ),
-        child: Text('No habits to schedule', style: theme.textTheme.muted),
+        child: Text(
+          translations.translate('no_habits_to_schedule'),
+          style: theme.textTheme.muted,
+        ),
       );
     }
 
@@ -43,7 +46,7 @@ class HabitDock extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Text(
-              'Drag habits to calendar',
+              translations.translate('drag_habits_to_calendar'),
               style: theme.textTheme.small.copyWith(
                 color: theme.colorScheme.mutedForeground,
                 fontWeight: FontWeight.w600,

@@ -130,8 +130,8 @@ class AppTranslations {
     // Settings Screen
     'settings_title': {AppLocale.en: 'Settings', AppLocale.vi: 'Cài đặt'},
     'cosmetics_title': {
-      AppLocale.en: 'Cosmetics & Rewards',
-      AppLocale.vi: 'Trang phục & Phần thưởng',
+      AppLocale.en: 'Streak',
+      AppLocale.vi: 'Chuỗi',
     },
     'cosmetics_subtitle': {
       AppLocale.en: 'View your level and unlock emojis/colors',
@@ -253,6 +253,34 @@ class AppTranslations {
     'start_hour': {AppLocale.en: 'Start Hour', AppLocale.vi: 'Giờ bắt đầu'},
     'end_hour': {AppLocale.en: 'End Hour', AppLocale.vi: 'Giờ kết thúc'},
     'done': {AppLocale.en: 'Done', AppLocale.vi: 'Xong'},
+    'event_style': {
+      AppLocale.en: 'Event Style',
+      AppLocale.vi: 'Kiểu hiển thị sự kiện',
+    },
+    'event_style_desc': {
+      AppLocale.en: 'Choose how events look on the calendar.',
+      AppLocale.vi: 'Chọn cách hiển thị sự kiện trên lịch.',
+    },
+    'style': {
+      AppLocale.en: 'Style',
+      AppLocale.vi: 'Kiểu hiển thị',
+    },
+    'style_dot': {
+      AppLocale.en: 'Dot',
+      AppLocale.vi: 'Chấm tròn',
+    },
+    'style_colored': {
+      AppLocale.en: 'Colored',
+      AppLocale.vi: 'Tô màu',
+    },
+    'style_mixed': {
+      AppLocale.en: 'Mixed',
+      AppLocale.vi: 'Kết hợp',
+    },
+    'manage_categories': {
+      AppLocale.en: 'Manage Categories',
+      AppLocale.vi: 'Quản lý danh mục',
+    },
 
     // Event Details Dialog
     'event_details': {
@@ -303,6 +331,14 @@ class AppTranslations {
     'no_unscheduled_habits': {
       AppLocale.en: 'No habits yet. Go to Habits tab to create one.',
       AppLocale.vi: 'Chưa có thói quen nào. Đi tới tab Thói quen để tạo mới.',
+    },
+    'drag_habits_to_calendar': {
+      AppLocale.en: 'Drag habits to calendar',
+      AppLocale.vi: 'Kéo thói quen vào lịch',
+    },
+    'no_habits_to_schedule': {
+      AppLocale.en: 'No habits to schedule',
+      AppLocale.vi: 'Không có thói quen nào cần lên lịch',
     },
 
     // Habits Screen & Heatmap
@@ -643,6 +679,30 @@ class AppTranslations {
     'profile_update_success': {
       AppLocale.en: 'Profile updated successfully',
       AppLocale.vi: 'Cập nhật hồ sơ thành công',
+    },
+    'invalid_dob_format': {
+      AppLocale.en: 'Invalid date format (e.g. MM/DD/YYYY)',
+      AppLocale.vi: 'Định dạng ngày không hợp lệ (VD: DD/MM/YYYY)',
+    },
+    'level_xp_table_title': {
+      AppLocale.en: 'Level Requirements (XP)',
+      AppLocale.vi: 'Bảng yêu cầu cấp độ (XP)',
+    },
+    'level_xp_table_desc': {
+      AppLocale.en: 'Accumulated experience required for next level:',
+      AppLocale.vi: 'Kinh nghiệm tích lũy để thăng cấp tiếp theo:',
+    },
+    'close_button': {
+      AppLocale.en: 'Close',
+      AppLocale.vi: 'Đóng',
+    },
+    'level_prefix': {
+      AppLocale.en: 'Level',
+      AppLocale.vi: 'Cấp',
+    },
+    'total_label': {
+      AppLocale.en: 'Total',
+      AppLocale.vi: 'Tổng',
     },
     'change_password_title': {
       AppLocale.en: 'Change Password',

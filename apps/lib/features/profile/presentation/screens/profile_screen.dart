@@ -52,8 +52,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _bioController.text = profile.bio ?? '';
           _selectedDob = profile.dateOfBirth;
           if (_selectedDob != null) {
-            _dobController.text =
-                "${_selectedDob!.year}-${_selectedDob!.month.toString().padLeft(2, '0')}-${_selectedDob!.day.toString().padLeft(2, '0')}";
+            final utcDob = _selectedDob!.toUtc();
+            final appLocale = ref.read(localeProvider);
+            if (appLocale == AppLocale.en) {
+              _dobController.text =
+                  "${utcDob.month.toString().padLeft(2, '0')}/${utcDob.day.toString().padLeft(2, '0')}/${utcDob.year}";
+            } else {
+              _dobController.text =
+                  "${utcDob.day.toString().padLeft(2, '0')}/${utcDob.month.toString().padLeft(2, '0')}/${utcDob.year}";
+            }
           }
           _selectedGender = profile.gender;
           _phoneController.text = profile.phoneNumber ?? '';
@@ -204,30 +211,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDob ?? DateTime(2000, 1, 1),
-                          firstDate: DateTime(1900),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selectedDob = picked;
-                            _dobController.text =
-                                "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-                          });
-                        }
-                      },
-                      child: AbsorbPointer(
-                        child: ShadInput(
-                          controller: _dobController,
-                          placeholder: Text(
-                            translations.translate('profile_dob'),
-                          ),
-                          trailing: const Icon(LucideIcons.calendar, size: 18),
-                        ),
+                    ShadInput(
+                      controller: _dobController,
+                      placeholder: Text(ref.watch(localeProvider) == AppLocale.en ? 'MM/DD/YYYY' : 'DD/MM/YYYY'),
+                      keyboardType: TextInputType.datetime,
+                      trailing: GestureDetector(
+                        onTap: _selectDate,
+                        child: const Icon(LucideIcons.calendar, size: 18),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -295,27 +285,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ShadButton(
                       child: Text(translations.translate('save_profile')),
                       onPressed: () async {
+                        DateTime? parsedDob;
+                        if (_dobController.text.trim().isNotEmpty) {
+                          parsedDob = _parseDateOfBirth(_dobController.text);
+                          if (parsedDob == null) {
+                            ShadToaster.of(context).show(
+                              ShadToast.destructive(
+                                title: Text(
+                                  translations.translate('error_title'),
+                                ),
+                                description: Text(
+                                  translations.translate('invalid_dob_format'),
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+                        }
+
                         await ref
                             .read(userProfileProvider.notifier)
                             .updateProfile(
                               displayName: _nameController.text.trim(),
                               bio: _bioController.text.trim(),
-                              dateOfBirth: _selectedDob,
+                              dateOfBirth: parsedDob,
                               gender: _selectedGender,
                               phoneNumber: _phoneController.text.trim(),
                               avatar: _selectedAvatar,
                             );
 
+                        final profileState = ref.read(userProfileProvider);
                         if (mounted) {
-                          ShadToaster.of(context).show(
-                            ShadToast(
-                              title: Text(
-                                translations.translate(
-                                  'profile_update_success',
+                          if (profileState.hasError) {
+                            ShadToaster.of(context).show(
+                              ShadToast.destructive(
+                                title: Text(
+                                  translations.translate('error_title'),
+                                ),
+                                description: Text(
+                                  profileState.error.toString(),
                                 ),
                               ),
-                            ),
-                          );
+                            );
+                          } else {
+                            ShadToaster.of(context).show(
+                              ShadToast(
+                                title: Text(
+                                  translations.translate(
+                                    'profile_update_success',
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
                         }
                       },
                     ),
@@ -348,6 +370,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         return ChangePasswordDialog(translations: translations, ref: ref);
       },
     );
+  }
+
+  DateTime? _parseDateOfBirth(String input) {
+    final digits = input.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 8) return null;
+
+    final int day, month, year;
+    final appLocale = ref.read(localeProvider);
+    if (appLocale == AppLocale.en) {
+      month = int.tryParse(digits.substring(0, 2)) ?? 0;
+      day = int.tryParse(digits.substring(2, 4)) ?? 0;
+    } else {
+      day = int.tryParse(digits.substring(0, 2)) ?? 0;
+      month = int.tryParse(digits.substring(2, 4)) ?? 0;
+    }
+    year = int.tryParse(digits.substring(4, 8)) ?? 0;
+
+    if (day == 0 || month == 0 || year == 0) return null;
+    if (month < 1 || month > 12) return null;
+    if (year < 1900 || year > DateTime.now().year) return null;
+
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    if (day < 1 || day > daysInMonth) return null;
+
+    return DateTime.utc(year, month, day);
+  }
+
+  Future<void> _selectDate() async {
+    DateTime? initialDate = _parseDateOfBirth(_dobController.text);
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate?.toUtc() ?? _selectedDob?.toUtc() ?? DateTime(2000, 1, 1),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDob = DateTime.utc(picked.year, picked.month, picked.day);
+        final appLocale = ref.read(localeProvider);
+        if (appLocale == AppLocale.en) {
+          _dobController.text =
+              "${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}";
+        } else {
+          _dobController.text =
+              "${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}";
+        }
+      });
+    }
   }
 
   Color _getBorderColor(String? hexColor) {
