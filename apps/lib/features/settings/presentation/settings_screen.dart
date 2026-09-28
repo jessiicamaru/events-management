@@ -7,6 +7,7 @@ import 'package:habit_tracker/features/profile/presentation/providers/user_profi
 import 'package:habit_tracker/features/settings/presentation/appearance_screen.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_settings_sheet.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -95,6 +96,23 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (context) => const habit_tracker_cosmetics.CosmeticsScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(),
+
+                  // Calendar Settings Page Tile
+                  ListTile(
+                    leading: const Icon(LucideIcons.calendarDays),
+                    title: Text(translations.translate('calendar_settings_title')),
+                    subtitle: Text(translations.translate('calendar_settings_desc')),
+                    trailing: const Icon(LucideIcons.chevronRight),
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => const CalendarSettingsSheet(),
                       );
                     },
                   ),

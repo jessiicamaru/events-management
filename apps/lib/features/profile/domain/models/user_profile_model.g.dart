@@ -11,6 +11,7 @@ _UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       email: json['email'] as String,
       totalXP: (json['totalXP'] as num).toInt(),
+      currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
       unlockedEmojis:
           (json['unlockedEmojis'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -32,6 +33,7 @@ Map<String, dynamic> _$UserProfileModelToJson(_UserProfileModel instance) =>
       'id': instance.id,
       'email': instance.email,
       'totalXP': instance.totalXP,
+      'currentStreak': instance.currentStreak,
       'unlockedEmojis': instance.unlockedEmojis,
       'avatarBorderColor': instance.avatarBorderColor,
       'displayName': instance.displayName,

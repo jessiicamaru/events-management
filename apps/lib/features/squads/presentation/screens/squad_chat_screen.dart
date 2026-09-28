@@ -32,15 +32,7 @@ class _SquadChatScreenState extends ConsumerState<SquadChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -54,12 +46,7 @@ class _SquadChatScreenState extends ConsumerState<SquadChatScreen> {
     final myMembership = activeSquad?.members.firstWhereOrNull((m) => m.userId == currentUserId);
     final isMuted = myMembership?.isMuted ?? false;
 
-    // Scroll to bottom when new messages arrive
-    ref.listen(squadChatProvider(widget.squadId), (prev, next) {
-      if (prev == null || prev.value.messages.length != next.value.messages.length) {
-        Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
-      }
-    });
+
 
     return ValueListenableBuilder<SquadChatState>(
       valueListenable: chatNotifier,
@@ -120,10 +107,11 @@ class _SquadChatScreenState extends ConsumerState<SquadChatScreen> {
                               )
                             : ListView.builder(
                             controller: _scrollController,
+                            reverse: true,
                             padding: const EdgeInsets.all(16.0),
                             itemCount: chatState.messages.length,
                             itemBuilder: (context, index) {
-                              final msg = chatState.messages[index];
+                              final msg = chatState.messages[chatState.messages.length - 1 - index];
                               final isMe = msg.senderUserId == currentUserId;
 
                               if (msg.isSystemMessage) {

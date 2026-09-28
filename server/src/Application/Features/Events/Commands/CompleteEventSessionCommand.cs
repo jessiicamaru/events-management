@@ -61,7 +61,7 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             if (!wasCompleted)
             {
-                int xpGained = 10;
+                // Recalculate streaks for the associated habit (if any)
                 if (Guid.TryParse(ev.HabitId, out Guid habitId))
                 {
                     var habit = await _habitRepository.GetByIdAsync(habitId);
@@ -69,15 +69,18 @@ namespace HabitTracker.Application.Features.Events.Commands
                     {
                         await RecalculateStreaks(habit);
                         await _habitRepository.UpdateAsync(habit);
-                        
-                        int streak = habit.CurrentStreak;
-                        xpGained = 10 + Math.Max(0, (streak - 1) * 2);
                     }
                 }
 
-                // Add XP (e.g. base 10 XP + streak bonus)
+                int xpGained = 10;
+                // Calculate XP based on overall user activity streak
                 if (!string.IsNullOrEmpty(ev.UserId))
                 {
+                    var allEvents = await _eventRepository.GetEventsForUserAsync(ev.UserId);
+                    var completedEvents = allEvents.Where(e => e.IsCompleted);
+                    int userStreak = CalculateActivityStreak(completedEvents);
+                    xpGained = 10 + Math.Max(0, (userStreak - 1) * 2);
+
                     var user = await _userRepository.GetByIdAsync(ev.UserId);
                     if (user != null)
                     {
@@ -101,11 +104,65 @@ namespace HabitTracker.Application.Features.Events.Commands
             return true;
         }
 
+        private int CalculateActivityStreak(IEnumerable<Event> completedEvents)
+        {
+            if (!completedEvents.Any()) return 0;
+
+            var completionDates = completedEvents
+                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
+
+            int currentStreak = 0;
+            int tempStreak = 0;
+            DateTime? previousDate = null;
+
+            foreach (var date in completionDates)
+            {
+                if (previousDate == null)
+                {
+                    tempStreak = 1;
+                }
+                else
+                {
+                    if (date == previousDate.Value.AddDays(1))
+                    {
+                        tempStreak++;
+                    }
+                    else
+                    {
+                        tempStreak = 1;
+                    }
+                }
+                previousDate = date;
+            }
+
+            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
+            if (previousDate.HasValue && (previousDate.Value == today || previousDate.Value == today.AddDays(-1)))
+            {
+                currentStreak = tempStreak;
+            }
+            else
+            {
+                currentStreak = 0;
+            }
+
+            return currentStreak;
+        }
+
+        private static DateTime ToLocalTimeUtc7(DateTime dt)
+        {
+            if (dt.Kind == DateTimeKind.Utc) return dt.AddHours(7);
+            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime().AddHours(7);
+            return DateTime.SpecifyKind(dt, DateTimeKind.Utc).AddHours(7);
+        }
+
         private async Task RecalculateStreaks(Habit habit)
         {
             var allEvents = await _eventRepository.GetAllAsync();
             var completedEvents = allEvents
-                .Where(e => e.HabitId == habit.Id.ToString() && e.IsCompleted)
+                .Where(e => e.IsCompleted && string.Equals(e.HabitId, habit.Id.ToString(), StringComparison.OrdinalIgnoreCase))
                 .OrderBy(e => e.StartTime)
                 .ToList();
 
@@ -116,7 +173,7 @@ namespace HabitTracker.Application.Features.Events.Commands
             }
 
             var completionDates = completedEvents
-                .Select(e => e.StartTime.Date)
+                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
                 .Distinct()
                 .OrderBy(d => d)
                 .ToList();
@@ -149,7 +206,7 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             if (tempStreak > longestStreak) longestStreak = tempStreak;
 
-            var today = DateTime.UtcNow.Date;
+            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
             if (previousDate.HasValue && (previousDate.Value == today || previousDate.Value == today.AddDays(-1)))
             {
                 currentStreak = tempStreak;

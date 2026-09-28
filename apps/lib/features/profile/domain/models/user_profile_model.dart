@@ -9,6 +9,7 @@ abstract class UserProfileModel with _$UserProfileModel {
     required String id,
     required String email,
     required int totalXP,
+    @Default(0) int currentStreak,
     @Default([]) List<String> unlockedEmojis,
     String? avatarBorderColor,
     String? displayName,

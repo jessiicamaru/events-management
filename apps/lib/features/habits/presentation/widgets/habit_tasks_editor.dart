@@ -92,7 +92,7 @@ class HabitTasksEditor extends ConsumerWidget {
                               ],
                             ),
                           ),
-                          _buildPriorityBadge(task.priority, theme),
+                          _buildPriorityBadge(task.priority, theme, translations),
                           ShadButton.ghost(
                             size: ShadButtonSize.sm,
                             onPressed: () => _showTaskDialog(context, ref, habitId: habitId, task: task),
@@ -124,21 +124,21 @@ class HabitTasksEditor extends ConsumerWidget {
     );
   }
 
-  Widget _buildPriorityBadge(TaskPriority priority, ShadThemeData theme) {
+  Widget _buildPriorityBadge(TaskPriority priority, ShadThemeData theme, AppTranslations translations) {
     Color color;
     String label;
     switch (priority) {
       case TaskPriority.high:
         color = Colors.red;
-        label = 'High';
+        label = translations.translate('priority_high');
         break;
       case TaskPriority.medium:
         color = Colors.orange;
-        label = 'Medium';
+        label = translations.translate('priority_medium');
         break;
       case TaskPriority.low:
         color = Colors.green;
-        label = 'Low';
+        label = translations.translate('priority_low');
         break;
     }
     return Container(
@@ -167,12 +167,13 @@ class HabitTasksEditor extends ConsumerWidget {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
+            final translations = ref.read(translationsProvider);
             return ShadDialog(
-              title: Text(isEdit ? 'Edit Task' : 'Add Task'),
+              title: Text(isEdit ? translations.translate('edit_task') : translations.translate('add_task')),
               actions: [
                 ShadButton.secondary(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
+                  child: Text(translations.translate('cancel')),
                 ),
                 ShadButton(
                   onPressed: () {
@@ -205,7 +206,7 @@ class HabitTasksEditor extends ConsumerWidget {
                     }
                     Navigator.of(context).pop();
                   },
-                  child: const Text('Save'),
+                  child: Text(translations.translate('save_btn')),
                 ),
               ],
               child: Container(
@@ -217,12 +218,12 @@ class HabitTasksEditor extends ConsumerWidget {
                   children: [
                     ShadInput(
                       controller: titleController,
-                      placeholder: const Text('Task title'),
+                      placeholder: Text(translations.translate('task_title_placeholder')),
                     ),
                     const SizedBox(height: 12),
                     ShadInput(
                       controller: descController,
-                      placeholder: const Text('Description (optional)'),
+                      placeholder: Text(translations.translate('description_optional')),
                       maxLines: 3,
                     ),
                     const SizedBox(height: 12),
@@ -230,24 +231,31 @@ class HabitTasksEditor extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: ShadSelect<TaskPriority>(
-                            placeholder: const Text('Priority'),
+                            placeholder: Text(translations.translate('priority_label')),
                             initialValue: selectedPriority,
                             onChanged: (val) {
                               if (val != null) setState(() => selectedPriority = val);
                             },
-                            options: const [
-                              ShadOption(value: TaskPriority.low, child: Text('Low')),
-                              ShadOption(value: TaskPriority.medium, child: Text('Medium')),
-                              ShadOption(value: TaskPriority.high, child: Text('High')),
+                            options: [
+                              ShadOption(value: TaskPriority.low, child: Text(translations.translate('priority_low'))),
+                              ShadOption(value: TaskPriority.medium, child: Text(translations.translate('priority_medium'))),
+                              ShadOption(value: TaskPriority.high, child: Text(translations.translate('priority_high'))),
                             ],
-                            selectedOptionBuilder: (context, value) => Text(value.name.toUpperCase()),
+                            selectedOptionBuilder: (context, value) {
+                              final label = value == TaskPriority.high 
+                                  ? translations.translate('priority_high')
+                                  : value == TaskPriority.medium
+                                      ? translations.translate('priority_medium')
+                                      : translations.translate('priority_low');
+                              return Text(label.toUpperCase());
+                            },
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ShadInput(
                             controller: estimateController,
-                            placeholder: const Text('Est. minutes'),
+                            placeholder: Text(translations.translate('est_minutes_placeholder')),
                             keyboardType: TextInputType.number,
                           ),
                         ),

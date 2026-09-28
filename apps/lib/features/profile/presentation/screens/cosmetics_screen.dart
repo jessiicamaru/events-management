@@ -29,7 +29,7 @@ class CosmeticsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildProfileCard(context, theme, profile.email, level, profile.totalXP, translations),
+                _buildProfileCard(context, theme, profile.email, level, profile.totalXP, profile.currentStreak, translations),
                 const SizedBox(height: 32),
                 Text(translations.translate('cosmetics_emojis_title'), style: theme.textTheme.h4),
                 const SizedBox(height: 8),
@@ -52,7 +52,7 @@ class CosmeticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
+  Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, int streak, AppTranslations translations) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -71,16 +71,31 @@ class CosmeticsScreen extends ConsumerWidget {
           Text(email, style: theme.textTheme.h4),
           const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _showLevelTableDialog(context, translations),
-                child: Icon(
-                  LucideIcons.info,
-                  size: 14,
-                  color: theme.colorScheme.mutedForeground,
-                ),
+              Row(
+                children: [
+                  Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => _showLevelTableDialog(context, translations),
+                    child: Icon(
+                      LucideIcons.info,
+                      size: 14,
+                      color: theme.colorScheme.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(LucideIcons.flame, size: 16, color: Colors.orange),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$streak ${translations.translate('days_count')}',
+                    style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ],
           ),
@@ -92,15 +107,14 @@ class CosmeticsScreen extends ConsumerWidget {
   }
 
   void _showLevelTableDialog(BuildContext context, AppTranslations translations) {
-    final theme = ShadTheme.of(context);
     showDialog(
       context: context,
       builder: (ctx) => ShadDialog(
-        title: const Text('Bảng yêu cầu cấp độ (XP)'),
-        description: const Text('Kinh nghiệm tích lũy để thăng cấp tiếp theo:'),
+        title: Text(translations.translate('level_xp_table_title')),
+        description: Text(translations.translate('level_xp_table_desc')),
         actions: [
           ShadButton(
-            child: const Text('Đóng'),
+            child: Text(translations.translate('close_button')),
             onPressed: () => Navigator.pop(ctx),
           ),
         ],
@@ -110,21 +124,26 @@ class CosmeticsScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: 12),
-              _buildLevelRow('Cấp 1 ➔ Cấp 2', '100 XP', 'Tổng: 100 XP'),
-              _buildLevelRow('Cấp 2 ➔ Cấp 3', '200 XP', 'Tổng: 300 XP'),
-              _buildLevelRow('Cấp 3 ➔ Cấp 4', '300 XP', 'Tổng: 600 XP'),
-              _buildLevelRow('Cấp 4 ➔ Cấp 5', '500 XP', 'Tổng: 1100 XP'),
-              _buildLevelRow('Cấp 5 ➔ Cấp 6', '800 XP', 'Tổng: 1900 XP'),
-              _buildLevelRow('Cấp 6 ➔ Cấp 7', '1300 XP', 'Tổng: 3200 XP'),
-              _buildLevelRow('Cấp 7 ➔ Cấp 8', '2100 XP', 'Tổng: 5300 XP'),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8.0),
-                child: Divider(),
-              ),
-              Text(
-                'Từ cấp 8 trở lên, kinh nghiệm thăng cấp tăng nhanh theo dãy Fibonacci tiếp theo (thử thách cực độ).',
-                style: theme.textTheme.muted.copyWith(fontSize: 12),
-                textAlign: TextAlign.center,
+              SizedBox(
+                height: 350,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: 29, // Level 1 to 30 transition rows
+                  itemBuilder: (context, index) {
+                    final lvl = index + 1;
+                    final xpDiff = LevelSystem.getXpDiffForLevel(lvl);
+                    final cumulative = LevelSystem.getXpForLevelStart(lvl + 1);
+                    
+                    final prefix = translations.translate('level_prefix');
+                    final totalLabel = translations.translate('total_label');
+                    
+                    return _buildLevelRow(
+                      '$prefix $lvl ➔ $prefix ${lvl + 1}',
+                      '$xpDiff XP',
+                      '$totalLabel: $cumulative XP',
+                    );
+                  },
+                ),
               ),
             ],
           ),

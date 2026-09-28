@@ -96,22 +96,28 @@ class CalendarSettingsSheet extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text('Event Style', style: theme.textTheme.large),
+            Text(translations.translate('event_style'), style: theme.textTheme.large),
             const SizedBox(height: 8),
             Text(
-              'Choose how events look on the calendar.',
+              translations.translate('event_style_desc'),
               style: theme.textTheme.muted,
             ),
             const SizedBox(height: 16),
             ShadSelect<CalendarEventStyle>(
-              placeholder: const Text('Style'),
+              placeholder: Text(translations.translate('style')),
               initialValue: settings.eventStyle,
               options: CalendarEventStyle.values.map((style) {
                 String label = '';
                 switch (style) {
-                  case CalendarEventStyle.dot: label = 'Dot'; break;
-                  case CalendarEventStyle.colored: label = 'Colored'; break;
-                  case CalendarEventStyle.mixed: label = 'Mixed'; break;
+                  case CalendarEventStyle.dot:
+                    label = translations.translate('style_dot');
+                    break;
+                  case CalendarEventStyle.colored:
+                    label = translations.translate('style_colored');
+                    break;
+                  case CalendarEventStyle.mixed:
+                    label = translations.translate('style_mixed');
+                    break;
                 }
                 return ShadOption(
                   value: style,
@@ -125,9 +131,12 @@ class CalendarSettingsSheet extends ConsumerWidget {
               },
               selectedOptionBuilder: (context, value) {
                 switch (value) {
-                  case CalendarEventStyle.dot: return const Text('Dot');
-                  case CalendarEventStyle.colored: return const Text('Colored');
-                  case CalendarEventStyle.mixed: return const Text('Mixed');
+                  case CalendarEventStyle.dot:
+                    return Text(translations.translate('style_dot'));
+                  case CalendarEventStyle.colored:
+                    return Text(translations.translate('style_colored'));
+                  case CalendarEventStyle.mixed:
+                    return Text(translations.translate('style_mixed'));
                 }
               },
             ),
@@ -138,7 +147,7 @@ class CalendarSettingsSheet extends ConsumerWidget {
                   builder: (context) => const CategoryManagementScreen(),
                 ));
               },
-              child: const Text('Manage Categories'),
+              child: Text(translations.translate('manage_categories')),
             ),
             const SizedBox(height: 16),
             ShadButton(

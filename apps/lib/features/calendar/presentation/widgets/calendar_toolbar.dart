@@ -3,7 +3,6 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/category_filter_provider.dart';
-import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_settings_sheet.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 
 class CalendarToolbar extends ConsumerWidget {
@@ -131,21 +130,6 @@ class CalendarToolbar extends ConsumerWidget {
                     padding: EdgeInsets.zero,
                     onPressed: onNextPressed,
                     child: const Icon(LucideIcons.chevronRight, size: 16),
-                  ),
-                  const SizedBox(width: 8),
-                  ShadButton.outline(
-                    width: 32,
-                    height: 32,
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        isScrollControlled: true,
-                        builder: (context) => const CalendarSettingsSheet(),
-                      );
-                    },
-                    child: const Icon(LucideIcons.settings, size: 16),
                   ),
                 ],
               ),
