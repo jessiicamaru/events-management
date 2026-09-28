@@ -18,5 +18,8 @@ namespace HabitTracker.Domain.Entities
         public Guid? CategoryId { get; set; }
         public EventCategory? Category { get; set; }
         public ICollection<EventTask> Tasks { get; set; } = new List<EventTask>();
+        
+        // Google Calendar sync mapping
+        public string? GoogleEventId { get; set; }
     }
 }

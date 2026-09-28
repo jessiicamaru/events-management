@@ -8,6 +8,7 @@ import 'package:habit_tracker/features/settings/presentation/appearance_screen.d
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_settings_sheet.dart';
+import 'package:habit_tracker/features/settings/presentation/google_calendar_sync_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -113,6 +114,20 @@ class SettingsScreen extends ConsumerWidget {
                         backgroundColor: Colors.transparent,
                         isScrollControlled: true,
                         builder: (context) => const CalendarSettingsSheet(),
+                      );
+                    },
+                  ),
+                  const Divider(),
+
+                  // Google Calendar Sync Page Tile
+                  ListTile(
+                    leading: const Icon(LucideIcons.refreshCw),
+                    title: Text(translations.translate('google_sync_title')),
+                    subtitle: Text(translations.translate('google_sync_desc')),
+                    trailing: const Icon(LucideIcons.chevronRight),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const GoogleCalendarSyncScreen()),
                       );
                     },
                   ),

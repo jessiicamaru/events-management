@@ -26,6 +26,7 @@ _UserProfileModel _$UserProfileModelFromJson(Map<String, dynamic> json) =>
       gender: json['gender'] as String?,
       phoneNumber: json['phoneNumber'] as String?,
       avatar: json['avatar'] as String?,
+      googleEmail: json['googleEmail'] as String?,
     );
 
 Map<String, dynamic> _$UserProfileModelToJson(_UserProfileModel instance) =>
@@ -42,4 +43,5 @@ Map<String, dynamic> _$UserProfileModelToJson(_UserProfileModel instance) =>
       'gender': instance.gender,
       'phoneNumber': instance.phoneNumber,
       'avatar': instance.avatar,
+      'googleEmail': instance.googleEmail,
     };

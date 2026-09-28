@@ -21,6 +21,7 @@ namespace HabitTracker.Application.Features.Users.Queries
         public string? Gender { get; set; }
         public string? PhoneNumber { get; set; }
         public string? Avatar { get; set; }
+        public string? GoogleEmail { get; set; }
     }
 
     public class GetMeQuery : IRequest<UserProfileDto?>
@@ -115,7 +116,8 @@ namespace HabitTracker.Application.Features.Users.Queries
                 DateOfBirth = appUser.DateOfBirth,
                 Gender = appUser.Gender,
                 PhoneNumber = appUser.PhoneNumber,
-                Avatar = appUser.Avatar
+                Avatar = appUser.Avatar,
+                GoogleEmail = appUser.GoogleEmail
             };
         }
     }

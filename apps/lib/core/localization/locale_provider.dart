@@ -202,6 +202,44 @@ class AppTranslations {
       AppLocale.vi: 'Chưa phân loại',
     },
 
+    // Google Calendar Sync
+    'google_sync_title': {
+      AppLocale.en: 'Google Calendar Sync',
+      AppLocale.vi: 'Đồng bộ Google Calendar',
+    },
+    'google_sync_desc': {
+      AppLocale.en: 'Sync your tasks and events with Google Calendar to manage everything in one place.',
+      AppLocale.vi: 'Đồng bộ thói quen và sự kiện của bạn với Google Calendar để quản lý mọi thứ tập trung.',
+    },
+    'google_connected_to': {
+      AppLocale.en: 'Connected to',
+      AppLocale.vi: 'Đã kết nối với',
+    },
+    'google_not_connected': {
+      AppLocale.en: 'Not Connected',
+      AppLocale.vi: 'Chưa kết nối',
+    },
+    'google_connect_btn': {
+      AppLocale.en: 'Connect Google Calendar',
+      AppLocale.vi: 'Kết nối Google Calendar',
+    },
+    'google_disconnect_btn': {
+      AppLocale.en: 'Disconnect',
+      AppLocale.vi: 'Ngắt kết nối',
+    },
+    'google_sync_now_btn': {
+      AppLocale.en: 'Sync Now',
+      AppLocale.vi: 'Đồng bộ ngay',
+    },
+    'google_sync_success': {
+      AppLocale.en: 'Calendar synchronized successfully.',
+      AppLocale.vi: 'Đồng bộ lịch thành công.',
+    },
+    'google_sync_failed': {
+      AppLocale.en: 'Failed to synchronize calendar.',
+      AppLocale.vi: 'Đồng bộ lịch thất bại.',
+    },
+
     // Create Event Sheet
     'schedule_event': {
       AppLocale.en: 'Schedule Event',

@@ -18,6 +18,7 @@ abstract class UserProfileModel with _$UserProfileModel {
     String? gender,
     String? phoneNumber,
     String? avatar,
+    String? googleEmail,
   }) = _UserProfileModel;
 
   factory UserProfileModel.fromJson(Map<String, dynamic> json) => _$UserProfileModelFromJson(json);

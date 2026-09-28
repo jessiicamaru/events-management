@@ -116,6 +116,10 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
+    // Scroll down to reveal bottom items (since we added Google Sync tile)
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+
     // Verify language change dialog
     final languageTile = find.text('Language');
     await tester.ensureVisible(languageTile);
