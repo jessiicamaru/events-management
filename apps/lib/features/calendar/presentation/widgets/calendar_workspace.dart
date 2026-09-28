@@ -64,6 +64,40 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
   final ScrollController _overlayScrollController = ScrollController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToCurrentDay();
+    });
+  }
+
+  @override
+  void didUpdateWidget(CalendarWorkspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.currentView == AppCalendarView.threeDay && oldWidget.currentView != AppCalendarView.threeDay) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToCurrentDay();
+      });
+    }
+  }
+
+  void _scrollToCurrentDay() {
+    if (widget.currentView == AppCalendarView.threeDay && widget.scrollController.hasClients) {
+      if (!mounted) return;
+      final double availableWidth = MediaQuery.sizeOf(context).width - _kTimeRulerWidth;
+      final double dayWidth = availableWidth / 3;
+      final int dayIndex = DateTime.now().weekday - 1; // 0 for Monday
+      
+      final double dayCenter = (dayIndex * dayWidth) + (dayWidth / 2);
+      final double screenCenter = availableWidth / 2;
+      
+      double targetOffset = dayCenter - screenCenter;
+      targetOffset = targetOffset.clamp(0.0, widget.scrollController.position.maxScrollExtent);
+      widget.scrollController.jumpTo(targetOffset);
+    }
+  }
+
+  @override
   void dispose() {
     _overlayScrollController.dispose();
     super.dispose();
@@ -260,12 +294,17 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                     },
                     dataSource: EventDataSource(filteredEvents, habits, theme, widget.currentUserId, translations),
                     onViewChanged: widget.onViewHeaderChanged,
+                    initialDisplayDate: DateTime.now(),
                     headerHeight: 0,
                     viewHeaderHeight: _kViewHeaderHeight,
                     view: isThreeDayScrollable ? CalendarView.week : (widget.currentView == AppCalendarView.day ? CalendarView.day : CalendarView.month),
                     viewNavigationMode: isThreeDayScrollable ? ViewNavigationMode.none : ViewNavigationMode.snap,
                     firstDayOfWeek: 1,
                     specialRegions: _getSpecialRegions(theme),
+                    dragAndDropSettings: const DragAndDropSettings(
+                      allowScroll: false,
+                      allowNavigation: false,
+                    ),
                     appointmentBuilder: (context, details) => buildCalendarEvent(context, details, habits, categories, settings.eventStyle),
                     onTap: (CalendarTapDetails tapDetails) async {
                       if (tapDetails.targetElement == CalendarElement.appointment) {
@@ -444,26 +483,6 @@ class EventDataSource extends CalendarDataSource {
 
   @override
   Object? getId(int index) => (appointments![index] as EventModel).id;
-
-  @override
-  Appointment? convertToCalendarAppointment(Object? customData) {
-    if (customData is EventModel) {
-      final isPersonal = customData.userId == currentUserId;
-      final color = customData.isCompleted 
-          ? (isPersonal ? const Color(0xFF10B981) : const Color(0xFF10B981).withValues(alpha: 0.6))
-          : (isPersonal ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.6));
-
-      return Appointment(
-        startTime: customData.startTime.toLocal(),
-        endTime: customData.endTime.toLocal(),
-        subject: customData.title,
-        color: color,
-        id: customData.id,
-        isAllDay: false,
-      );
-    }
-    return super.convertToCalendarAppointment(customData);
-  }
 
   @override
   Object? convertAppointmentToObject(Object? customData, Appointment appointment) {

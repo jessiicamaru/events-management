@@ -74,7 +74,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Schedule Event'), findsOneWidget);
-      expect(find.text('Unscheduled Habits'), findsOneWidget);
+      expect(find.text('Habits'), findsOneWidget);
       expect(find.text('Title'), findsOneWidget);
       expect(find.text('Category'), findsOneWidget);
       expect(find.text('Date'), findsOneWidget);

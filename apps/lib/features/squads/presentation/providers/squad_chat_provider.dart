@@ -5,7 +5,6 @@ import 'package:signalr_netcore/signalr_client.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
-import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
 class SquadChatState {
   final List<SquadChatMessageModel> messages;
@@ -31,7 +30,10 @@ class SquadChatState {
   }
 }
 
-final squadChatProvider = Provider.family<SquadChatNotifier, String>((ref, squadId) {
+final squadChatProvider = Provider.family<SquadChatNotifier, String>((
+  ref,
+  squadId,
+) {
   ref.watch(authProvider);
   return SquadChatNotifier(ref, squadId);
 });
@@ -42,7 +44,8 @@ class SquadChatNotifier extends ValueNotifier<SquadChatState> {
   HubConnection? _connection;
   bool _isDisposed = false;
 
-  SquadChatNotifier(this.ref, this.squadId) : super(SquadChatState(isConnecting: true)) {
+  SquadChatNotifier(this.ref, this.squadId)
+    : super(SquadChatState(isConnecting: true)) {
     _init();
     ref.onDispose(() {
       _isDisposed = true;
@@ -95,39 +98,46 @@ class SquadChatNotifier extends ValueNotifier<SquadChatState> {
         }
       });
 
-
-
       await _connection!.start();
 
       // Join the squad group
       await _connection!.invoke("JoinSquadGroup", args: [squadId]);
-
     } catch (e) {
       if (!_isDisposed) {
-        value = SquadChatState(messages: value.messages, error: e.toString(), isConnecting: false);
+        value = SquadChatState(
+          messages: value.messages,
+          error: e.toString(),
+          isConnecting: false,
+        );
       }
     }
   }
 
   Future<void> sendMessage(String text) async {
-    if (_connection == null || _connection!.state != HubConnectionState.Connected) {
+    if (_connection == null ||
+        _connection!.state != HubConnectionState.Connected) {
       throw Exception("Chat is not connected");
     }
     await _connection!.invoke("SendMessage", args: [squadId, text]);
   }
 
   Future<void> sendPoke(String targetUserId) async {
-    if (_connection == null || _connection!.state != HubConnectionState.Connected) {
+    if (_connection == null ||
+        _connection!.state != HubConnectionState.Connected) {
       throw Exception("Chat is not connected");
     }
     await _connection!.invoke("SendPoke", args: [squadId, targetUserId]);
   }
 
   Future<void> sendReaction(String targetUserId, String emoji) async {
-    if (_connection == null || _connection!.state != HubConnectionState.Connected) {
+    if (_connection == null ||
+        _connection!.state != HubConnectionState.Connected) {
       throw Exception("Chat is not connected");
     }
-    await _connection!.invoke("SendReaction", args: [squadId, targetUserId, emoji]);
+    await _connection!.invoke(
+      "SendReaction",
+      args: [squadId, targetUserId, emoji],
+    );
   }
 
   Future<void> _disconnect() async {

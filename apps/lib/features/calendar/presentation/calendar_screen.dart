@@ -155,29 +155,31 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.primaryForeground,
-        shape: const CircleBorder(),
-        elevation: 4,
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (bottomSheetContext) => Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
-              ),
-              child: CreateEventSheet(
-                habitsAsync: habitsAsync,
-                initialDate: _displayDate,
-              ),
+      floatingActionButton: _isCommandCenterVisible 
+          ? null 
+          : FloatingActionButton(
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: theme.colorScheme.primaryForeground,
+              shape: const CircleBorder(),
+              elevation: 4,
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  isScrollControlled: true,
+                  builder: (bottomSheetContext) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+                    ),
+                    child: CreateEventSheet(
+                      habitsAsync: habitsAsync,
+                      initialDate: _displayDate,
+                    ),
+                  ),
+                );
+              },
+              child: const Icon(LucideIcons.plus, size: 24),
             ),
-          );
-        },
-        child: const Icon(LucideIcons.plus, size: 24),
-      ),
     );
   }
 }
