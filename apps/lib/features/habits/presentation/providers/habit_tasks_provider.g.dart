@@ -50,7 +50,7 @@ final class HabitTasksProvider
   }
 }
 
-String _$habitTasksHash() => r'b077bdf82d586cdb04a465bca45afb7d4fab3ed7';
+String _$habitTasksHash() => r'e9e681c2049eb20734cc9730f0d86cd291f9aa32';
 
 final class HabitTasksFamily extends $Family
     with
