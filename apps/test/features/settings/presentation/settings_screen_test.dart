@@ -117,7 +117,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify language change dialog
-    await tester.tap(find.text('Language'));
+    final languageTile = find.text('Language');
+    await tester.ensureVisible(languageTile);
+    await tester.pumpAndSettle();
+    await tester.tap(languageTile);
     await tester.pumpAndSettle();
 
     expect(find.text('Select Language'), findsOneWidget);
@@ -129,10 +132,14 @@ void main() {
 
     // Verify translation works
     expect(find.text('Cài đặt'), findsWidgets); // Settings -> Cài đặt
-    expect(find.text('Đăng xuất'), findsOneWidget); // Log Out -> Đăng xuất
+    
+    final logoutTile = find.text('Đăng xuất');
+    await tester.ensureVisible(logoutTile);
+    await tester.pumpAndSettle();
+    expect(logoutTile, findsOneWidget); // Log Out -> Đăng xuất
 
     // Tap Log Out (Đăng xuất)
-    await tester.tap(find.text('Đăng xuất'));
+    await tester.tap(logoutTile);
     await tester.pumpAndSettle();
 
     // Tap final destructive logout button inside confirmation dialog

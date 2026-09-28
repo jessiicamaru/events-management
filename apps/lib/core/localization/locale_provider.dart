@@ -130,12 +130,20 @@ class AppTranslations {
     // Settings Screen
     'settings_title': {AppLocale.en: 'Settings', AppLocale.vi: 'Cài đặt'},
     'cosmetics_title': {
-      AppLocale.en: 'Streak',
-      AppLocale.vi: 'Chuỗi',
+      AppLocale.en: 'Experience',
+      AppLocale.vi: 'Kinh nghiệm',
     },
     'cosmetics_subtitle': {
-      AppLocale.en: 'View your level and unlock emojis/colors',
-      AppLocale.vi: 'Xem cấp độ và mở khóa biểu tượng/màu sắc',
+      AppLocale.en: 'View level, streak, and unlock emojis/colors',
+      AppLocale.vi: 'Xem cấp độ, chuỗi và mở khóa biểu tượng/màu sắc',
+    },
+    'streak_label': {
+      AppLocale.en: 'Activity Streak',
+      AppLocale.vi: 'Chuỗi hoạt động',
+    },
+    'days_count': {
+      AppLocale.en: 'days',
+      AppLocale.vi: 'ngày',
     },
     'language_title': {AppLocale.en: 'Language', AppLocale.vi: 'Ngôn ngữ'},
     'select_language_title': {
@@ -165,6 +173,10 @@ class AppTranslations {
     'calendar_settings_title': {
       AppLocale.en: 'Calendar Settings',
       AppLocale.vi: 'Cài đặt lịch',
+    },
+    'calendar_settings_desc': {
+      AppLocale.en: 'Configure visible hours and event styles',
+      AppLocale.vi: 'Cấu hình khung giờ hiển thị và giao diện sự kiện',
     },
     'cal_view_day': {AppLocale.en: 'Day', AppLocale.vi: 'Ngày'},
     'cal_view_3day': {AppLocale.en: '3-Day', AppLocale.vi: '3 Ngày'},
@@ -390,6 +402,14 @@ class AppTranslations {
       AppLocale.vi: 'Công việc (Tùy chọn)',
     },
     'add_task': {AppLocale.en: 'Add Task', AppLocale.vi: 'Thêm công việc'},
+    'edit_task': {AppLocale.en: 'Edit Task', AppLocale.vi: 'Sửa công việc'},
+    'task_title_placeholder': {AppLocale.en: 'Task title', AppLocale.vi: 'Tiêu đề công việc'},
+    'description_optional': {AppLocale.en: 'Description (optional)', AppLocale.vi: 'Mô tả (tùy chọn)'},
+    'priority_label': {AppLocale.en: 'Priority', AppLocale.vi: 'Độ ưu tiên'},
+    'priority_low': {AppLocale.en: 'Low', AppLocale.vi: 'Thấp'},
+    'priority_medium': {AppLocale.en: 'Medium', AppLocale.vi: 'Trung bình'},
+    'priority_high': {AppLocale.en: 'High', AppLocale.vi: 'Cao'},
+    'est_minutes_placeholder': {AppLocale.en: 'Est. minutes', AppLocale.vi: 'Thời gian dự kiến (phút)'},
     'no_tasks_yet': {
       AppLocale.en:
           'No tasks added yet. Add a task to create a checklist for this habit.',

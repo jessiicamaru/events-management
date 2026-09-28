@@ -39,13 +39,18 @@ namespace HabitTracker.Application.Tests
 
             var members = new List<SquadMember> { member };
 
+            // Calculate base date for the test relative to UtcNow
+            var todayLocal = DateTime.UtcNow.AddHours(7).Date;
+            var ev1Time = DateTime.SpecifyKind(todayLocal.AddDays(-1).AddHours(15).AddHours(-7), DateTimeKind.Utc);
+            var ev2Time = DateTime.SpecifyKind(todayLocal.AddHours(2).AddHours(-7), DateTimeKind.Utc);
+
             // Standalone and Habit events completed by the user
             var events = new List<Event>
             {
-                // Completed on July 24
-                new Event { Id = Guid.NewGuid(), UserId = userId, IsCompleted = true, StartTime = new DateTime(2026, 7, 24, 15, 0, 0, DateTimeKind.Utc) },
-                // Completed on July 25
-                new Event { Id = Guid.NewGuid(), UserId = userId, IsCompleted = true, StartTime = new DateTime(2026, 7, 25, 2, 0, 0, DateTimeKind.Utc) }
+                // Completed on yesterday local
+                new Event { Id = Guid.NewGuid(), UserId = userId, IsCompleted = true, StartTime = ev1Time },
+                // Completed on today local
+                new Event { Id = Guid.NewGuid(), UserId = userId, IsCompleted = true, StartTime = ev2Time }
             };
 
             mockSquadRepo.Setup(r => r.GetSquadByIdAsync(squadId)).ReturnsAsync(squad);
@@ -69,7 +74,7 @@ namespace HabitTracker.Application.Tests
             memberDto.Email.Should().Be("user@test.com");
             memberDto.TotalXP.Should().Be(150);
 
-            // July 24 and July 25 (local time offset +7) are consecutive, so streak should be 2.
+            // Yesterday and today (local time offset +7) are consecutive, so streak should be 2.
             memberDto.CurrentStreak.Should().Be(2);
 
             mockSquadRepo.Verify(r => r.GetSquadByIdAsync(squadId), Times.Once);

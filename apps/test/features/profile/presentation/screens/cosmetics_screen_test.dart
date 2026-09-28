@@ -33,7 +33,7 @@ void main() {
     );
 
     // Initial state will be loading or empty, so it should at least display the App Bar or main title
-    expect(find.text('Cosmetics & Rewards'), findsOneWidget);
+    expect(find.text('Experience'), findsOneWidget);
 
     await tester.pumpAndSettle();
   });

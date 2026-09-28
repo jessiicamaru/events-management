@@ -221,23 +221,28 @@ namespace HabitTracker.Application.Tests
                 LongestStreak = 0
             };
 
-            // Event 1: July 24 at 11:00 PM local (July 24 at 4:00 PM UTC)
+            // Calculate base date for the test relative to UtcNow
+            var todayLocal = DateTime.UtcNow.AddHours(7).Date;
+            var ev1Time = DateTime.SpecifyKind(todayLocal.AddDays(-1).AddHours(23).AddHours(-7), DateTimeKind.Utc);
+            var ev2Time = DateTime.SpecifyKind(todayLocal.AddHours(6).AddHours(-7), DateTimeKind.Utc);
+
+            // Event 1: Yesterday at 11:00 PM local (Yesterday at 4:00 PM UTC)
             var ev1 = new Event
             {
                 Id = eventId1,
                 HabitId = habitId.ToString(),
                 IsCompleted = true,
-                StartTime = new DateTime(2026, 7, 24, 16, 0, 0, DateTimeKind.Utc),
+                StartTime = ev1Time,
                 UserId = userId
             };
 
-            // Event 2: July 25 at 6:00 AM local (July 24 at 11:00 PM UTC)
+            // Event 2: Today at 6:00 AM local (Yesterday at 11:00 PM UTC)
             var ev2 = new Event
             {
                 Id = eventId2,
                 HabitId = habitId.ToString(),
                 IsCompleted = false, // To be completed now
-                StartTime = new DateTime(2026, 7, 24, 23, 0, 0, DateTimeKind.Utc),
+                StartTime = ev2Time,
                 UserId = userId
             };
 

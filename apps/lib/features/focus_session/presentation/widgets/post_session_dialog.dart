@@ -7,6 +7,8 @@ import 'package:habit_tracker/features/calendar/presentation/events_provider.dar
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
 class PostSessionDialog extends ConsumerStatefulWidget {
   final EventModel event;
@@ -52,6 +54,9 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
         ref.invalidate(eventsProvider);
         ref.invalidate(habitsProvider);
         ref.invalidate(heatmapProvider);
+        ref.invalidate(userProfileProvider);
+        ref.invalidate(activeSquadProvider);
+        ref.invalidate(squadsListProvider);
 
         // Pop the dialog
         Navigator.of(context).pop(true);

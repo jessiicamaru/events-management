@@ -29,7 +29,7 @@ class CosmeticsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildProfileCard(context, theme, profile.email, level, profile.totalXP, translations),
+                _buildProfileCard(context, theme, profile.email, level, profile.totalXP, profile.currentStreak, translations),
                 const SizedBox(height: 32),
                 Text(translations.translate('cosmetics_emojis_title'), style: theme.textTheme.h4),
                 const SizedBox(height: 8),
@@ -52,7 +52,7 @@ class CosmeticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
+  Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, int streak, AppTranslations translations) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -71,16 +71,31 @@ class CosmeticsScreen extends ConsumerWidget {
           Text(email, style: theme.textTheme.h4),
           const SizedBox(height: 16),
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _showLevelTableDialog(context, translations),
-                child: Icon(
-                  LucideIcons.info,
-                  size: 14,
-                  color: theme.colorScheme.mutedForeground,
-                ),
+              Row(
+                children: [
+                  Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: () => _showLevelTableDialog(context, translations),
+                    child: Icon(
+                      LucideIcons.info,
+                      size: 14,
+                      color: theme.colorScheme.mutedForeground,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(LucideIcons.flame, size: 16, color: Colors.orange),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$streak ${translations.translate('days_count')}',
+                    style: theme.textTheme.small.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ],
           ),

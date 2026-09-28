@@ -3,6 +3,8 @@ import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
 part 'events_provider.g.dart';
 
@@ -50,6 +52,9 @@ class EventsNotifier extends _$EventsNotifier {
       await apiService.toggleEvent(id, isCompleted);
       ref.invalidate(habitsProvider);
       ref.invalidate(heatmapProvider);
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(activeSquadProvider);
+      ref.invalidate(squadsListProvider);
     } catch (e) {
       state = previousState;
       rethrow;
