@@ -9,7 +9,8 @@ namespace HabitTracker.Application.Features.Squads.Commands
     public class CreateSquadCommand : IRequest<Squad>
     {
         public string Name { get; set; } = string.Empty;
-        public bool IsBuddyMode { get; set; }
+        public int MaxMembers { get; set; }
+        public bool RequireApproval { get; set; }
         public string AdminUserId { get; set; } = string.Empty;
     }
 
@@ -24,13 +25,16 @@ namespace HabitTracker.Application.Features.Squads.Commands
 
         public async Task<Squad> Handle(CreateSquadCommand request, CancellationToken cancellationToken)
         {
-            var exists = await _repository.IsUserInAnySquadAsync(request.AdminUserId);
-            if (exists) throw new System.Exception("Already in a squad");
+            if (request.MaxMembers < 2 || request.MaxMembers > 10)
+            {
+                throw new System.Exception("Max members must be between 2 and 10");
+            }
 
             var squad = new Squad
             {
                 Name = request.Name,
-                IsBuddyMode = request.IsBuddyMode
+                MaxMembers = request.MaxMembers,
+                RequireApproval = request.RequireApproval
             };
 
             return await _repository.CreateSquadAsync(squad, request.AdminUserId);

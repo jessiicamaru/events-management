@@ -67,5 +67,50 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             // EndTime should be updated because UpdateCalendar is true
             _mockEventRepo.Verify(repo => repo.UpdateAsync(It.IsAny<Event>()), Times.Once);
         }
+
+        [Fact]
+        public async Task Handle_ShouldAwardXPToUserAndApprovedSquads_WhenUserAndSquadsExist()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var habitId = Guid.NewGuid().ToString();
+            var userId = "user1";
+            var squadId1 = Guid.NewGuid();
+            var squadId2 = Guid.NewGuid();
+
+            var ev = new Event { Id = eventId, UserId = userId, HabitId = habitId, IsCompleted = false, StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddMinutes(30) };
+            var command = new CompleteEventSessionCommand { EventId = eventId, ActualDuration = TimeSpan.FromMinutes(25) };
+
+            var user = new ApplicationUser { Id = userId, TotalXP = 50 };
+            var squad1 = new Squad { Id = squadId1, TotalSquadXP = 100 };
+            var squad2 = new Squad { Id = squadId2, TotalSquadXP = 200 };
+
+            var membership1 = new SquadMember { SquadId = squadId1, UserId = userId, IsApproved = true, XpContributionEnabled = true };
+            var membership2 = new SquadMember { SquadId = squadId2, UserId = userId, IsApproved = true, XpContributionEnabled = false }; // contribution disabled
+
+            _mockEventRepo.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(ev);
+            _mockEventRepo.Setup(repo => repo.UpdateAsync(ev)).Returns(Task.CompletedTask);
+            _mockHabitRepo.Setup(repo => repo.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync(new Habit { Id = Guid.Parse(habitId) });
+            _mockUserRepo.Setup(repo => repo.GetByIdAsync(userId)).ReturnsAsync(user);
+            _mockUserRepo.Setup(repo => repo.UpdateAsync(user)).Returns(Task.CompletedTask);
+            
+            _mockSquadRepo.Setup(repo => repo.GetSquadsByUserIdAsync(userId)).ReturnsAsync(new System.Collections.Generic.List<Squad> { squad1, squad2 });
+            _mockSquadRepo.Setup(repo => repo.GetMembershipAsync(squadId1, userId)).ReturnsAsync(membership1);
+            _mockSquadRepo.Setup(repo => repo.GetMembershipAsync(squadId2, userId)).ReturnsAsync(membership2);
+            _mockSquadRepo.Setup(repo => repo.UpdateAsync(It.IsAny<Squad>())).Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            Assert.True(result);
+            Assert.Equal(60, user.TotalXP); // 50 + 10
+            Assert.Equal(110, squad1.TotalSquadXP); // 100 + 10 (contribution enabled)
+            Assert.Equal(200, squad2.TotalSquadXP); // 200 (contribution disabled, should not change)
+
+            _mockUserRepo.Verify(repo => repo.UpdateAsync(user), Times.Once);
+            _mockSquadRepo.Verify(repo => repo.UpdateAsync(squad1), Times.Once);
+            _mockSquadRepo.Verify(repo => repo.UpdateAsync(squad2), Times.Never);
+        }
     }
 }

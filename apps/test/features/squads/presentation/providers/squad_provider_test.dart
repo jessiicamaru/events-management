@@ -4,14 +4,25 @@ import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
+
 class MockApiService implements ApiService {
   SquadModel? squadToReturn;
+  List<MySquadSummaryModel> squadsListToReturn = [];
 
   @override
-  Future<SquadModel?> fetchMySquad() async => squadToReturn;
+  Future<SquadModel?> fetchSquadDetails(String squadId) async => squadToReturn;
+
+  @override
+  Future<List<MySquadSummaryModel>> fetchMySquads() async => squadsListToReturn;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class MockAuth extends Auth {
+  @override
+  Future<String?> build() async => 'dummy-token';
 }
 
 void main() {
@@ -28,6 +39,7 @@ void main() {
       parent: parent,
       overrides: [
         apiServiceProvider.overrideWithValue(mockApiService),
+        authProvider.overrideWith(() => MockAuth()),
       ],
     );
     addTearDown(container.dispose);
@@ -38,15 +50,26 @@ void main() {
     final mockSquad = SquadModel(
       id: 'squad-1',
       name: 'Alpha Squad',
-      isBuddyMode: false,
+      maxMembers: 5,
+      requireApproval: false,
       totalSquadXP: 1000,
       members: [],
     );
 
     mockApiService.squadToReturn = mockSquad;
+    mockApiService.squadsListToReturn = [
+      const MySquadSummaryModel(
+        id: 'squad-1',
+        name: 'Alpha Squad',
+        memberCount: 0,
+        maxMembers: 5,
+        totalSquadXP: 1000,
+      )
+    ];
 
     final container = createContainer();
-    final provider = squadProvider;
+    // activeSquadProvider handles detail fetching
+    final provider = activeSquadProvider;
 
     final states = <AsyncValue<SquadModel?>>[];
     container.listen(
@@ -65,5 +88,3 @@ void main() {
     expect(states[1].value, mockSquad);
   });
 }
-
-

@@ -6,7 +6,7 @@ import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 
-class FakeSquadNotifier extends SquadNotifier {
+class FakeActiveSquadNotifier extends ActiveSquadNotifier {
   @override
   Future<SquadModel?> build() async {
     return null;
@@ -18,7 +18,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          squadProvider.overrideWith(() => FakeSquadNotifier()),
+          activeSquadProvider.overrideWith(() => FakeActiveSquadNotifier()),
           translationsProvider.overrideWithValue(AppTranslations(AppLocale.en)),
         ],
         child: const ShadApp(
@@ -27,7 +27,7 @@ void main() {
       ),
     );
 
-    // Initial state will be loading or empty, so it should at least display the App Bar or main title
+    // Title 'Squad' (nav_squad translation) should be found on the AppBar
     expect(find.text('Squad'), findsOneWidget);
 
     await tester.pumpAndSettle();

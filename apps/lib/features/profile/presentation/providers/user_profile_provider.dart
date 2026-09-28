@@ -1,12 +1,22 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, UserProfileModel>(() => UserProfileNotifier());
 
 class UserProfileNotifier extends AsyncNotifier<UserProfileModel> {
   @override
   Future<UserProfileModel> build() async {
+    final authState = ref.watch(authProvider);
+    final token = authState.value;
+    if (token == null) {
+      if (authState.isLoading) {
+        return Completer<UserProfileModel>().future;
+      }
+      throw Exception('Not authenticated');
+    }
     return _fetchProfile();
   }
 

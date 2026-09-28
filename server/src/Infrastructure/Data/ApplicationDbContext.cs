@@ -16,6 +16,7 @@ namespace HabitTracker.Infrastructure.Data
 
         public DbSet<Squad> Squads { get; set; } = null!;
         public DbSet<SquadMember> SquadMembers { get; set; } = null!;
+        public DbSet<SquadChatMessage> SquadChatMessages { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -74,6 +75,20 @@ namespace HabitTracker.Infrastructure.Data
                 entity.HasOne(t => t.Event)
                       .WithMany(ev => ev.Tasks)
                       .HasForeignKey(t => t.EventId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<SquadChatMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Message).IsRequired().HasMaxLength(2000);
+                entity.HasOne(e => e.Squad)
+                      .WithMany()
+                      .HasForeignKey(e => e.SquadId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Sender)
+                      .WithMany()
+                      .HasForeignKey(e => e.SenderUserId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }

@@ -120,9 +120,16 @@ class ApiService {
       options: Options(contentType: 'application/json'),
     );
   }
-  Future<SquadModel?> fetchMySquad() async {
+  Future<List<MySquadSummaryModel>> fetchMySquads() async {
+    final response = await _dio.get('/squads/list');
+    return (response.data as List)
+        .map((json) => MySquadSummaryModel.fromJson(json))
+        .toList();
+  }
+
+  Future<SquadModel?> fetchSquadDetails(String squadId) async {
     try {
-      final response = await _dio.get('/squads');
+      final response = await _dio.get('/squads', queryParameters: {'squadId': squadId});
       return SquadModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return null;
@@ -130,18 +137,68 @@ class ApiService {
     }
   }
 
-  Future<SquadModel> createSquad(String name, bool isBuddyMode) async {
+  Future<SquadModel> createSquad(String name, int maxMembers, bool requireApproval) async {
     final response = await _dio.post('/squads', data: {
       'name': name,
-      'isBuddyMode': isBuddyMode,
+      'maxMembers': maxMembers,
+      'requireApproval': requireApproval,
     });
     return SquadModel.fromJson(response.data);
   }
 
-  Future<void> joinSquad(String squadId) async {
-    await _dio.post('/squads/join', data: {
+  Future<bool> joinSquad(String squadId) async {
+    final response = await _dio.post('/squads/join', data: {
       'squadId': squadId,
     });
+    return response.data['isApproved'] as bool;
+  }
+
+  Future<void> approveMember(String squadId, String targetUserId) async {
+    await _dio.post('/squads/$squadId/approve/$targetUserId');
+  }
+
+  Future<void> rejectMember(String squadId, String targetUserId) async {
+    await _dio.post('/squads/$squadId/reject/$targetUserId');
+  }
+
+  Future<void> leaveSquad(String squadId) async {
+    await _dio.delete('/squads/$squadId/leave');
+  }
+
+  Future<void> updateSquadSettings(String squadId, String name, int maxMembers, bool requireApproval) async {
+    await _dio.put('/squads/$squadId/settings', data: {
+      'name': name,
+      'maxMembers': maxMembers,
+      'requireApproval': requireApproval,
+    });
+  }
+
+  Future<void> changeLeader(String squadId, String targetUserId) async {
+    await _dio.post('/squads/$squadId/change-leader', data: {
+      'targetUserId': targetUserId,
+    });
+  }
+
+  Future<void> updateMemberSettings(String squadId, {String? nickname, required bool isMuted, required bool xpContributionEnabled}) async {
+    await _dio.put('/squads/$squadId/member-settings', data: {
+      'nickname': nickname,
+      'isMuted': isMuted,
+      'xpContributionEnabled': xpContributionEnabled,
+    });
+  }
+
+  Future<void> changeMemberNickname(String squadId, String targetUserId, String newNickname) async {
+    await _dio.put('/squads/$squadId/member-nickname', data: {
+      'targetUserId': targetUserId,
+      'newNickname': newNickname,
+    });
+  }
+
+  Future<List<SquadChatMessageModel>> fetchChatHistory(String squadId) async {
+    final response = await _dio.get('/squads/$squadId/chat-history');
+    return (response.data as List)
+        .map((json) => SquadChatMessageModel.fromJson(json))
+        .toList();
   }
 
   Future<UserProfileModel> fetchMe() async {

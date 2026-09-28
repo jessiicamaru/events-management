@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/level_system.dart';
 
 class SquadStatsCard extends ConsumerWidget {
   final SquadModel squad;
@@ -13,8 +14,8 @@ class SquadStatsCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
     final translations = ref.watch(translationsProvider);
-    final level = (squad.totalSquadXP / 1000).floor() + 1;
-    final progress = (squad.totalSquadXP % 1000) / 1000.0;
+    final level = LevelSystem.getLevel(squad.totalSquadXP);
+    final progress = LevelSystem.getProgressPercentage(squad.totalSquadXP);
 
     return Container(
       padding: const EdgeInsets.all(24),

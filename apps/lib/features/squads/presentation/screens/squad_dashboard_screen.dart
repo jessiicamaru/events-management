@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
-import 'package:habit_tracker/features/squads/presentation/widgets/friend_activity_feed.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_chat_provider.dart';
+import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
-import 'package:habit_tracker/features/squads/presentation/widgets/squad_empty_state.dart';
 import 'package:habit_tracker/features/squads/presentation/widgets/squad_stats_card.dart';
 import 'package:habit_tracker/features/squads/presentation/widgets/squad_member_row.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/squads/presentation/screens/squad_chat_screen.dart';
+import 'package:habit_tracker/features/squads/presentation/screens/squad_settings_screen.dart';
 
 class SquadDashboardScreen extends ConsumerWidget {
   const SquadDashboardScreen({super.key});
@@ -16,7 +18,8 @@ class SquadDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = ShadTheme.of(context);
-    final squadState = ref.watch(squadProvider);
+    final squadState = ref.watch(activeSquadProvider);
+    final userProfile = ref.watch(userProfileProvider).value;
     final translations = ref.watch(translationsProvider);
 
     return Scaffold(
@@ -25,19 +28,50 @@ class SquadDashboardScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          if (squadState.value != null)
+          if (squadState.value != null) ...[
+            IconButton(
+              icon: const Icon(LucideIcons.messageSquare),
+              tooltip: translations.translate('squad_chat_title'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SquadChatScreen(
+                      squadId: squadState.value!.id,
+                      squadName: squadState.value!.name,
+                    ),
+                  ),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(LucideIcons.userPlus),
+              tooltip: translations.translate('invite_friends'),
               onPressed: () => _showInviteDialog(context, ref, squadState.value!.id),
-            )
+            ),
+            IconButton(
+              icon: const Icon(LucideIcons.settings),
+              tooltip: translations.translate('squad_settings_title'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SquadSettingsScreen(
+                      squadId: squadState.value!.id,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ]
         ],
       ),
       body: squadState.when(
         data: (squad) {
           if (squad == null) {
-            return _buildEmptyState(context, ref, theme);
+            return const Center(child: Text('Không tìm thấy nhóm.'));
           }
-          return _buildDashboard(context, ref, theme, squad, translations);
+          return _buildDashboard(context, ref, theme, squad, translations, userProfile?.unlockedEmojis ?? []);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('${translations.translate('error_heatmap')} $err')),
@@ -45,15 +79,18 @@ class SquadDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, WidgetRef ref, ShadThemeData theme) {
-    return SquadEmptyState(
-      onCreateSquad: () => _showCreateSquadDialog(context, ref),
-      onJoinSquad: () => _showJoinSquadDialog(context, ref),
-    );
-  }
+  Widget _buildDashboard(
+    BuildContext context,
+    WidgetRef ref,
+    ShadThemeData theme,
+    SquadModel squad,
+    AppTranslations translations,
+    List<String> currentUserEmojis,
+  ) {
+    final isBuddyMode = squad.maxMembers == 2;
+    final approvedMembers = squad.members.where((m) => m.isApproved).toList();
 
-  Widget _buildDashboard(BuildContext context, WidgetRef ref, ShadThemeData theme, SquadModel squad, AppTranslations translations) {
-    final sortedMembers = List<SquadMemberModel>.from(squad.members)
+    final sortedMembers = List<SquadMemberModel>.from(approvedMembers)
       ..sort((a, b) => b.totalXP.compareTo(a.totalXP));
 
     return SingleChildScrollView(
@@ -63,7 +100,7 @@ class SquadDashboardScreen extends ConsumerWidget {
         children: [
           SquadStatsCard(squad: squad),
           const SizedBox(height: 24),
-          Text(squad.isBuddyMode ? translations.translate('buddies') : translations.translate('leaderboard'), style: theme.textTheme.h4),
+          Text(isBuddyMode ? translations.translate('buddies') : translations.translate('leaderboard'), style: theme.textTheme.h4),
           const SizedBox(height: 16),
           ...sortedMembers.asMap().entries.map((entry) {
             final index = entry.key;
@@ -73,15 +110,27 @@ class SquadDashboardScreen extends ConsumerWidget {
               child: SquadMemberRow(
                 member: member, 
                 rank: index + 1, 
-                isBuddyMode: squad.isBuddyMode,
+                isBuddyMode: isBuddyMode,
+                currentUserEmojis: currentUserEmojis,
                 onPoke: () {
-                  // Poke logic
+                  ref.read(squadChatProvider(squad.id)).sendPoke(member.userId);
+                  ShadToaster.of(context).show(
+                    ShadToast(
+                      description: Text('Đã gửi chọc tới ${member.nickname ?? member.email.split('@').first} ✋'),
+                    ),
+                  );
+                },
+                onReact: (emoji) {
+                  ref.read(squadChatProvider(squad.id)).sendReaction(member.userId, emoji);
+                  ShadToaster.of(context).show(
+                    ShadToast(
+                      description: Text('Đã thả biểu cảm $emoji'),
+                    ),
+                  );
                 },
               ),
             );
           }),
-          const SizedBox(height: 24),
-          const FriendActivityFeed(),
         ],
       ),
     );
@@ -117,106 +166,14 @@ class SquadDashboardScreen extends ConsumerWidget {
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: squadId));
                   Navigator.pop(ctx);
+                  ShadToaster.of(context).show(
+                    const ShadToast(
+                      description: Text('Đã sao chép mã mời vào bộ nhớ tạm!'),
+                    ),
+                  );
                 },
               )
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCreateSquadDialog(BuildContext context, WidgetRef ref) {
-    final nameController = TextEditingController();
-    final translations = ref.read(translationsProvider);
-    bool isBuddyMode = true;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setState) => ShadDialog(
-          title: Text(translations.translate('create_squad')),
-          description: Text(translations.translate('create_squad_desc')),
-          actions: [
-            ShadButton.outline(
-              child: Text(translations.translate('cancel')),
-              onPressed: () => Navigator.pop(ctx),
-            ),
-            ShadButton(
-              child: Text(translations.translate('create_btn')),
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  ref.read(squadProvider.notifier).createSquad(nameController.text, isBuddyMode);
-                  Navigator.pop(ctx);
-                }
-              },
-            ),
-          ],
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ShadInput(
-                  controller: nameController,
-                  placeholder: Text(translations.translate('squad_name_placeholder')),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(translations.translate('mode')),
-                    ShadSelect<bool>(
-                      initialValue: isBuddyMode,
-                      options: [
-                        ShadOption(value: true, child: Text(translations.translate('mode_buddy'))),
-                        ShadOption(value: false, child: Text(translations.translate('mode_squad'))),
-                      ],
-                      selectedOptionBuilder: (context, value) => Text(value ? translations.translate('buddies') : translations.translate('nav_squad')),
-                      onChanged: (val) {
-                        if (val != null) setState(() => isBuddyMode = val);
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showJoinSquadDialog(BuildContext context, WidgetRef ref) {
-    final codeController = TextEditingController();
-    final translations = ref.read(translationsProvider);
-
-    showDialog(
-      context: context,
-      builder: (ctx) => ShadDialog(
-        title: Text(translations.translate('join_squad')),
-        description: Text(translations.translate('join_squad_desc')),
-        actions: [
-          ShadButton.outline(
-            child: Text(translations.translate('cancel')),
-            onPressed: () => Navigator.pop(ctx),
-          ),
-          ShadButton(
-            child: Text(translations.translate('join_btn')),
-            onPressed: () {
-              if (codeController.text.isNotEmpty) {
-                ref.read(squadProvider.notifier).joinSquad(codeController.text);
-                Navigator.pop(ctx);
-              }
-            },
-          ),
-        ],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0),
-          child: ShadInput(
-            controller: codeController,
-            placeholder: Text(translations.translate('invite_code_placeholder')),
           ),
         ),
       ),
