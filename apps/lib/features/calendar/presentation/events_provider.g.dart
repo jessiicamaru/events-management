@@ -9,6 +9,60 @@ part of 'events_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
+@ProviderFor(CalendarViewRangeNotifier)
+final calendarViewRangeProvider = CalendarViewRangeNotifierProvider._();
+
+final class CalendarViewRangeNotifierProvider
+    extends $NotifierProvider<CalendarViewRangeNotifier, CalendarViewRange?> {
+  CalendarViewRangeNotifierProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'calendarViewRangeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$calendarViewRangeNotifierHash();
+
+  @$internal
+  @override
+  CalendarViewRangeNotifier create() => CalendarViewRangeNotifier();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(CalendarViewRange? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<CalendarViewRange?>(value),
+    );
+  }
+}
+
+String _$calendarViewRangeNotifierHash() =>
+    r'f97ca44cb860b5dae7ce57a7a43634460329a9e1';
+
+abstract class _$CalendarViewRangeNotifier
+    extends $Notifier<CalendarViewRange?> {
+  CalendarViewRange? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<CalendarViewRange?, CalendarViewRange?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<CalendarViewRange?, CalendarViewRange?>,
+              CalendarViewRange?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(EventsNotifier)
 final eventsProvider = EventsNotifierProvider._();
 
@@ -33,7 +87,7 @@ final class EventsNotifierProvider
   EventsNotifier create() => EventsNotifier();
 }
 
-String _$eventsNotifierHash() => r'e35bebde8b0a0e4212869bdc24a48c86c6064899';
+String _$eventsNotifierHash() => r'fee7a98d2808fe347ec8437972bd268950d483ea';
 
 abstract class _$EventsNotifier extends $AsyncNotifier<List<EventModel>> {
   FutureOr<List<EventModel>> build();

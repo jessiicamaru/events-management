@@ -17,8 +17,10 @@ import 'package:habit_tracker/features/focus_session/presentation/screens/focus_
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_card.dart';
-import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/sticky_time_ruler_overlay.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_data_source.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/custom_recurrence_dialog.dart';
 
 /// Width of the time ruler column (logical pixels).
 const double _kTimeRulerWidth = 60.0;
@@ -254,8 +256,24 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                           startTime: details.droppingTime!,
                           endTime: details.droppingTime!.add(duration),
                         );
+                        
+                        String? editScope;
+                        DateTime? originalOccurrenceDate;
+                        if (event.recurrenceRule != null || event.parentEventId != null) {
+                          editScope = await showRecurrenceEditOptionDialog(context, translations);
+                          if (editScope == null) {
+                            ref.invalidate(eventsProvider);
+                            return;
+                          }
+                          originalOccurrenceDate = event.startTime;
+                        }
+
                         try {
-                          await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                          await ref.read(eventsProvider.notifier).updateEvent(
+                            updatedEvent, 
+                            editScope: editScope, 
+                            originalOccurrenceDate: originalOccurrenceDate
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             ShadToaster.of(context).show(
@@ -277,8 +295,24 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                           startTime: details.startTime!,
                           endTime: details.endTime!,
                         );
+
+                        String? editScope;
+                        DateTime? originalOccurrenceDate;
+                        if (event.recurrenceRule != null || event.parentEventId != null) {
+                          editScope = await showRecurrenceEditOptionDialog(context, translations);
+                          if (editScope == null) {
+                            ref.invalidate(eventsProvider);
+                            return;
+                          }
+                          originalOccurrenceDate = event.startTime;
+                        }
+
                         try {
-                          await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                          await ref.read(eventsProvider.notifier).updateEvent(
+                            updatedEvent, 
+                            editScope: editScope, 
+                            originalOccurrenceDate: originalOccurrenceDate
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             ShadToaster.of(context).show(
@@ -434,67 +468,3 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
   }
 }
 
-class EventDataSource extends CalendarDataSource {
-  final List<HabitModel> habits;
-  final ShadThemeData theme;
-  final String? currentUserId;
-  final AppTranslations translations;
-
-  EventDataSource(
-    List<EventModel> source, 
-    this.habits, 
-    this.theme, 
-    this.currentUserId,
-    this.translations,
-  ) {
-    appointments = source;
-  }
-
-  @override
-  DateTime getStartTime(int index) => (appointments![index] as EventModel).startTime.toLocal();
-
-  @override
-  DateTime getEndTime(int index) => (appointments![index] as EventModel).endTime.toLocal();
-
-  @override
-  String getSubject(int index) => (appointments![index] as EventModel).title;
-
-  @override
-  Color getColor(int index) {
-    final event = appointments![index] as EventModel;
-    final isPersonal = event.userId == currentUserId;
-    
-    // Dim the color slightly for squad events to distinguish them
-    if (event.id == 'hover_preview') {
-      return theme.colorScheme.primary.withValues(alpha: 0.5);
-    }
-    
-    if (event.isCompleted) {
-      return isPersonal 
-          ? const Color(0xFF10B981) // Emerald 500
-          : const Color(0xFF10B981).withValues(alpha: 0.6); // Dimmer Emerald
-    }
-
-    // Uncompleted events
-    return isPersonal
-        ? theme.colorScheme.primary
-        : theme.colorScheme.primary.withValues(alpha: 0.6);
-  }
-
-  @override
-  Object? getId(int index) => (appointments![index] as EventModel).id;
-
-  @override
-  Object? convertAppointmentToObject(Object? customData, Appointment appointment) {
-    if (customData is EventModel) {
-      return customData.copyWith(
-        startTime: appointment.startTime.toUtc(),
-        endTime: appointment.endTime.toUtc(),
-      );
-    }
-    return super.convertAppointmentToObject(customData, appointment);
-  }
-
-  @override
-  bool isAllDay(int index) => false;
-}

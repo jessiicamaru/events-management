@@ -239,6 +239,34 @@ class AppTranslations {
       AppLocale.en: 'Failed to synchronize calendar.',
       AppLocale.vi: 'Đồng bộ lịch thất bại.',
     },
+    'this_occurrence': {
+      AppLocale.en: 'This occurrence',
+      AppLocale.vi: 'Sự kiện này',
+    },
+    'this_and_future_occurrences': {
+      AppLocale.en: 'This and future occurrences',
+      AppLocale.vi: 'Sự kiện này và các sự kiện tiếp theo',
+    },
+    'all_occurrences': {
+      AppLocale.en: 'All occurrences',
+      AppLocale.vi: 'Tất cả các sự kiện',
+    },
+    'edit_recurring_event': {
+      AppLocale.en: 'Edit Recurring Event',
+      AppLocale.vi: 'Sửa sự kiện lặp lại',
+    },
+    'edit_recurring_event_prompt': {
+      AppLocale.en: 'Do you want to edit only this occurrence, this and future occurrences, or all occurrences in the series?',
+      AppLocale.vi: 'Bạn muốn sửa chỉ sự kiện này, sự kiện này và các sự kiện tiếp theo, hay tất cả các sự kiện trong chuỗi?',
+    },
+    'delete_recurring_event': {
+      AppLocale.en: 'Delete Recurring Event',
+      AppLocale.vi: 'Xóa sự kiện lặp lại',
+    },
+    'delete_recurring_event_prompt': {
+      AppLocale.en: 'Do you want to delete only this occurrence, this and future occurrences, or all occurrences in the series?',
+      AppLocale.vi: 'Bạn muốn xóa chỉ sự kiện này, sự kiện này và các sự kiện tiếp theo, hay tất cả các sự kiện trong chuỗi?',
+    },
 
     // Create Event Sheet
     'schedule_event': {
@@ -908,6 +936,74 @@ class AppTranslations {
     'no_categories_yet': {
       AppLocale.en: 'No categories yet',
       AppLocale.vi: 'Chưa có danh mục nào',
+    },
+    'repeat': {
+      AppLocale.en: 'Repeat',
+      AppLocale.vi: 'Lặp lại',
+    },
+    'does_not_repeat': {
+      AppLocale.en: 'Does not repeat',
+      AppLocale.vi: 'Không lặp lại',
+    },
+    'every_day': {
+      AppLocale.en: 'Every day',
+      AppLocale.vi: 'Hàng ngày',
+    },
+    'every_weekday': {
+      AppLocale.en: 'Every weekday (Mon-Fri)',
+      AppLocale.vi: 'Mọi ngày trong tuần (T2-T6)',
+    },
+    'every_week': {
+      AppLocale.en: 'Every week on',
+      AppLocale.vi: 'Mỗi tuần vào',
+    },
+    'every_2_weeks': {
+      AppLocale.en: 'Every 2 weeks on',
+      AppLocale.vi: 'Mỗi 2 tuần vào',
+    },
+    'every_month': {
+      AppLocale.en: 'Every month on day',
+      AppLocale.vi: 'Mỗi tháng vào ngày',
+    },
+    'every_year': {
+      AppLocale.en: 'Every year on',
+      AppLocale.vi: 'Mỗi năm vào',
+    },
+    'custom_dots': {
+      AppLocale.en: 'Custom...',
+      AppLocale.vi: 'Tùy chỉnh...',
+    },
+    'custom': {
+      AppLocale.en: 'Custom',
+      AppLocale.vi: 'Tùy chỉnh',
+    },
+    'monday': {
+      AppLocale.en: 'Monday',
+      AppLocale.vi: 'Thứ Hai',
+    },
+    'tuesday': {
+      AppLocale.en: 'Tuesday',
+      AppLocale.vi: 'Thứ Ba',
+    },
+    'wednesday': {
+      AppLocale.en: 'Wednesday',
+      AppLocale.vi: 'Thứ Tư',
+    },
+    'thursday': {
+      AppLocale.en: 'Thursday',
+      AppLocale.vi: 'Thứ Năm',
+    },
+    'friday': {
+      AppLocale.en: 'Friday',
+      AppLocale.vi: 'Thứ Sáu',
+    },
+    'saturday': {
+      AppLocale.en: 'Saturday',
+      AppLocale.vi: 'Thứ Bảy',
+    },
+    'sunday': {
+      AppLocale.en: 'Sunday',
+      AppLocale.vi: 'Chủ Nhật',
     },
   };
 

@@ -22,11 +22,21 @@ namespace HabitTracker.Infrastructure.Repositories
             return await _context.Events.ToListAsync();
         }
 
-        public async Task<IEnumerable<Event>> GetEventsForUserAsync(string userId)
+        public async Task<IEnumerable<Event>> GetEventsForUserAsync(string userId, DateTime? startTime = null, DateTime? endTime = null)
         {
-            return await _context.Events
-                .Where(e => e.UserId == userId)
-                .ToListAsync();
+            var query = _context.Events.Where(e => e.UserId == userId);
+
+            if (startTime.HasValue && endTime.HasValue)
+            {
+                var start = startTime.Value;
+                var end = endTime.Value;
+                query = query.Where(e => 
+                    (e.StartTime <= end && e.EndTime >= start) || 
+                    (e.RecurrenceRule != null && e.StartTime <= end) ||
+                    (e.ParentEventId != null));
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<Event?> GetByIdAsync(Guid id)

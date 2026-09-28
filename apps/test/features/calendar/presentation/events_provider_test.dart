@@ -9,7 +9,7 @@ class MockApiService implements ApiService {
   bool syncEventCalled = false;
 
   @override
-  Future<List<EventModel>> fetchEvents() async => eventsToReturn;
+  Future<List<EventModel>> fetchEvents({DateTime? startTime, DateTime? endTime}) async => eventsToReturn;
 
   @override
   Future<void> syncEvent(EventModel event) async {
@@ -20,12 +20,19 @@ class MockApiService implements ApiService {
   @override
   Future<void> updateEvent(String id, Map<String, dynamic> data) async {
     updateEventCalled = true;
+    final index = eventsToReturn.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      eventsToReturn[index] = eventsToReturn[index].copyWith(
+        title: data['title'] ?? eventsToReturn[index].title,
+      );
+    }
   }
 
   bool deleteEventCalled = false;
   @override
-  Future<void> deleteEvent(String id) async {
+  Future<void> deleteEvent(String id, {String? deleteScope, DateTime? originalOccurrenceDate}) async {
     deleteEventCalled = true;
+    eventsToReturn.removeWhere((e) => e.id == id);
   }
 
   @override

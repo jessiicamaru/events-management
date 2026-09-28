@@ -27,6 +27,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public string UserId { get; set; } = string.Empty;
         public Guid? CategoryId { get; set; }
         public List<CreateEventTaskDto>? Tasks { get; set; }
+        public string? RecurrenceRule { get; set; }
     }
 
     public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -52,7 +53,8 @@ namespace HabitTracker.Application.Features.Events.Commands
                 HabitId = request.HabitId,
                 TargetDuration = request.TargetDuration ?? request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime(),
                 UserId = request.UserId,
-                CategoryId = request.CategoryId
+                CategoryId = request.CategoryId,
+                RecurrenceRule = request.RecurrenceRule
             };
 
             await _repository.AddAsync(ev);

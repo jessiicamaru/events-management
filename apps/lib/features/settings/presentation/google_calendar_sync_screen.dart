@@ -27,6 +27,7 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
       'https://www.googleapis.com/auth/calendar',
     ],
     serverClientId: _serverClientId,
+    forceCodeForRefreshToken: true,
   );
 
   Future<void> _connect() async {

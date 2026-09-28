@@ -27,6 +27,12 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
   tasks: (json['tasks'] as List<dynamic>?)
       ?.map((e) => EventTaskModel.fromJson(e as Map<String, dynamic>))
       .toList(),
+  recurrenceRule: json['recurrenceRule'] as String?,
+  recurrenceExceptionDates: json['recurrenceExceptionDates'] as String?,
+  parentEventId: json['parentEventId'] as String?,
+  exceptionDate: json['exceptionDate'] == null
+      ? null
+      : DateTime.parse(json['exceptionDate'] as String),
 );
 
 Map<String, dynamic> _$EventModelToJson(
@@ -44,4 +50,8 @@ Map<String, dynamic> _$EventModelToJson(
   'createdAt': instance.createdAt?.toIso8601String(),
   'userId': instance.userId,
   'tasks': ?instance.tasks,
+  'recurrenceRule': instance.recurrenceRule,
+  'recurrenceExceptionDates': instance.recurrenceExceptionDates,
+  'parentEventId': instance.parentEventId,
+  'exceptionDate': instance.exceptionDate?.toIso8601String(),
 };

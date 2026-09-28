@@ -10,6 +10,7 @@ import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks_checklist.dart';
 import 'package:habit_tracker/features/focus_session/presentation/screens/focus_screen.dart';
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
+import 'package:syncfusion_flutter_calendar/calendar.dart';
 
 class CommandCenterPanel extends ConsumerWidget {
   const CommandCenterPanel({super.key});
@@ -25,14 +26,91 @@ class CommandCenterPanel extends ConsumerWidget {
 
     // Look for current or upcoming event across all days
     final now = DateTime.now();
-    final allEvents = List<EventModel>.from(eventsAsync.value ?? []);
-    allEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+    
+    // We expand recurring events within a window from 1 day ago to 7 days in the future
+    final rangeStart = now.subtract(const Duration(days: 1));
+    final rangeEnd = now.add(const Duration(days: 7));
+    
+    final List<EventModel> expandedEvents = [];
+    final allEvents = eventsAsync.value ?? [];
+    
+    for (var event in allEvents) {
+      if (event.recurrenceRule == null || event.recurrenceRule!.isEmpty) {
+        expandedEvents.add(event);
+      } else {
+        try {
+          final rrule = event.recurrenceRule!.replaceAll('RRULE:', '');
+          final dates = SfCalendar.getRecurrenceDateTimeCollection(
+            rrule,
+            event.startTime.toLocal(),
+            specificStartDate: rangeStart,
+            specificEndDate: rangeEnd,
+          );
+          
+          final duration = event.endTime.difference(event.startTime);
+          
+          for (var date in dates) {
+            // Check if this date is a deleted exception
+            bool isException = false;
+            if (event.recurrenceExceptionDates != null && event.recurrenceExceptionDates!.isNotEmpty) {
+              final exceptionDates = event.recurrenceExceptionDates!.split(',');
+              for (var exDateStr in exceptionDates) {
+                try {
+                  final exDate = DateTime.parse(exDateStr).toLocal();
+                  if (exDate.year == date.year &&
+                      exDate.month == date.month &&
+                      exDate.day == date.day &&
+                      exDate.hour == date.hour &&
+                      exDate.minute == date.minute) {
+                    isException = true;
+                    break;
+                  }
+                } catch (_) {}
+              }
+            }
+            
+            if (isException) continue;
+            
+            // Check if there is a custom edited occurrence
+            bool hasCustomException = false;
+            for (var other in allEvents) {
+              if (other.parentEventId == event.id && other.exceptionDate != null) {
+                final exDate = other.exceptionDate!.toLocal();
+                if (exDate.year == date.year &&
+                    exDate.month == date.month &&
+                    exDate.day == date.day &&
+                    exDate.hour == date.hour &&
+                    exDate.minute == date.minute) {
+                  hasCustomException = true;
+                  break;
+                }
+              }
+            }
+            
+            if (hasCustomException) continue;
+
+            expandedEvents.add(
+              event.copyWith(
+                startTime: date.toUtc(),
+                endTime: date.add(duration).toUtc(),
+              ),
+            );
+          }
+        } catch (_) {
+          expandedEvents.add(event);
+        }
+      }
+    }
+
+    expandedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     EventModel? activeEvent;
     
     // 1. First, try to find an event that is currently happening
-    for (var event in allEvents) {
-      if (now.isAfter(event.startTime) && now.isBefore(event.endTime)) {
+    for (var event in expandedEvents) {
+      final startTimeLocal = event.startTime.toLocal();
+      final endTimeLocal = event.endTime.toLocal();
+      if (now.isAfter(startTimeLocal) && now.isBefore(endTimeLocal)) {
         activeEvent = event;
         break;
       }
@@ -40,8 +118,9 @@ class CommandCenterPanel extends ConsumerWidget {
 
     // 2. If no event is currently happening, find the next upcoming event
     if (activeEvent == null) {
-      for (var event in allEvents) {
-        if (now.isBefore(event.startTime) && !event.isCompleted) {
+      for (var event in expandedEvents) {
+        final startTimeLocal = event.startTime.toLocal();
+        if (now.isBefore(startTimeLocal) && !event.isCompleted) {
           activeEvent = event;
           break;
         }

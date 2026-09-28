@@ -27,7 +27,15 @@ namespace HabitTracker.Application.Tests
             
             mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(events);
 
-            var handler = new GetEventsQueryHandler(mockRepo.Object);
+            var mockUserRepo = new Mock<IUserRepository>();
+            var mockGoogleService = new Mock<IGoogleCalendarService>();
+            var mockSyncCacheRepo = new Mock<IGoogleCalendarSyncCacheRepository>();
+
+            var handler = new GetEventsQueryHandler(
+                mockRepo.Object, 
+                mockUserRepo.Object, 
+                mockGoogleService.Object, 
+                mockSyncCacheRepo.Object);
             var query = new GetEventsQuery();
 
             // Act

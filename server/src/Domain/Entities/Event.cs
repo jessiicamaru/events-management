@@ -21,5 +21,12 @@ namespace HabitTracker.Domain.Entities
         
         // Google Calendar sync mapping
         public string? GoogleEventId { get; set; }
+
+        // Recurrence properties
+        public string? RecurrenceRule { get; set; }
+        public Guid? ParentEventId { get; set; }
+        public Event? ParentEvent { get; set; }
+        public DateTime? ExceptionDate { get; set; }
+        public string? RecurrenceExceptionDates { get; set; }
     }
 }

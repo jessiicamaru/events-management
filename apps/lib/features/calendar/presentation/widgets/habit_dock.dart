@@ -20,18 +20,7 @@ class HabitDock extends ConsumerWidget {
         ref.watch(eventCategoriesProvider(squadId: null)).value ?? [];
 
     if (habits.isEmpty) {
-      return Container(
-        height: 100,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.card,
-          border: Border(top: BorderSide(color: theme.colorScheme.border)),
-        ),
-        child: Text(
-          translations.translate('no_habits_to_schedule'),
-          style: theme.textTheme.muted,
-        ),
-      );
+      return const SizedBox.shrink();
     }
 
     return Container(

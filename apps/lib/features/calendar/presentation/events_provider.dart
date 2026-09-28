@@ -8,11 +8,46 @@ import 'package:habit_tracker/features/squads/presentation/providers/squad_provi
 
 part 'events_provider.g.dart';
 
+class CalendarViewRange {
+  final DateTime startTime;
+  final DateTime endTime;
+
+  CalendarViewRange(this.startTime, this.endTime);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalendarViewRange &&
+          runtimeType == other.runtimeType &&
+          startTime == other.startTime &&
+          endTime == other.endTime;
+
+  @override
+  int get hashCode => startTime.hashCode ^ endTime.hashCode;
+}
+
+@riverpod
+class CalendarViewRangeNotifier extends _$CalendarViewRangeNotifier {
+  @override
+  CalendarViewRange? build() => null;
+
+  void updateRange(DateTime start, DateTime end) {
+    final nextState = CalendarViewRange(start, end);
+    if (state != nextState) {
+      state = nextState;
+    }
+  }
+}
+
 @riverpod
 class EventsNotifier extends _$EventsNotifier {
   @override
   Future<List<EventModel>> build() async {
+    final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
+    if (range != null) {
+      return await apiService.fetchEvents(startTime: range.startTime, endTime: range.endTime);
+    }
     return await apiService.fetchEvents();
   }
 
@@ -61,17 +96,18 @@ class EventsNotifier extends _$EventsNotifier {
     }
   }
 
-  Future<void> deleteEvent(String id) async {
+  Future<void> deleteEvent(String id, {String? deleteScope, DateTime? originalOccurrenceDate}) async {
     final apiService = ref.read(apiServiceProvider);
     
     final previousState = state;
-    if (state.hasValue) {
+    if (state.hasValue && (deleteScope == null || deleteScope == 'AllOccurrences')) {
       final updatedEvents = state.value!.where((e) => e.id != id).toList();
       state = AsyncData(updatedEvents);
     }
 
     try {
-      await apiService.deleteEvent(id);
+      await apiService.deleteEvent(id, deleteScope: deleteScope, originalOccurrenceDate: originalOccurrenceDate);
+      ref.invalidateSelf();
       ref.invalidate(habitsProvider);
       ref.invalidate(heatmapProvider);
     } catch (e) {
@@ -80,17 +116,10 @@ class EventsNotifier extends _$EventsNotifier {
     }
   }
 
-  Future<void> updateEvent(EventModel event) async {
+  Future<void> updateEvent(EventModel event, {String? editScope, DateTime? originalOccurrenceDate}) async {
     final apiService = ref.read(apiServiceProvider);
     
     final previousState = state;
-    if (state.hasValue) {
-      final updatedEvents = state.value!.map((e) {
-        if (e.id == event.id) return event;
-        return e;
-      }).toList();
-      state = AsyncData(updatedEvents);
-    }
 
     try {
       await apiService.updateEvent(event.id, {
@@ -100,7 +129,11 @@ class EventsNotifier extends _$EventsNotifier {
         'habitId': event.habitId,
         'categoryId': event.categoryId,
         'targetDuration': const TimeSpanConverter().toJson(event.targetDuration),
+        if (editScope != null) 'editScope': editScope,
+        if (originalOccurrenceDate != null) 'originalOccurrenceDate': originalOccurrenceDate.toUtc().toIso8601String(),
+        if (event.recurrenceRule != null) 'recurrenceRule': event.recurrenceRule,
       });
+      ref.invalidateSelf();
       ref.invalidate(habitsProvider);
       ref.invalidate(heatmapProvider);
     } catch (e) {

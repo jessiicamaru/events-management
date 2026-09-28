@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ISquadRepository, SquadRepository>();
         services.AddScoped<IHabitTaskRepository, HabitTaskRepository>();
         services.AddScoped<IEventTaskRepository, EventTaskRepository>();
+        services.AddScoped<IGoogleCalendarSyncCacheRepository, GoogleCalendarSyncCacheRepository>();
         services.AddScoped<IGoogleCalendarService, GoogleCalendarService>();
         services.AddScoped<ApplicationDbContextInitialiser>();
 

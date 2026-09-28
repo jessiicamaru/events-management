@@ -69,6 +69,21 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         setState(() {
           _displayDate = details.visibleDates[details.visibleDates.length ~/ 2];
         });
+
+        if (details.visibleDates.isNotEmpty) {
+          DateTime start;
+          DateTime end;
+          if (details.visibleDates.length <= 7) {
+            // Day, 3-Day, Week view: Fetch 3 weeks (1 week before, visible dates, 2 weeks after)
+            start = details.visibleDates.first.subtract(const Duration(days: 7));
+            end = details.visibleDates.last.add(const Duration(days: 14));
+          } else {
+            // Month view: Fetch the exact visible month range (covers the 35 or 42 visible days)
+            start = details.visibleDates.first;
+            end = details.visibleDates.last;
+          }
+          ref.read(calendarViewRangeProvider.notifier).updateRange(start, end);
+        }
       }
     });
   }

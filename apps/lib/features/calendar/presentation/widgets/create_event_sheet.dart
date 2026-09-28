@@ -13,6 +13,8 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/habit_tasks_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/custom_recurrence_dialog.dart';
+
 
 
 class CreateEventSheet extends ConsumerStatefulWidget {
@@ -43,6 +45,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   TimeOfDay _endTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isSubmitting = false;
   List<EventTaskModel>? _localTasks;
+  String _selectedRepeatPreset = 'none';
+  String? _recurrenceRule;
 
   @override
   void initState() {
@@ -58,6 +62,24 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
         _targetDurationController.text = evt.targetDuration.toString();
       } else {
         _updateTargetDuration();
+      }
+      _recurrenceRule = evt.recurrenceRule;
+      if (_recurrenceRule == null || _recurrenceRule!.isEmpty) {
+        _selectedRepeatPreset = 'none';
+      } else if (_recurrenceRule == 'RRULE:FREQ=DAILY;INTERVAL=1') {
+        _selectedRepeatPreset = 'daily';
+      } else if (_recurrenceRule == 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR') {
+        _selectedRepeatPreset = 'weekday';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=')) {
+        _selectedRepeatPreset = 'weekly';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=')) {
+        _selectedRepeatPreset = 'biweekly';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=MONTHLY;BYMONTHDAY=')) {
+        _selectedRepeatPreset = 'monthly';
+      } else if (_recurrenceRule == 'RRULE:FREQ=YEARLY') {
+        _selectedRepeatPreset = 'yearly';
+      } else {
+        _selectedRepeatPreset = 'custom';
       }
     } else if (widget.initialDate != null) {
       _startDate = widget.initialDate!;
@@ -111,6 +133,84 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  String _getWeekdayName(int weekday, AppTranslations translations) {
+    switch (weekday) {
+      case DateTime.monday: return translations.translate('monday');
+      case DateTime.tuesday: return translations.translate('tuesday');
+      case DateTime.wednesday: return translations.translate('wednesday');
+      case DateTime.thursday: return translations.translate('thursday');
+      case DateTime.friday: return translations.translate('friday');
+      case DateTime.saturday: return translations.translate('saturday');
+      case DateTime.sunday: return translations.translate('sunday');
+      default: return '';
+    }
+  }
+
+  void _handleRepeatPresetChanged(String? preset) async {
+    if (preset == null || preset == 'none') {
+      setState(() {
+        _selectedRepeatPreset = 'none';
+        _recurrenceRule = null;
+      });
+      return;
+    }
+
+    if (preset == 'custom') {
+      final customRule = await showShadDialog<String>(
+        context: context,
+        builder: (context) => CustomRecurrenceDialog(initialRrule: _recurrenceRule),
+      );
+      if (customRule != null) {
+        setState(() {
+          _selectedRepeatPreset = 'custom';
+          _recurrenceRule = customRule;
+        });
+      } else {
+        // Revert preset if cancelled
+        setState(() {});
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedRepeatPreset = preset;
+      final weekdayCode = _getWeekdayCode(_startDate.weekday);
+      switch (preset) {
+        case 'daily':
+          _recurrenceRule = 'RRULE:FREQ=DAILY;INTERVAL=1';
+          break;
+        case 'weekday':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+          break;
+        case 'weekly':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=$weekdayCode';
+          break;
+        case 'biweekly':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=$weekdayCode';
+          break;
+        case 'monthly':
+          _recurrenceRule = 'RRULE:FREQ=MONTHLY;BYMONTHDAY=${_startDate.day}';
+          break;
+        case 'yearly':
+          _recurrenceRule = 'RRULE:FREQ=YEARLY';
+          break;
+      }
+    });
+  }
+
+  String _getWeekdayCode(int weekday) {
+    switch (weekday) {
+      case DateTime.monday: return 'MO';
+      case DateTime.tuesday: return 'TU';
+      case DateTime.wednesday: return 'WE';
+      case DateTime.thursday: return 'TH';
+      case DateTime.friday: return 'FR';
+      case DateTime.saturday: return 'SA';
+      case DateTime.sunday: return 'SU';
+      default: return 'MO';
     }
   }
 
@@ -192,11 +292,27 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
       categoryId: _selectedCategoryId,
+      recurrenceRule: _recurrenceRule,
     );
+
+    String? editScope;
+    DateTime? originalOccurrenceDate;
+    if (widget.eventToEdit != null && (widget.eventToEdit!.recurrenceRule != null || widget.eventToEdit!.parentEventId != null)) {
+      editScope = await showRecurrenceEditOptionDialog(context, translations);
+      if (editScope == null) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
+      originalOccurrenceDate = widget.eventToEdit!.startTime;
+    }
 
     try {
       if (widget.eventToEdit != null) {
-        await ref.read(eventsProvider.notifier).updateEvent(event);
+        await ref.read(eventsProvider.notifier).updateEvent(
+          event, 
+          editScope: editScope, 
+          originalOccurrenceDate: originalOccurrenceDate
+        );
       } else {
         await ref.read(eventsProvider.notifier).addEvent(event);
       }
@@ -291,11 +407,12 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section: Quick fill from habits
-                  UnscheduledHabitsSelector(
-                    habits: habits,
-                    selectedHabit: _selectedHabit,
-                    onSelect: _fillFromHabit,
-                  ),
+                  if (habits.isNotEmpty)
+                    UnscheduledHabitsSelector(
+                      habits: habits,
+                      selectedHabit: _selectedHabit,
+                      onSelect: _fillFromHabit,
+                    ),
 
                   if (_selectedHabit != null || widget.eventToEdit != null) ...[
                     const SizedBox(height: 16),
@@ -339,7 +456,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                       ),
                     ),
                     loading: () => const CircularProgressIndicator(),
-                    error: (_, __) => const Text('Error loading categories'),
+                    error: (_, ___) => const Text('Error loading categories'),
                   ),
                   const SizedBox(height: 16),
 
@@ -397,13 +514,51 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
 
                   const SizedBox(height: 16),
 
-                  // Target Duration
+                   // Target Duration
                   Text(translations.translate('target_duration'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   ShadInput(
                     controller: _targetDurationController,
                     placeholder: Text(translations.translate('duration_placeholder')),
                     keyboardType: TextInputType.number,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(translations.translate('repeat'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadSelect<String>(
+                      placeholder: Text(translations.translate('does_not_repeat')),
+                      initialValue: _selectedRepeatPreset,
+                      onChanged: (val) {
+                        _handleRepeatPresetChanged(val);
+                      },
+                      options: [
+                        ShadOption(value: 'none', child: Text(translations.translate('does_not_repeat'))),
+                        ShadOption(value: 'daily', child: Text(translations.translate('every_day'))),
+                        ShadOption(value: 'weekday', child: Text(translations.translate('every_weekday'))),
+                        ShadOption(value: 'weekly', child: Text('${translations.translate('every_week')} ${_getWeekdayName(_startDate.weekday, translations)}')),
+                        ShadOption(value: 'biweekly', child: Text('${translations.translate('every_2_weeks')} ${_getWeekdayName(_startDate.weekday, translations)}')),
+                        ShadOption(value: 'monthly', child: Text('${translations.translate('every_month')} ${_startDate.day}')),
+                        ShadOption(value: 'yearly', child: Text('${translations.translate('every_year')} ${DateFormat('MMM d').format(_startDate)}')),
+                        ShadOption(value: 'custom', child: Text(translations.translate('custom_dots'))),
+                      ],
+                      selectedOptionBuilder: (context, value) {
+                        switch (value) {
+                          case 'none': return Text(translations.translate('does_not_repeat'));
+                          case 'daily': return Text(translations.translate('every_day'));
+                          case 'weekday': return Text(translations.translate('every_weekday'));
+                          case 'weekly': return Text('${translations.translate('every_week')} ${_getWeekdayName(_startDate.weekday, translations)}');
+                          case 'biweekly': return Text('${translations.translate('every_2_weeks')} ${_getWeekdayName(_startDate.weekday, translations)}');
+                          case 'monthly': return Text('${translations.translate('every_month')} ${_startDate.day}');
+                          case 'yearly': return Text('${translations.translate('every_year')} ${DateFormat('MMM d').format(_startDate)}');
+                          case 'custom': return Text(translations.translate('custom'));
+                          default: return Text(translations.translate('does_not_repeat'));
+                        }
+                      },
+                    ),
                   ),
 
                   const SizedBox(height: 28),

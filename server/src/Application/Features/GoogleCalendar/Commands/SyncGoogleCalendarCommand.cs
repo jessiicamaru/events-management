@@ -29,7 +29,7 @@ namespace HabitTracker.Application.Features.GoogleCalendar.Commands
                 return false;
             }
 
-            return await _googleCalendarService.SyncEventsAsync(user.Id, user.GoogleRefreshToken, cancellationToken);
+            return await _googleCalendarService.SyncEventsAsync(user.Id, user.GoogleRefreshToken, null, null, cancellationToken);
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using HabitTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260729170200_AddEventRecurrence")]
+    partial class AddEventRecurrence
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -257,32 +260,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("EventId");
 
                     b.ToTable("EventTasks");
-                });
-
-            modelBuilder.Entity("HabitTracker.Domain.Entities.GoogleCalendarSyncCache", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("LastSyncedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("SyncedFrom")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("SyncedTo")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("GoogleCalendarSyncCaches");
                 });
 
             modelBuilder.Entity("HabitTracker.Domain.Entities.Habit", b =>
@@ -637,17 +614,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Event");
-                });
-
-            modelBuilder.Entity("HabitTracker.Domain.Entities.GoogleCalendarSyncCache", b =>
-                {
-                    b.HasOne("HabitTracker.Domain.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("HabitTracker.Domain.Entities.Habit", b =>

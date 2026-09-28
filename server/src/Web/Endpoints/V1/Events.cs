@@ -26,12 +26,21 @@ public class Events : EndpointGroupBase
         groupBuilder.MapPut("{id}", UpdateEvent);
     }
 
-    public async Task<IResult> GetEvents(ISender sender, System.Security.Claims.ClaimsPrincipal user)
+    public async Task<IResult> GetEvents(
+        ISender sender, 
+        System.Security.Claims.ClaimsPrincipal user,
+        DateTime? startTime = null,
+        DateTime? endTime = null)
     {
         var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
-        var events = await sender.Send(new GetEventsQuery { UserId = userId });
+        var events = await sender.Send(new GetEventsQuery 
+        { 
+            UserId = userId,
+            StartTime = startTime,
+            EndTime = endTime
+        });
         return TypedResults.Ok(events);
     }
 
@@ -70,12 +79,17 @@ public class Events : EndpointGroupBase
         return TypedResults.Ok();
     }
 
-    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteEvent(ISender sender, Guid id, ClaimsPrincipal user)
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteEvent(
+        ISender sender, 
+        Guid id, 
+        string? deleteScope, 
+        DateTime? originalOccurrenceDate, 
+        ClaimsPrincipal user)
     {
         var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
-        var result = await sender.Send(new DeleteEventCommand(id, userId));
+        var result = await sender.Send(new DeleteEventCommand(id, userId, deleteScope, originalOccurrenceDate));
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();
     }
@@ -94,7 +108,10 @@ public class Events : EndpointGroupBase
             HabitId = request.HabitId,
             CategoryId = request.CategoryId,
             TargetDuration = request.TargetDuration,
-            UserId = userId
+            UserId = userId,
+            EditScope = request.EditScope,
+            OriginalOccurrenceDate = request.OriginalOccurrenceDate,
+            RecurrenceRule = request.RecurrenceRule
         };
 
         var result = await sender.Send(command);
@@ -103,6 +120,16 @@ public class Events : EndpointGroupBase
     }
 }
 
-public record UpdateEventRequest(string Title, DateTime StartTime, DateTime EndTime, string HabitId, Guid? CategoryId, TimeSpan? TargetDuration);
+public record UpdateEventRequest(
+    string Title, 
+    DateTime StartTime, 
+    DateTime EndTime, 
+    string HabitId, 
+    Guid? CategoryId, 
+    TimeSpan? TargetDuration,
+    string? EditScope = null,
+    DateTime? OriginalOccurrenceDate = null,
+    string? RecurrenceRule = null
+);
 
 public record ToggleEventRequest(bool IsCompleted);

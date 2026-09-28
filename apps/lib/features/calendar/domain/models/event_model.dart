@@ -43,6 +43,10 @@ abstract class EventModel with _$EventModel {
     DateTime? createdAt,
     String? userId, // ID of the user who owns this event
     @JsonKey(includeIfNull: false) List<EventTaskModel>? tasks,
+    String? recurrenceRule,
+    String? recurrenceExceptionDates,
+    String? parentEventId,
+    DateTime? exceptionDate,
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
