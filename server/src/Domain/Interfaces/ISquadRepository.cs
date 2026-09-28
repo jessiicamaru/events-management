@@ -18,6 +18,7 @@ namespace HabitTracker.Domain.Interfaces
         Task UpdateAsync(Squad squad);
         Task UpdateMemberAsync(SquadMember member);
         Task RemoveMemberAsync(Guid squadId, string userId);
+        Task DeleteSquadAsync(Guid squadId);
         Task<List<SquadChatMessage>> GetChatMessageHistoryAsync(Guid squadId, int limit = 50);
         Task SaveChatMessageAsync(SquadChatMessage message);
     }

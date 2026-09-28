@@ -8,7 +8,7 @@ using System.Linq;
 
 namespace HabitTracker.Application.Features.Events.Commands
 {
-    public record ToggleEventCommand(Guid Id, bool IsCompleted) : IRequest<bool>;
+    public record ToggleEventCommand(Guid Id, bool IsCompleted, string UserId = "") : IRequest<bool>;
 
     public class ToggleEventCommandHandler : IRequestHandler<ToggleEventCommand, bool>
     {
@@ -24,7 +24,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public async Task<bool> Handle(ToggleEventCommand request, CancellationToken cancellationToken)
         {
             var evt = await _eventRepository.GetByIdAsync(request.Id);
-            if (evt == null) return false;
+            if (evt == null || evt.UserId != request.UserId) return false;
 
             evt.IsCompleted = request.IsCompleted;
             await _eventRepository.UpdateAsync(evt);

@@ -81,7 +81,7 @@ class SquadMemberRow extends StatelessWidget {
                 Row(
                   children: [
                     Text('${member.totalXP} XP', style: theme.textTheme.muted),
-                    if (member.currentStreak > 0) ...[
+                    if (member.currentStreak >= 0) ...[
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

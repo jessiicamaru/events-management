@@ -15,6 +15,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public Guid EventId { get; set; }
         public TimeSpan ActualDuration { get; set; }
         public bool UpdateCalendar { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 
     public class CompleteEventSessionCommandHandler : IRequestHandler<CompleteEventSessionCommand, bool>
@@ -39,7 +40,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         public async Task<bool> Handle(CompleteEventSessionCommand request, CancellationToken cancellationToken)
         {
             var ev = await _eventRepository.GetByIdAsync(request.EventId);
-            if (ev == null)
+            if (ev == null || ev.UserId != request.UserId)
             {
                 return false;
             }

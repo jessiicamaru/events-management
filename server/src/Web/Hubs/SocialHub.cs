@@ -37,18 +37,80 @@ namespace HabitTracker.Web.Hubs
         public async Task SendPoke(string squadId, string targetUserId)
         {
             var senderId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (senderId != null)
+            if (senderId == null) return;
+
+            if (Guid.TryParse(squadId, out Guid squadGuid))
             {
-                await Clients.Group($"Squad_{squadId}").SendAsync("ReceivePoke", senderId, targetUserId);
+                var members = await _squadRepository.GetSquadMembersAsync(squadGuid);
+                var sender = members.FirstOrDefault(m => m.UserId == senderId);
+                var target = members.FirstOrDefault(m => m.UserId == targetUserId);
+
+                var senderName = sender?.Nickname ?? sender?.User?.DisplayName ?? sender?.User?.Email?.Split('@').First() ?? "Unknown";
+                var targetName = target?.Nickname ?? target?.User?.DisplayName ?? target?.User?.Email?.Split('@').First() ?? "Unknown";
+
+                var messageText = $"{senderName} đã chọc {targetName} ✋";
+
+                var msg = new SquadChatMessage
+                {
+                    SquadId = squadGuid,
+                    SenderUserId = null,
+                    Message = messageText,
+                    SentAt = DateTime.UtcNow,
+                    IsSystemMessage = true
+                };
+
+                await _squadRepository.SaveChatMessageAsync(msg);
+
+                await Clients.Group($"Squad_{squadId}").SendAsync("ReceiveMessage", new
+                {
+                    Id = msg.Id,
+                    SquadId = msg.SquadId,
+                    SenderUserId = msg.SenderUserId,
+                    SenderDisplayName = "System",
+                    Message = msg.Message,
+                    SentAt = msg.SentAt,
+                    IsSystemMessage = msg.IsSystemMessage
+                });
             }
         }
 
         public async Task SendReaction(string squadId, string targetUserId, string emoji)
         {
             var senderId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (senderId != null)
+            if (senderId == null) return;
+
+            if (Guid.TryParse(squadId, out Guid squadGuid))
             {
-                await Clients.Group($"Squad_{squadId}").SendAsync("ReceiveReaction", senderId, targetUserId, emoji);
+                var members = await _squadRepository.GetSquadMembersAsync(squadGuid);
+                var sender = members.FirstOrDefault(m => m.UserId == senderId);
+                var target = members.FirstOrDefault(m => m.UserId == targetUserId);
+
+                var senderName = sender?.Nickname ?? sender?.User?.DisplayName ?? sender?.User?.Email?.Split('@').First() ?? "Unknown";
+                var targetName = target?.Nickname ?? target?.User?.DisplayName ?? target?.User?.Email?.Split('@').First() ?? "Unknown";
+
+                var messageText = $"{senderName} đã thả biểu cảm {emoji} cho {targetName}";
+
+                var msg = new SquadChatMessage
+                {
+                    SquadId = squadGuid,
+                    SenderUserId = null,
+                    Message = messageText,
+                    SentAt = DateTime.UtcNow,
+                    IsSystemMessage = true
+                };
+
+                await _squadRepository.SaveChatMessageAsync(msg);
+
+                await Clients.Group($"Squad_{squadId}").SendAsync("ReceiveMessage", new
+                {
+                    Id = msg.Id,
+                    SquadId = msg.SquadId,
+                    SenderUserId = msg.SenderUserId,
+                    SenderDisplayName = "System",
+                    Message = msg.Message,
+                    SentAt = msg.SentAt,
+                    IsSystemMessage = msg.IsSystemMessage
+                });
             }
         }
 

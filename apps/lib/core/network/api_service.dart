@@ -165,6 +165,10 @@ class ApiService {
     await _dio.delete('/squads/$squadId/leave');
   }
 
+  Future<void> deleteSquad(String squadId) async {
+    await _dio.delete('/squads/$squadId');
+  }
+
   Future<void> updateSquadSettings(String squadId, String name, int maxMembers, bool requireApproval) async {
     await _dio.put('/squads/$squadId/settings', data: {
       'name': name,

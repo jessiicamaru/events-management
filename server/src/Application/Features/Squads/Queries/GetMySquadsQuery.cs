@@ -39,13 +39,18 @@ namespace HabitTracker.Application.Features.Squads.Queries
             foreach (var squad in squads)
             {
                 var count = await _repository.GetMemberCountAsync(squad.Id);
+                var members = await _repository.GetSquadMembersAsync(squad.Id);
+                int totalSquadXp = members
+                    .Where(m => m.IsApproved && m.XpContributionEnabled)
+                    .Sum(m => m.User?.TotalXP ?? 0);
+
                 summaries.Add(new MySquadSummaryDto
                 {
                     Id = squad.Id,
                     Name = squad.Name,
                     MemberCount = count,
                     MaxMembers = squad.MaxMembers,
-                    TotalSquadXP = squad.TotalSquadXP
+                    TotalSquadXP = totalSquadXp
                 });
             }
 

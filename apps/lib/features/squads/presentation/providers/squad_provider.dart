@@ -135,6 +135,18 @@ class ActiveSquadNotifier extends AsyncNotifier<SquadModel?> {
     });
   }
 
+  Future<void> deleteSquad(String squadId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      final api = ref.read(apiServiceProvider);
+      await api.deleteSquad(squadId);
+      
+      await ref.read(squadsListProvider.notifier).refresh();
+      ref.read(activeSquadIdProvider.notifier).state = null;
+      return null;
+    });
+  }
+
   Future<void> approveMember(String squadId, String targetUserId) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {

@@ -95,70 +95,7 @@ class SquadChatNotifier extends ValueNotifier<SquadChatState> {
         }
       });
 
-      // Handle receiving pokes
-      _connection!.on("ReceivePoke", (arguments) {
-        if (arguments != null && arguments.length >= 2 && !_isDisposed) {
-          try {
-            final senderId = arguments[0] as String;
-            final targetId = arguments[1] as String;
 
-            final activeSquad = ref.read(activeSquadProvider).value;
-            if (activeSquad != null) {
-              final sender = activeSquad.members.firstWhere((m) => m.userId == senderId);
-              final target = activeSquad.members.firstWhere((m) => m.userId == targetId);
-              final senderName = sender.nickname ?? sender.email.split('@').first;
-              final targetName = target.nickname ?? target.email.split('@').first;
-
-              final systemMsg = SquadChatMessageModel(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                squadId: squadId,
-                senderUserId: null,
-                senderDisplayName: "System",
-                message: "$senderName đã chọc $targetName ✋",
-                sentAt: DateTime.now(),
-                isSystemMessage: true,
-              );
-
-              value = value.copyWith(messages: [...value.messages, systemMsg]);
-            }
-          } catch (e) {
-            print("Error parsing poke argument: $e");
-          }
-        }
-      });
-
-      // Handle receiving reactions
-      _connection!.on("ReceiveReaction", (arguments) {
-        if (arguments != null && arguments.length >= 3 && !_isDisposed) {
-          try {
-            final senderId = arguments[0] as String;
-            final targetId = arguments[1] as String;
-            final emoji = arguments[2] as String;
-
-            final activeSquad = ref.read(activeSquadProvider).value;
-            if (activeSquad != null) {
-              final sender = activeSquad.members.firstWhere((m) => m.userId == senderId);
-              final target = activeSquad.members.firstWhere((m) => m.userId == targetId);
-              final senderName = sender.nickname ?? sender.email.split('@').first;
-              final targetName = target.nickname ?? target.email.split('@').first;
-
-              final systemMsg = SquadChatMessageModel(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                squadId: squadId,
-                senderUserId: null,
-                senderDisplayName: "System",
-                message: "$senderName đã thả biểu cảm $emoji cho $targetName",
-                sentAt: DateTime.now(),
-                isSystemMessage: true,
-              );
-
-              value = value.copyWith(messages: [...value.messages, systemMsg]);
-            }
-          } catch (e) {
-            print("Error parsing reaction argument: $e");
-          }
-        }
-      });
 
       await _connection!.start();
 

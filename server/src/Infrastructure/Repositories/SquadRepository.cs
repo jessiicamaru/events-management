@@ -109,6 +109,16 @@ namespace HabitTracker.Infrastructure.Repositories
             }
         }
 
+        public async Task DeleteSquadAsync(Guid squadId)
+        {
+            var squad = await _context.Squads.FindAsync(squadId);
+            if (squad != null)
+            {
+                _context.Squads.Remove(squad);
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task<List<SquadChatMessage>> GetChatMessageHistoryAsync(Guid squadId, int limit = 50)
         {
             return await _context.SquadChatMessages

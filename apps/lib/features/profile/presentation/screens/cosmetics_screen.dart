@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/utils/level_system.dart';
+import 'package:habit_tracker/core/widgets/xp_progress_bar.dart';
 
 class CosmeticsScreen extends ConsumerWidget {
   const CosmeticsScreen({super.key});
@@ -52,10 +53,6 @@ class CosmeticsScreen extends ConsumerWidget {
   }
 
   Widget _buildProfileCard(BuildContext context, ShadThemeData theme, String email, int level, int xp, AppTranslations translations) {
-    final progress = LevelSystem.getProgressPercentage(xp);
-    final xpWithinLevel = LevelSystem.getXpProgressWithinLevel(xp);
-    final xpNeededForLevelUp = LevelSystem.getXpNeededWithinLevel(level);
-
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -74,33 +71,21 @@ class CosmeticsScreen extends ConsumerWidget {
           Text(email, style: theme.textTheme.h4),
           const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => _showLevelTableDialog(context, translations),
-                    child: Icon(
-                      LucideIcons.info,
-                      size: 14,
-                      color: theme.colorScheme.mutedForeground,
-                    ),
-                  ),
-                ],
+              Text('${translations.translate('level_label')} $level', style: theme.textTheme.small),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => _showLevelTableDialog(context, translations),
+                child: Icon(
+                  LucideIcons.info,
+                  size: 14,
+                  color: theme.colorScheme.mutedForeground,
+                ),
               ),
-              Text('$xpWithinLevel / $xpNeededForLevelUp XP', style: theme.textTheme.small),
             ],
           ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-            ),
-          ),
+          const SizedBox(height: 16),
+          XpProgressBar(totalXp: xp),
         ],
       ),
     );

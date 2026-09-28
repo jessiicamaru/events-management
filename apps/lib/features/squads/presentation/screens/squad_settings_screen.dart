@@ -413,6 +413,35 @@ class _SquadSettingsScreenState extends ConsumerState<SquadSettingsScreen> {
                 );
               },
             ),
+            if (isLeader) ...[
+              const SizedBox(height: 16),
+              ShadButton.destructive(
+                child: Text(translations.translate('delete_squad_btn')),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (ctx) => ShadDialog(
+                      title: Text(translations.translate('delete_squad_confirm_title')),
+                      description: Text(translations.translate('delete_squad_confirm_desc')),
+                      actions: [
+                        ShadButton.outline(
+                          child: Text(translations.translate('cancel')),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                        ShadButton.destructive(
+                          child: const Text('Xác nhận xóa'),
+                          onPressed: () {
+                            ref.read(activeSquadProvider.notifier).deleteSquad(widget.squadId);
+                            Navigator.pop(ctx); // Close dialog
+                            Navigator.pop(context); // Close settings screen
+                          },
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ],
         ),
       ),

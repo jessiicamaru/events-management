@@ -518,6 +518,12 @@ class AppTranslations {
     'change_leader': {AppLocale.en: 'Transfer Leadership', AppLocale.vi: 'Chuyển trưởng nhóm'},
     'kick_member': {AppLocale.en: 'Kick', AppLocale.vi: 'Kích khỏi nhóm'},
     'leave_squad_btn': {AppLocale.en: 'Leave Squad', AppLocale.vi: 'Rời nhóm'},
+    'delete_squad_btn': {AppLocale.en: 'Delete Squad', AppLocale.vi: 'Xóa nhóm'},
+    'delete_squad_confirm_title': {AppLocale.en: 'Delete Squad', AppLocale.vi: 'Xóa nhóm'},
+    'delete_squad_confirm_desc': {
+      AppLocale.en: 'Are you sure you want to delete this squad? This action is permanent and cannot be undone.',
+      AppLocale.vi: 'Bạn có chắc chắn muốn xóa nhóm này không? Hành động này sẽ giải tán nhóm và không thể hoàn tác.',
+    },
     'nickname_dialog_title': {AppLocale.en: 'Change Nickname', AppLocale.vi: 'Đổi biệt danh'},
     'enter_nickname': {AppLocale.en: 'Enter nickname...', AppLocale.vi: 'Nhập biệt danh...'},
     'status_pending': {AppLocale.en: 'Pending', AppLocale.vi: 'Chờ duyệt'},

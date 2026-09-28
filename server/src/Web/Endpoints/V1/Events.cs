@@ -45,19 +45,26 @@ public class Events : EndpointGroupBase
         return TypedResults.Created($"/api/v1/events/{id}", id);
     }
 
-    public async Task<Results<Ok, NotFound>> ToggleEvent(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] ToggleEventRequest request)
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> ToggleEvent(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] ToggleEventRequest request, ClaimsPrincipal user)
     {
-        var result = await sender.Send(new ToggleEventCommand(id, request.IsCompleted));
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var result = await sender.Send(new ToggleEventCommand(id, request.IsCompleted, userId));
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();
     }
-    public async Task<Results<Ok, NotFound>> CompleteSession(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] CompleteEventSessionRequest request)
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> CompleteSession(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] CompleteEventSessionRequest request, ClaimsPrincipal user)
     {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
         var result = await sender.Send(new CompleteEventSessionCommand 
         { 
             EventId = id, 
             ActualDuration = request.ActualDuration, 
-            UpdateCalendar = request.UpdateCalendar 
+            UpdateCalendar = request.UpdateCalendar,
+            UserId = userId
         });
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();

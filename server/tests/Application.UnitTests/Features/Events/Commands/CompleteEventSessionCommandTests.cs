@@ -34,7 +34,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
         public async Task Handle_ShouldReturnFalse_WhenEventDoesNotExist()
         {
             // Arrange
-            var command = new CompleteEventSessionCommand { EventId = Guid.NewGuid(), ActualDuration = TimeSpan.FromMinutes(25) };
+            var command = new CompleteEventSessionCommand { EventId = Guid.NewGuid(), ActualDuration = TimeSpan.FromMinutes(25), UserId = "user1" };
             _mockEventRepo.Setup(repo => repo.GetByIdAsync(command.EventId)).ReturnsAsync((Event?)null);
 
             // Act
@@ -50,8 +50,8 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             // Arrange
             var eventId = Guid.NewGuid();
             var habitId = Guid.NewGuid().ToString();
-            var ev = new Event { Id = eventId, HabitId = habitId, IsCompleted = false, StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddMinutes(30) };
-            var command = new CompleteEventSessionCommand { EventId = eventId, ActualDuration = TimeSpan.FromMinutes(25), UpdateCalendar = true };
+            var ev = new Event { Id = eventId, UserId = "user1", HabitId = habitId, IsCompleted = false, StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddMinutes(30) };
+            var command = new CompleteEventSessionCommand { EventId = eventId, UserId = "user1", ActualDuration = TimeSpan.FromMinutes(25), UpdateCalendar = true };
             
             _mockEventRepo.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(ev);
             _mockEventRepo.Setup(repo => repo.UpdateAsync(ev)).Returns(Task.CompletedTask);
@@ -69,6 +69,25 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
         }
 
         [Fact]
+        public async Task Handle_ShouldReturnFalse_WhenUserIdMismatch()
+        {
+            // Arrange
+            var eventId = Guid.NewGuid();
+            var habitId = Guid.NewGuid().ToString();
+            var ev = new Event { Id = eventId, UserId = "user1", HabitId = habitId, IsCompleted = false };
+            var command = new CompleteEventSessionCommand { EventId = eventId, UserId = "different_user", ActualDuration = TimeSpan.FromMinutes(25) };
+
+            _mockEventRepo.Setup(repo => repo.GetByIdAsync(eventId)).ReturnsAsync(ev);
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            Assert.False(result);
+            _mockEventRepo.Verify(repo => repo.UpdateAsync(It.IsAny<Event>()), Times.Never);
+        }
+
+        [Fact]
         public async Task Handle_ShouldAwardXPToUserAndApprovedSquads_WhenUserAndSquadsExist()
         {
             // Arrange
@@ -79,7 +98,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             var squadId2 = Guid.NewGuid();
 
             var ev = new Event { Id = eventId, UserId = userId, HabitId = habitId, IsCompleted = false, StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddMinutes(30) };
-            var command = new CompleteEventSessionCommand { EventId = eventId, ActualDuration = TimeSpan.FromMinutes(25) };
+            var command = new CompleteEventSessionCommand { EventId = eventId, UserId = userId, ActualDuration = TimeSpan.FromMinutes(25) };
 
             var user = new ApplicationUser { Id = userId, TotalXP = 50 };
             var squad1 = new Squad { Id = squadId1, TotalSquadXP = 100 };

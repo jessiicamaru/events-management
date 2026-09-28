@@ -24,6 +24,7 @@ namespace HabitTracker.Web.Endpoints.V1
             app.MapPost("/{id:guid}/approve/{targetUserId}", ApproveMember);
             app.MapPost("/{id:guid}/reject/{targetUserId}", RejectMember);
             app.MapDelete("/{id:guid}/leave", LeaveSquad);
+            app.MapDelete("/{id:guid}", DeleteSquad);
             app.MapPut("/{id:guid}/settings", UpdateSquadSettings);
             app.MapPost("/{id:guid}/change-leader", ChangeLeader);
             app.MapPut("/{id:guid}/member-settings", UpdateMemberSettings);
@@ -158,6 +159,28 @@ namespace HabitTracker.Web.Endpoints.V1
             {
                 SquadId = id,
                 UserId = userId
+            };
+
+            try
+            {
+                await sender.Send(command);
+                return Results.Ok();
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        }
+
+        public async Task<IResult> DeleteSquad(ISender sender, ClaimsPrincipal user, Guid id)
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Results.Unauthorized();
+
+            var command = new DeleteSquadCommand
+            {
+                SquadId = id,
+                ActionByUserId = userId
             };
 
             try

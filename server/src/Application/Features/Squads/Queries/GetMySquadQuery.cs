@@ -93,13 +93,17 @@ namespace HabitTracker.Application.Features.Squads.Queries
                 });
             }
 
+            int totalSquadXp = memberDtos
+                .Where(m => m.IsApproved && m.XpContributionEnabled)
+                .Sum(m => m.TotalXP);
+
             return new SquadDto
             {
                 Id = squad.Id,
                 Name = squad.Name,
                 MaxMembers = squad.MaxMembers,
                 RequireApproval = squad.RequireApproval,
-                TotalSquadXP = squad.TotalSquadXP,
+                TotalSquadXP = totalSquadXp,
                 UnlockedHeatmapColor = squad.UnlockedHeatmapColor,
                 Members = memberDtos
             };
