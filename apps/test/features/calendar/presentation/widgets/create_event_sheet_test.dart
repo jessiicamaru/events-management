@@ -7,6 +7,7 @@ import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/unscheduled_habits_selector.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 
@@ -115,8 +116,16 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Unscheduled Habits section should not appear
-      expect(find.text('Unscheduled Habits'), findsNothing);
+      // The selector renders nothing at all without habits, so its heading is absent.
+      // Asserted through the widget: looking for the text alone would pass whatever the
+      // selector did, because no widget anywhere renders the words it used to look for.
+      expect(
+        find.descendant(
+          of: find.byType(UnscheduledHabitsSelector),
+          matching: find.text('Habits'),
+        ),
+        findsNothing,
+      );
       // But the form should still show
       expect(find.text('Title'), findsOneWidget);
     });
