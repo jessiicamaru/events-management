@@ -5,6 +5,7 @@ import 'package:signalr_netcore/signalr_client.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:habit_tracker/features/squads/domain/models/squad_model.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
 class SquadChatState {
   final List<SquadChatMessageModel> messages;

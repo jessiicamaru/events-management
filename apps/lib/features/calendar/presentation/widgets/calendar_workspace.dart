@@ -18,6 +18,16 @@ import 'package:habit_tracker/features/focus_session/presentation/widgets/post_s
 import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_card.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/sticky_time_ruler_overlay.dart';
+
+/// Width of the time ruler column (logical pixels).
+const double _kTimeRulerWidth = 60.0;
+
+/// Explicit view header height for sticky overlay alignment.
+const double _kViewHeaderHeight = 55.0;
+
+/// Height of each time interval slot (logical pixels).
+const double _kTimeIntervalHeight = 50.0;
 
 class CalendarWorkspace extends ConsumerStatefulWidget {
   final CalendarController calendarController;
@@ -51,6 +61,13 @@ class CalendarWorkspace extends ConsumerStatefulWidget {
 
 class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
   EventModel? _hoverEvent;
+  final ScrollController _overlayScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _overlayScrollController.dispose();
+    super.dispose();
+  }
 
   List<TimeRegion> _getSpecialRegions(ShadThemeData theme) {
     if (widget.currentView != AppCalendarView.threeDay) return [];
@@ -244,6 +261,7 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                     dataSource: EventDataSource(filteredEvents, habits, theme, widget.currentUserId, translations),
                     onViewChanged: widget.onViewHeaderChanged,
                     headerHeight: 0,
+                    viewHeaderHeight: _kViewHeaderHeight,
                     view: isThreeDayScrollable ? CalendarView.week : (widget.currentView == AppCalendarView.day ? CalendarView.day : CalendarView.month),
                     viewNavigationMode: isThreeDayScrollable ? ViewNavigationMode.none : ViewNavigationMode.snap,
                     firstDayOfWeek: 1,
@@ -289,7 +307,8 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                     timeSlotViewSettings: TimeSlotViewSettings(
                       startHour: settings.visibleStartHour.toDouble(),
                       endHour: settings.visibleEndHour.toDouble(),
-                      timeIntervalHeight: 50,
+                      timeIntervalHeight: _kTimeIntervalHeight,
+                      timeRulerSize: _kTimeRulerWidth,
                       timeFormat: 'h a',
                     ),
                   );
@@ -308,6 +327,21 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                   );
 
                   if (isThreeDayScrollable) {
+                    calendar = NotificationListener<ScrollNotification>(
+                      onNotification: (notification) {
+                        if (notification is ScrollUpdateNotification &&
+                            notification.metrics.axis == Axis.vertical &&
+                            _overlayScrollController.hasClients) {
+                          final clampedOffset = notification.metrics.pixels.clamp(
+                            0.0,
+                            _overlayScrollController.position.maxScrollExtent,
+                          );
+                          _overlayScrollController.jumpTo(clampedOffset);
+                        }
+                        return false;
+                      },
+                      child: calendar,
+                    );
                     calendar = Listener(
                       onPointerMove: (PointerMoveEvent event) {
                         if (widget.scrollController.hasClients) {
@@ -326,11 +360,31 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
             );
 
             if (isThreeDayScrollable) {
-              return SingleChildScrollView(
-                controller: widget.scrollController,
-                physics: const NeverScrollableScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                child: calendarWidget,
+              return Stack(
+                children: [
+                  SingleChildScrollView(
+                    controller: widget.scrollController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    child: calendarWidget,
+                  ),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    child: StickyTimeRulerOverlay(
+                      viewHeaderHeight: _kViewHeaderHeight,
+                      timeRulerWidth: _kTimeRulerWidth,
+                      timeIntervalHeight: _kTimeIntervalHeight,
+                      startHour: settings.visibleStartHour,
+                      endHour: settings.visibleEndHour,
+                      scrollController: _overlayScrollController,
+                      timeTextStyle: theme.textTheme.small,
+                      backgroundColor: theme.colorScheme.background,
+                      borderColor: theme.colorScheme.border,
+                    ),
+                  ),
+                ],
               );
             }
             return calendarWidget;
