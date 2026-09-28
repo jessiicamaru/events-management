@@ -7,6 +7,7 @@ import 'package:habit_tracker/features/calendar/presentation/providers/event_cat
 import 'package:habit_tracker/features/calendar/models/event_category.dart';
 import 'package:habit_tracker/features/settings/presentation/category_management_screen.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/habit_card.dart';
 
 class HabitDock extends ConsumerWidget {
   final List<HabitModel> habits;
@@ -73,8 +74,8 @@ class HabitDock extends ConsumerWidget {
   }
 
   Widget _buildDraggableHabit(BuildContext context, HabitModel habit, ShadThemeData theme, List<EventCategory> categories, dynamic translations) {
-    Color habitColor = AppTheme.getHabitColor(null);
     String categoryName = translations.translate('uncategorized');
+    String? categoryPreset;
 
     if (habit.categoryId != null) {
       final category = categories.firstWhere(
@@ -82,43 +83,18 @@ class HabitDock extends ConsumerWidget {
         orElse: () => const EventCategory(id: '', name: 'Uncategorized', colorPreset: 'Slate'),
       );
       if (category.id.isNotEmpty) {
-        habitColor = colorPalette[category.colorPreset] ?? Colors.blueGrey;
+        categoryPreset = category.colorPreset;
         categoryName = category.name;
       }
     }
 
-    final habitCard = Container(
+    final habitCard = SizedBox(
       width: 140,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: habitColor.withValues(alpha: 0.15),
-        border: Border.all(color: habitColor.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            habit.name,
-            style: theme.textTheme.small.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.foreground,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            categoryName,
-            style: theme.textTheme.small.copyWith(
-              color: theme.colorScheme.mutedForeground,
-              fontSize: 10,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+      child: HabitCard(
+        habit: habit,
+        categoryName: categoryName,
+        categoryColorPreset: categoryPreset,
+        compact: true,
       ),
     );
 
@@ -134,11 +110,17 @@ class HabitDock extends ConsumerWidget {
           ),
         ),
       ),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
+      childWhenDragging: Container(
+        alignment: Alignment.center,
+        child: Opacity(
+          opacity: 0.3,
+          child: habitCard,
+        ),
+      ),
+      child: Container(
+        alignment: Alignment.center,
         child: habitCard,
       ),
-      child: habitCard,
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:habit_tracker/features/habits/presentation/providers/heatmap_pro
 import 'package:habit_tracker/features/habits/presentation/widgets/heatmap_widget.dart';
 import 'package:habit_tracker/features/habits/presentation/widgets/add_habit_dialog.dart';
 import 'package:habit_tracker/features/habits/presentation/widgets/edit_habit_dialog.dart';
+import 'package:habit_tracker/features/habits/presentation/widgets/habit_card.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 
@@ -69,66 +70,48 @@ class HabitsScreen extends ConsumerWidget {
                               final habit = habits[index];
                               
                               String categoryText = translations.translate('uncategorized');
+                              String? categoryPreset;
                               if (habit.categoryId != null) {
                                 categoriesAsync.whenData((categories) {
                                   final cat = categories.where((c) => c.id == habit.categoryId).firstOrNull;
                                   if (cat != null) {
                                     categoryText = cat.name;
+                                    categoryPreset = cat.colorPreset;
                                   }
                                 });
                               }
 
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
-                                child: ShadCard(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                child: HabitCard(
+                                  habit: habit,
+                                  categoryName: categoryText,
+                                  categoryColorPreset: categoryPreset,
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                      if (habit.currentStreak > 0)
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          mainAxisAlignment: MainAxisAlignment.center,
                                           children: [
-                                            Text(
-                                              translations.translate(habit.name),
-                                              style: theme.textTheme.large,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            ShadBadge.secondary(
-                                              child: Text(categoryText),
+                                            Row(
+                                              children: [
+                                                const Icon(LucideIcons.flame, color: Colors.orange, size: 18),
+                                                const SizedBox(width: 4),
+                                                Text('${habit.currentStreak}', style: theme.textTheme.large.copyWith(color: Colors.orange)),
+                                              ],
                                             ),
                                           ],
                                         ),
-                                      ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Column(
-                                            crossAxisAlignment: CrossAxisAlignment.end,
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              if (habit.currentStreak > 0)
-                                                Row(
-                                                  children: [
-                                                    const Icon(LucideIcons.flame, color: Colors.orange, size: 18),
-                                                    const SizedBox(width: 4),
-                                                    Text('${habit.currentStreak}', style: theme.textTheme.large.copyWith(color: Colors.orange)),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          const SizedBox(width: 12),
-                                          ShadButton.ghost(
-                                            size: ShadButtonSize.sm,
-                                            onPressed: () => showDialog(
-                                              context: context,
-                                              builder: (context) => EditHabitDialog(habit: habit),
-                                            ),
-                                            child: const Icon(LucideIcons.pencil, size: 16),
-                                          ),
-                                        ],
+                                      const SizedBox(width: 12),
+                                      ShadButton.ghost(
+                                        size: ShadButtonSize.sm,
+                                        onPressed: () => showDialog(
+                                          context: context,
+                                          builder: (context) => EditHabitDialog(habit: habit),
+                                        ),
+                                        child: const Icon(LucideIcons.pencil, size: 16),
                                       ),
                                     ],
                                   ),

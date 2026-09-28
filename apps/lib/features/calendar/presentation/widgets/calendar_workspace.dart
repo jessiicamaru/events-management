@@ -24,7 +24,7 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/sticky_time
 const double _kTimeRulerWidth = 60.0;
 
 /// Explicit view header height for sticky overlay alignment.
-const double _kViewHeaderHeight = 55.0;
+const double _kViewHeaderHeight = 65.0;
 
 /// Height of each time interval slot (logical pixels).
 const double _kTimeIntervalHeight = 50.0;
@@ -440,6 +440,40 @@ class EventDataSource extends CalendarDataSource {
     return isPersonal
         ? theme.colorScheme.primary
         : theme.colorScheme.primary.withValues(alpha: 0.6);
+  }
+
+  @override
+  Object? getId(int index) => (appointments![index] as EventModel).id;
+
+  @override
+  Appointment? convertToCalendarAppointment(Object? customData) {
+    if (customData is EventModel) {
+      final isPersonal = customData.userId == currentUserId;
+      final color = customData.isCompleted 
+          ? (isPersonal ? const Color(0xFF10B981) : const Color(0xFF10B981).withValues(alpha: 0.6))
+          : (isPersonal ? theme.colorScheme.primary : theme.colorScheme.primary.withValues(alpha: 0.6));
+
+      return Appointment(
+        startTime: customData.startTime.toLocal(),
+        endTime: customData.endTime.toLocal(),
+        subject: customData.title,
+        color: color,
+        id: customData.id,
+        isAllDay: false,
+      );
+    }
+    return super.convertToCalendarAppointment(customData);
+  }
+
+  @override
+  Object? convertAppointmentToObject(Object? customData, Appointment appointment) {
+    if (customData is EventModel) {
+      return customData.copyWith(
+        startTime: appointment.startTime.toUtc(),
+        endTime: appointment.endTime.toUtc(),
+      );
+    }
+    return super.convertAppointmentToObject(customData, appointment);
   }
 
   @override
