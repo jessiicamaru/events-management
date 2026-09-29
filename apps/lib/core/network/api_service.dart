@@ -321,4 +321,26 @@ class ApiService {
     }
     await _dio.delete('/event-categories/$id', queryParameters: queryParams);
   }
+
+  // --- Google Calendar Sync ---
+
+  Future<void> connectGoogleCalendar(String authCode, String email) async {
+    await _dio.post('/google-calendar/connect', data: {
+      'authCode': authCode,
+      'googleEmail': email,
+    });
+  }
+
+  Future<void> syncGoogleCalendar() async {
+    await _dio.post(
+      '/google-calendar/sync',
+      options: Options(
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+  }
+
+  Future<void> disconnectGoogleCalendar() async {
+    await _dio.post('/google-calendar/disconnect');
+  }
 }
