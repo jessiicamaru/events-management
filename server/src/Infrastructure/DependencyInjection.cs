@@ -1,6 +1,7 @@
 using HabitTracker.Domain.Interfaces;
 using HabitTracker.Infrastructure.Data;
 using HabitTracker.Infrastructure.Repositories;
+using HabitTracker.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<ISquadRepository, SquadRepository>();
         services.AddScoped<IHabitTaskRepository, HabitTaskRepository>();
         services.AddScoped<IEventTaskRepository, EventTaskRepository>();
+        services.AddScoped<IGoogleCalendarService, GoogleCalendarService>();
         services.AddScoped<ApplicationDbContextInitialiser>();
 
         return services;
