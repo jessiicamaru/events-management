@@ -15,5 +15,9 @@ namespace HabitTracker.Domain.Entities
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
         public string? Avatar { get; set; }
+        
+        // Google Calendar Sync Fields
+        public string? GoogleRefreshToken { get; set; }
+        public string? GoogleEmail { get; set; }
     }
 }
