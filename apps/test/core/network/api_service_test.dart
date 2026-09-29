@@ -36,6 +36,30 @@ void main() {
               ),
             );
           }
+          if (options.path == '/google-calendar/connect' && options.method == 'POST') {
+            return handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+              ),
+            );
+          }
+          if (options.path == '/google-calendar/sync' && options.method == 'POST') {
+            return handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+              ),
+            );
+          }
+          if (options.path == '/google-calendar/disconnect' && options.method == 'POST') {
+            return handler.resolve(
+              Response(
+                requestOptions: options,
+                statusCode: 200,
+              ),
+            );
+          }
           return handler.next(options);
         },
       ));
@@ -60,6 +84,18 @@ void main() {
       );
       
       await expectLater(apiService.syncHabit(habit), completes);
+    });
+
+    test('connectGoogleCalendar calls correct endpoint and completes', () async {
+      await expectLater(apiService.connectGoogleCalendar('code', 'email@test.com'), completes);
+    });
+
+    test('syncGoogleCalendar calls correct endpoint and completes', () async {
+      await expectLater(apiService.syncGoogleCalendar(), completes);
+    });
+
+    test('disconnectGoogleCalendar calls correct endpoint and completes', () async {
+      await expectLater(apiService.disconnectGoogleCalendar(), completes);
     });
   });
 }
