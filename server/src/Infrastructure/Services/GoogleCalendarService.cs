@@ -31,33 +31,48 @@ namespace HabitTracker.Infrastructure.Services
             {
                 var clientId = _configuration["GoogleCalendar:ClientId"];
                 var clientSecret = _configuration["GoogleCalendar:ClientSecret"];
-                var redirectUri = _configuration["GoogleCalendar:RedirectUri"] ?? "postmessage";
-
-                var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+                var redirectUri = _configuration["GoogleCalendar:RedirectUri"];
+                if (string.IsNullOrWhiteSpace(redirectUri))
                 {
-                    ClientSecrets = new ClientSecrets
-                    {
-                        ClientId = clientId,
-                        ClientSecret = clientSecret
-                    },
-                    Scopes = new[] { CalendarService.Scope.Calendar }
-                });
+                    redirectUri = "http://localhost:5000";
+                }
 
-                var tokenResponse = await flow.ExchangeCodeForTokenAsync(
-                    userId: userId,
-                    code: authCode,
-                    redirectUri: redirectUri,
+                using var httpClient = new System.Net.Http.HttpClient();
+                var requestBody = new Dictionary<string, string>
+                {
+                    { "code", authCode },
+                    { "client_id", clientId ?? "" },
+                    { "client_secret", clientSecret ?? "" },
+                    { "redirect_uri", redirectUri },
+                    { "grant_type", "authorization_code" },
+                };
+
+                var response = await httpClient.PostAsync(
+                    "https://oauth2.googleapis.com/token",
+                    new System.Net.Http.FormUrlEncodedContent(requestBody),
                     cancellationToken
                 );
 
-                return tokenResponse?.RefreshToken;
+                var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    Console.WriteLine($"Google Auth Exchange Error: {responseContent}");
+                    return null;
+                }
+
+                var json = System.Text.Json.JsonDocument.Parse(responseContent);
+                var refreshToken = json.RootElement.TryGetProperty("refresh_token", out var rt) ? rt.GetString() : null;
+                Console.WriteLine($"Google Auth Exchange: Success, got refresh_token={refreshToken != null}");
+                return refreshToken;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Google Auth Exchange Error: {ex}");
+                Console.WriteLine($"Google Auth Exchange Error: {ex.Message}");
                 return null;
             }
         }
+
 
         private static DateTime GetGoogleDateTime(Google.Apis.Calendar.v3.Data.EventDateTime? googleTime)
         {
