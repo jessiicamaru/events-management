@@ -131,27 +131,41 @@ class EventDetailsDialog extends ConsumerWidget {
                   Expanded(
                     child: ShadButton.destructive(
                       onPressed: () async {
-                        final confirm = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) => ShadDialog(
-                            title: Text(translations.translate('delete_event_confirm_title')),
-                            description: Text(translations.translate('delete_event_confirm_desc')),
-                            actions: [
-                              ShadButton.outline(
-                                onPressed: () => Navigator.of(ctx).pop(false),
-                                child: Text(translations.translate('cancel')),
-                              ),
-                              ShadButton.destructive(
-                                onPressed: () => Navigator.of(ctx).pop(true),
-                                child: Text(translations.translate('delete')),
-                              ),
-                            ],
-                          ),
-                        );
+                        String? deleteScope;
+                        DateTime? originalOccurrenceDate;
 
-                        if (confirm == true && context.mounted) {
+                        if (event.recurrenceRule != null || event.parentEventId != null) {
+                          deleteScope = await showRecurrenceDeleteOptionDialog(context, translations);
+                          if (deleteScope == null) return;
+                          originalOccurrenceDate = event.startTime;
+                        } else {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => ShadDialog(
+                              title: Text(translations.translate('delete_event_confirm_title')),
+                              description: Text(translations.translate('delete_event_confirm_desc')),
+                              actions: [
+                                ShadButton.outline(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: Text(translations.translate('cancel')),
+                                ),
+                                ShadButton.destructive(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: Text(translations.translate('delete')),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true) return;
+                        }
+
+                        if (context.mounted) {
                           try {
-                            await ref.read(eventsProvider.notifier).deleteEvent(event.id);
+                            await ref.read(eventsProvider.notifier).deleteEvent(
+                              event.id,
+                              deleteScope: deleteScope,
+                              originalOccurrenceDate: originalOccurrenceDate,
+                            );
                             if (context.mounted) {
                               Navigator.of(context).pop();
                               ShadToaster.of(context).show(
@@ -218,4 +232,32 @@ class EventDetailsDialog extends ConsumerWidget {
       ],
     );
   }
+}
+
+Future<String?> showRecurrenceDeleteOptionDialog(BuildContext context, AppTranslations translations) async {
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(translations.translate('delete_recurring_event')),
+      content: Text(translations.translate('delete_recurring_event_prompt')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisOccurrence'),
+          child: Text(translations.translate('this_occurrence')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisAndFuture'),
+          child: Text(translations.translate('this_and_future_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('AllOccurrences'),
+          child: Text(translations.translate('all_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(translations.translate('cancel')),
+        ),
+      ],
+    ),
+  );
 }

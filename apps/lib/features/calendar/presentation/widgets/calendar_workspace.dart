@@ -254,8 +254,24 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                           startTime: details.droppingTime!,
                           endTime: details.droppingTime!.add(duration),
                         );
+                        
+                        String? editScope;
+                        DateTime? originalOccurrenceDate;
+                        if (event.recurrenceRule != null || event.parentEventId != null) {
+                          editScope = await showRecurrenceEditOptionDialog(context, translations);
+                          if (editScope == null) {
+                            ref.invalidate(eventsProvider);
+                            return;
+                          }
+                          originalOccurrenceDate = event.startTime;
+                        }
+
                         try {
-                          await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                          await ref.read(eventsProvider.notifier).updateEvent(
+                            updatedEvent, 
+                            editScope: editScope, 
+                            originalOccurrenceDate: originalOccurrenceDate
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             ShadToaster.of(context).show(
@@ -277,8 +293,24 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
                           startTime: details.startTime!,
                           endTime: details.endTime!,
                         );
+
+                        String? editScope;
+                        DateTime? originalOccurrenceDate;
+                        if (event.recurrenceRule != null || event.parentEventId != null) {
+                          editScope = await showRecurrenceEditOptionDialog(context, translations);
+                          if (editScope == null) {
+                            ref.invalidate(eventsProvider);
+                            return;
+                          }
+                          originalOccurrenceDate = event.startTime;
+                        }
+
                         try {
-                          await ref.read(eventsProvider.notifier).updateEvent(updatedEvent);
+                          await ref.read(eventsProvider.notifier).updateEvent(
+                            updatedEvent, 
+                            editScope: editScope, 
+                            originalOccurrenceDate: originalOccurrenceDate
+                          );
                         } catch (e) {
                           if (context.mounted) {
                             ShadToaster.of(context).show(
@@ -485,6 +517,23 @@ class EventDataSource extends CalendarDataSource {
   Object? getId(int index) => (appointments![index] as EventModel).id;
 
   @override
+  String? getRecurrenceRule(int index) => (appointments![index] as EventModel).recurrenceRule;
+
+  @override
+  List<DateTime>? getRecurrenceExceptionDates(int index) {
+    final event = appointments![index] as EventModel;
+    if (event.recurrenceExceptionDates == null || event.recurrenceExceptionDates!.isEmpty) return null;
+    try {
+      return event.recurrenceExceptionDates!
+          .split(',')
+          .map((d) => DateTime.parse(d).toLocal())
+          .toList();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  @override
   Object? convertAppointmentToObject(Object? customData, Appointment appointment) {
     if (customData is EventModel) {
       return customData.copyWith(
@@ -497,4 +546,32 @@ class EventDataSource extends CalendarDataSource {
 
   @override
   bool isAllDay(int index) => false;
+}
+
+Future<String?> showRecurrenceEditOptionDialog(BuildContext context, AppTranslations translations) async {
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(translations.translate('edit_recurring_event')),
+      content: Text(translations.translate('edit_recurring_event_prompt')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisOccurrence'),
+          child: Text(translations.translate('this_occurrence')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisAndFuture'),
+          child: Text(translations.translate('this_and_future_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('AllOccurrences'),
+          child: Text(translations.translate('all_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(translations.translate('cancel')),
+        ),
+      ],
+    ),
+  );
 }

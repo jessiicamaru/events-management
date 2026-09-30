@@ -98,8 +98,14 @@ class ApiService {
     );
   }
 
-  Future<void> deleteEvent(String id) async {
-    await _dio.delete('/events/$id');
+  Future<void> deleteEvent(String id, {String? deleteScope, DateTime? originalOccurrenceDate}) async {
+    await _dio.delete(
+      '/events/$id',
+      queryParameters: {
+        if (deleteScope != null) 'deleteScope': deleteScope,
+        if (originalOccurrenceDate != null) 'originalOccurrenceDate': originalOccurrenceDate.toUtc().toIso8601String(),
+      },
+    );
   }
 
   Future<void> updateEvent(String id, Map<String, dynamic> data) async {

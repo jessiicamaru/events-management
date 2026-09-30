@@ -43,6 +43,8 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   TimeOfDay _endTime = const TimeOfDay(hour: 8, minute: 0);
   bool _isSubmitting = false;
   List<EventTaskModel>? _localTasks;
+  String _selectedRepeatPreset = 'none';
+  String? _recurrenceRule;
 
   @override
   void initState() {
@@ -58,6 +60,24 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
         _targetDurationController.text = evt.targetDuration.toString();
       } else {
         _updateTargetDuration();
+      }
+      _recurrenceRule = evt.recurrenceRule;
+      if (_recurrenceRule == null || _recurrenceRule!.isEmpty) {
+        _selectedRepeatPreset = 'none';
+      } else if (_recurrenceRule == 'RRULE:FREQ=DAILY;INTERVAL=1') {
+        _selectedRepeatPreset = 'daily';
+      } else if (_recurrenceRule == 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR') {
+        _selectedRepeatPreset = 'weekday';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=')) {
+        _selectedRepeatPreset = 'weekly';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=')) {
+        _selectedRepeatPreset = 'biweekly';
+      } else if (_recurrenceRule!.startsWith('RRULE:FREQ=MONTHLY;BYMONTHDAY=')) {
+        _selectedRepeatPreset = 'monthly';
+      } else if (_recurrenceRule == 'RRULE:FREQ=YEARLY') {
+        _selectedRepeatPreset = 'yearly';
+      } else {
+        _selectedRepeatPreset = 'custom';
       }
     } else if (widget.initialDate != null) {
       _startDate = widget.initialDate!;
@@ -111,6 +131,84 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  String _getWeekdayName(int weekday, AppTranslations translations) {
+    switch (weekday) {
+      case DateTime.monday: return translations.translate('monday') ?? 'Monday';
+      case DateTime.tuesday: return translations.translate('tuesday') ?? 'Tuesday';
+      case DateTime.wednesday: return translations.translate('wednesday') ?? 'Wednesday';
+      case DateTime.thursday: return translations.translate('thursday') ?? 'Thursday';
+      case DateTime.friday: return translations.translate('friday') ?? 'Friday';
+      case DateTime.saturday: return translations.translate('saturday') ?? 'Saturday';
+      case DateTime.sunday: return translations.translate('sunday') ?? 'Sunday';
+      default: return '';
+    }
+  }
+
+  void _handleRepeatPresetChanged(String? preset) async {
+    if (preset == null || preset == 'none') {
+      setState(() {
+        _selectedRepeatPreset = 'none';
+        _recurrenceRule = null;
+      });
+      return;
+    }
+
+    if (preset == 'custom') {
+      final customRule = await showDialog<String>(
+        context: context,
+        builder: (context) => CustomRecurrenceDialog(initialRrule: _recurrenceRule),
+      );
+      if (customRule != null) {
+        setState(() {
+          _selectedRepeatPreset = 'custom';
+          _recurrenceRule = customRule;
+        });
+      } else {
+        // Revert preset if cancelled
+        setState(() {});
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedRepeatPreset = preset;
+      final weekdayCode = _getWeekdayCode(_startDate.weekday);
+      switch (preset) {
+        case 'daily':
+          _recurrenceRule = 'RRULE:FREQ=DAILY;INTERVAL=1';
+          break;
+        case 'weekday':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+          break;
+        case 'weekly':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=$weekdayCode';
+          break;
+        case 'biweekly':
+          _recurrenceRule = 'RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=$weekdayCode';
+          break;
+        case 'monthly':
+          _recurrenceRule = 'RRULE:FREQ=MONTHLY;BYMONTHDAY=${_startDate.day}';
+          break;
+        case 'yearly':
+          _recurrenceRule = 'RRULE:FREQ=YEARLY';
+          break;
+      }
+    });
+  }
+
+  String _getWeekdayCode(int weekday) {
+    switch (weekday) {
+      case DateTime.monday: return 'MO';
+      case DateTime.tuesday: return 'TU';
+      case DateTime.wednesday: return 'WE';
+      case DateTime.thursday: return 'TH';
+      case DateTime.friday: return 'FR';
+      case DateTime.saturday: return 'SA';
+      case DateTime.sunday: return 'SU';
+      default: return 'MO';
     }
   }
 
@@ -192,11 +290,27 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       createdAt: widget.eventToEdit?.createdAt,
       userId: widget.eventToEdit?.userId,
       categoryId: _selectedCategoryId,
+      recurrenceRule: _recurrenceRule,
     );
+
+    String? editScope;
+    DateTime? originalOccurrenceDate;
+    if (widget.eventToEdit != null && (widget.eventToEdit!.recurrenceRule != null || widget.eventToEdit!.parentEventId != null)) {
+      editScope = await showRecurrenceEditOptionDialog(context, translations);
+      if (editScope == null) {
+        setState(() => _isSubmitting = false);
+        return;
+      }
+      originalOccurrenceDate = widget.eventToEdit!.startTime;
+    }
 
     try {
       if (widget.eventToEdit != null) {
-        await ref.read(eventsProvider.notifier).updateEvent(event);
+        await ref.read(eventsProvider.notifier).updateEvent(
+          event, 
+          editScope: editScope, 
+          originalOccurrenceDate: originalOccurrenceDate
+        );
       } else {
         await ref.read(eventsProvider.notifier).addEvent(event);
       }
@@ -397,13 +511,51 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
 
                   const SizedBox(height: 16),
 
-                  // Target Duration
+                   // Target Duration
                   Text(translations.translate('target_duration'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   ShadInput(
                     controller: _targetDurationController,
                     placeholder: Text(translations.translate('duration_placeholder')),
                     keyboardType: TextInputType.number,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(translations.translate('repeat') ?? 'Repeat', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadSelect<String>(
+                      placeholder: Text(translations.translate('does_not_repeat')),
+                      initialValue: _selectedRepeatPreset,
+                      onChanged: (val) {
+                        _handleRepeatPresetChanged(val);
+                      },
+                      options: [
+                        ShadOption(value: 'none', child: Text(translations.translate('does_not_repeat'))),
+                        ShadOption(value: 'daily', child: Text(translations.translate('every_day'))),
+                        ShadOption(value: 'weekday', child: Text(translations.translate('every_weekday'))),
+                        ShadOption(value: 'weekly', child: Text('${translations.translate('every_week')} ${_getWeekdayName(_startDate.weekday, translations)}')),
+                        ShadOption(value: 'biweekly', child: Text('${translations.translate('every_2_weeks')} ${_getWeekdayName(_startDate.weekday, translations)}')),
+                        ShadOption(value: 'monthly', child: Text('${translations.translate('every_month')} ${_startDate.day}')),
+                        ShadOption(value: 'yearly', child: Text('${translations.translate('every_year')} ${DateFormat('MMM d').format(_startDate)}')),
+                        ShadOption(value: 'custom', child: Text(translations.translate('custom_dots'))),
+                      ],
+                      selectedOptionBuilder: (context, value) {
+                        switch (value) {
+                          case 'none': return Text(translations.translate('does_not_repeat'));
+                          case 'daily': return Text(translations.translate('every_day'));
+                          case 'weekday': return Text(translations.translate('every_weekday'));
+                          case 'weekly': return Text('${translations.translate('every_week')} ${_getWeekdayName(_startDate.weekday, translations)}');
+                          case 'biweekly': return Text('${translations.translate('every_2_weeks')} ${_getWeekdayName(_startDate.weekday, translations)}');
+                          case 'monthly': return Text('${translations.translate('every_month')} ${_startDate.day}');
+                          case 'yearly': return Text('${translations.translate('every_year')} ${DateFormat('MMM d').format(_startDate)}');
+                          case 'custom': return Text(translations.translate('custom'));
+                          default: return Text(translations.translate('does_not_repeat'));
+                        }
+                      },
+                    ),
                   ),
 
                   const SizedBox(height: 28),
@@ -425,4 +577,249 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       ),
     );
   }
+}
+
+class CustomRecurrenceDialog extends StatefulWidget {
+  final String? initialRrule;
+  const CustomRecurrenceDialog({super.key, this.initialRrule});
+
+  @override
+  State<CustomRecurrenceDialog> createState() => _CustomRecurrenceDialogState();
+}
+
+class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
+  String _freq = 'DAILY';
+  int _interval = 1;
+  List<String> _byDays = [];
+  String _endType = 'never'; // 'never', 'date', 'count'
+  DateTime _untilDate = DateTime.now().add(const Duration(days: 30));
+  int _count = 10;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialRrule != null && widget.initialRrule!.isNotEmpty) {
+      final parts = widget.initialRrule!.replaceAll('RRULE:', '').split(';');
+      for (final part in parts) {
+        if (part.startsWith('FREQ=')) _freq = part.substring(5);
+        if (part.startsWith('INTERVAL=')) _interval = int.tryParse(part.substring(9)) ?? 1;
+        if (part.startsWith('BYDAY=')) _byDays = part.substring(6).split(',');
+        if (part.startsWith('UNTIL=')) {
+          _endType = 'date';
+          final dateStr = part.substring(6);
+          if (dateStr.length >= 8) {
+            final y = int.parse(dateStr.substring(0, 4));
+            final m = int.parse(dateStr.substring(4, 6));
+            final d = int.parse(dateStr.substring(6, 8));
+            _untilDate = DateTime(y, m, d);
+          }
+        }
+        if (part.startsWith('COUNT=')) {
+          _endType = 'count';
+          _count = int.tryParse(part.substring(6)) ?? 10;
+        }
+      }
+    }
+  }
+
+  String _buildRrule() {
+    final List<String> rruleParts = [];
+    rruleParts.add('FREQ=$_freq');
+    rruleParts.add('INTERVAL=$_interval');
+    if (_freq == 'WEEKLY' && _byDays.isNotEmpty) {
+      rruleParts.add('BYDAY=${_byDays.join(',')}');
+    }
+    if (_endType == 'date') {
+      rruleParts.add('UNTIL=${_untilDate.toUtc().toString().replaceAll('-', '').replaceAll(':', '').split('.').first}Z');
+    } else if (_endType == 'count') {
+      rruleParts.add('COUNT=$_count');
+    }
+    return 'RRULE:${rruleParts.join(';')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ShadTheme.of(context);
+
+    return AlertDialog(
+      title: const Text('Custom Recurrence'),
+      backgroundColor: theme.colorScheme.background,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Repeat every', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 60,
+                  child: ShadInput(
+                    initialValue: _interval.toString(),
+                    keyboardType: TextInputType.number,
+                    onChanged: (val) {
+                      setState(() {
+                        _interval = int.tryParse(val) ?? 1;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ShadSelect<String>(
+                    initialValue: _freq,
+                    onChanged: (val) {
+                      if (val != null) setState(() => _freq = val);
+                    },
+                    options: const [
+                      ShadOption(value: 'DAILY', child: Text('Day(s)')),
+                      ShadOption(value: 'WEEKLY', child: Text('Week(s)')),
+                      ShadOption(value: 'MONTHLY', child: Text('Month(s)')),
+                      ShadOption(value: 'YEARLY', child: Text('Year(s)')),
+                    ],
+                    selectedOptionBuilder: (context, value) => Text(value == 'DAILY' ? 'Day(s)' : value == 'WEEKLY' ? 'Week(s)' : value == 'MONTHLY' ? 'Month(s)' : 'Year(s)'),
+                  ),
+                ),
+              ],
+            ),
+            if (_freq == 'WEEKLY') ...[
+              const SizedBox(height: 16),
+              const Text('Repeat on', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map((day) {
+                  final isSelected = _byDays.contains(day);
+                  if (isSelected) {
+                    return ShadButton(
+                      size: ShadButtonSize.sm,
+                      onPressed: () {
+                        setState(() {
+                          _byDays.remove(day);
+                        });
+                      },
+                      child: Text(day.substring(0, 1)),
+                    );
+                  } else {
+                    return ShadButton.outline(
+                      size: ShadButtonSize.sm,
+                      onPressed: () {
+                        setState(() {
+                          _byDays.add(day);
+                        });
+                      },
+                      child: Text(day.substring(0, 1)),
+                    );
+                  }
+                }).toList(),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const Text('Ends', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Column(
+              children: [
+                RadioListTile<String>(
+                  title: const Text('Never'),
+                  value: 'never',
+                  groupValue: _endType,
+                  onChanged: (val) => setState(() => _endType = val!),
+                ),
+                RadioListTile<String>(
+                  title: Row(
+                    children: [
+                      const Text('On '),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ShadButton.outline(
+                          size: ShadButtonSize.sm,
+                          onPressed: _endType == 'date' ? () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: _untilDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) setState(() => _untilDate = picked);
+                          } : null,
+                          child: Text(DateFormat('yyyy-MM-dd').format(_untilDate)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  value: 'date',
+                  groupValue: _endType,
+                  onChanged: (val) => setState(() => _endType = val!),
+                ),
+                RadioListTile<String>(
+                  title: Row(
+                    children: [
+                      const Text('After '),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 60,
+                        child: ShadInput(
+                          initialValue: _count.toString(),
+                          keyboardType: TextInputType.number,
+                          onChanged: (val) {
+                            setState(() {
+                              _count = int.tryParse(val) ?? 10;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('occurrences'),
+                    ],
+                  ),
+                  value: 'count',
+                  groupValue: _endType,
+                  onChanged: (val) => setState(() => _endType = val!),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        ShadButton.outline(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ShadButton(
+          onPressed: () => Navigator.of(context).pop(_buildRrule()),
+          child: const Text('Done'),
+        ),
+      ],
+    );
+  }
+}
+
+Future<String?> showRecurrenceEditOptionDialog(BuildContext context, AppTranslations translations) async {
+  return showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(translations.translate('edit_recurring_event')),
+      content: Text(translations.translate('edit_recurring_event_prompt')),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisOccurrence'),
+          child: Text(translations.translate('this_occurrence')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('ThisAndFuture'),
+          child: Text(translations.translate('this_and_future_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop('AllOccurrences'),
+          child: Text(translations.translate('all_occurrences')),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: Text(translations.translate('cancel')),
+        ),
+      ],
+    ),
+  );
 }

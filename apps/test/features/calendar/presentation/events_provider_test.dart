@@ -20,12 +20,19 @@ class MockApiService implements ApiService {
   @override
   Future<void> updateEvent(String id, Map<String, dynamic> data) async {
     updateEventCalled = true;
+    final index = eventsToReturn.indexWhere((e) => e.id == id);
+    if (index != -1) {
+      eventsToReturn[index] = eventsToReturn[index].copyWith(
+        title: data['title'] ?? eventsToReturn[index].title,
+      );
+    }
   }
 
   bool deleteEventCalled = false;
   @override
-  Future<void> deleteEvent(String id) async {
+  Future<void> deleteEvent(String id, {String? deleteScope, DateTime? originalOccurrenceDate}) async {
     deleteEventCalled = true;
+    eventsToReturn.removeWhere((e) => e.id == id);
   }
 
   @override
