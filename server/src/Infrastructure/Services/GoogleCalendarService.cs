@@ -59,6 +59,16 @@ namespace HabitTracker.Infrastructure.Services
             }
         }
 
+        private static DateTime GetGoogleDateTime(Google.Apis.Calendar.v3.Data.EventDateTime? googleTime)
+        {
+            if (googleTime == null) return DateTime.UtcNow;
+            if (googleTime.DateTimeDateTimeOffset.HasValue)
+                return googleTime.DateTimeDateTimeOffset.Value.UtcDateTime;
+            if (!string.IsNullOrEmpty(googleTime.Date))
+                return DateTime.SpecifyKind(DateTime.Parse(googleTime.Date), DateTimeKind.Utc);
+            return DateTime.UtcNow;
+        }
+
         public async Task<bool> SyncEventsAsync(string userId, string refreshToken, CancellationToken cancellationToken)
         {
             try
@@ -91,10 +101,10 @@ namespace HabitTracker.Infrastructure.Services
                 });
 
                 var listRequest = calendarService.Events.List("primary");
-                listRequest.TimeMinDateTimeOffset = DateTime.UtcNow.AddDays(-30);
-                listRequest.TimeMaxDateTimeOffset = DateTime.UtcNow.AddDays(60);
-                listRequest.SingleEvents = true;
-                listRequest.ShowDeleted = false;
+                listRequest.TimeMinDateTimeOffset = DateTime.UtcNow.AddDays(-7);
+                listRequest.TimeMaxDateTimeOffset = DateTime.UtcNow.AddDays(14);
+                listRequest.SingleEvents = false;
+                listRequest.ShowDeleted = true;
 
                 var googleEventsList = await listRequest.ExecuteAsync(cancellationToken);
                 var googleEvents = googleEventsList.Items ?? new List<Google.Apis.Calendar.v3.Data.Event>();
@@ -104,65 +114,169 @@ namespace HabitTracker.Infrastructure.Services
 
                 var googleEventIds = googleEvents.Select(ge => ge.Id).ToHashSet();
 
-                // 1. Delete events locally that were removed in Google Calendar
+                // 1. Delete events locally that are no longer in Google Calendar or are marked cancelled (for non-recurring events)
                 foreach (var localEvent in localGoogleEvents)
                 {
-                    if (!googleEventIds.Contains(localEvent.GoogleEventId!))
+                    var matchingGe = googleEvents.FirstOrDefault(ge => ge.Id == localEvent.GoogleEventId);
+                    if (matchingGe == null || (matchingGe.Status == "cancelled" && string.IsNullOrEmpty(matchingGe.RecurringEventId)))
                     {
                         await _eventRepository.DeleteAsync(localEvent.Id);
                     }
                 }
 
-                // 2. Add or Update events
-                foreach (var googleEvent in googleEvents)
+                // Refresh local google events list
+                localEvents = await _eventRepository.GetEventsForUserAsync(userId);
+                localGoogleEvents = localEvents.Where(e => !string.IsNullOrEmpty(e.GoogleEventId)).ToList();
+
+                // 2. Separate Google Events into Masters, Exceptions, and regular events
+                var masterEvents = googleEvents.Where(ge => ge.Status != "cancelled" && ge.Recurrence != null && ge.Recurrence.Any()).ToList();
+                var exceptionEvents = googleEvents.Where(ge => ge.RecurringEventId != null).ToList();
+                var regularEvents = googleEvents.Where(ge => ge.Status != "cancelled" && (ge.Recurrence == null || !ge.Recurrence.Any()) && ge.RecurringEventId == null).ToList();
+
+                // 3. Process Master Events
+                foreach (var ge in masterEvents)
                 {
-                    var existingLocalEvent = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == googleEvent.Id);
-
-                    DateTime startTime = DateTime.UtcNow;
-                    DateTime endTime = DateTime.UtcNow.AddHours(1);
-
-                    if (googleEvent.Start != null)
-                    {
-                        if (googleEvent.Start.DateTimeDateTimeOffset.HasValue)
-                            startTime = googleEvent.Start.DateTimeDateTimeOffset.Value.UtcDateTime;
-                        else if (!string.IsNullOrEmpty(googleEvent.Start.Date))
-                            startTime = DateTime.SpecifyKind(DateTime.Parse(googleEvent.Start.Date), DateTimeKind.Utc);
-                    }
-
-                    if (googleEvent.End != null)
-                    {
-                        if (googleEvent.End.DateTimeDateTimeOffset.HasValue)
-                            endTime = googleEvent.End.DateTimeDateTimeOffset.Value.UtcDateTime;
-                        else if (!string.IsNullOrEmpty(googleEvent.End.Date))
-                            endTime = DateTime.SpecifyKind(DateTime.Parse(googleEvent.End.Date), DateTimeKind.Utc);
-                    }
-
+                    var existingLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id && le.ParentEventId == null);
+                    var rrule = ge.Recurrence.First();
+                    
+                    DateTime startTime = GetGoogleDateTime(ge.Start);
+                    DateTime endTime = GetGoogleDateTime(ge.End);
                     var targetDuration = endTime - startTime;
 
-                    if (existingLocalEvent != null)
+                    if (existingLocal != null)
                     {
-                        existingLocalEvent.Title = googleEvent.Summary ?? "(No Title)";
-                        existingLocalEvent.StartTime = startTime;
-                        existingLocalEvent.EndTime = endTime;
-                        existingLocalEvent.TargetDuration = targetDuration;
-
-                        await _eventRepository.UpdateAsync(existingLocalEvent);
+                        existingLocal.Title = ge.Summary ?? "(No Title)";
+                        existingLocal.StartTime = startTime;
+                        existingLocal.EndTime = endTime;
+                        existingLocal.TargetDuration = targetDuration;
+                        existingLocal.RecurrenceRule = rrule;
+                        await _eventRepository.UpdateAsync(existingLocal);
                     }
                     else
                     {
                         var newEvent = new Event
                         {
                             Id = Guid.NewGuid(),
-                            Title = googleEvent.Summary ?? "(No Title)",
+                            Title = ge.Summary ?? "(No Title)",
                             StartTime = startTime,
                             EndTime = endTime,
                             TargetDuration = targetDuration,
                             UserId = userId,
-                            GoogleEventId = googleEvent.Id,
+                            GoogleEventId = ge.Id,
+                            RecurrenceRule = rrule,
                             IsCompleted = false,
                             HabitId = string.Empty
                         };
+                        await _eventRepository.AddAsync(newEvent);
+                        localGoogleEvents.Add(newEvent); // Add to local list to be referenced as parent
+                    }
+                }
 
+                // 4. Process Exceptions
+                foreach (var ge in exceptionEvents)
+                {
+                    var localMaster = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.RecurringEventId && le.ParentEventId == null);
+                    if (localMaster == null) continue;
+
+                    var originalDate = GetGoogleDateTime(ge.OriginalStartTime ?? ge.Start);
+                    var originalDateStr = originalDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                    if (ge.Status == "cancelled")
+                    {
+                        // Add exception date to master EXDATE list
+                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
+                        {
+                            localMaster.RecurrenceExceptionDates = originalDateStr;
+                        }
+                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
+                        {
+                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
+                        }
+                        await _eventRepository.UpdateAsync(localMaster);
+
+                        var existingExceptionLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id);
+                        if (existingExceptionLocal != null)
+                        {
+                            await _eventRepository.DeleteAsync(existingExceptionLocal.Id);
+                        }
+                    }
+                    else
+                    {
+                        var existingExceptionLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id);
+                        DateTime startTime = GetGoogleDateTime(ge.Start);
+                        DateTime endTime = GetGoogleDateTime(ge.End);
+                        var targetDuration = endTime - startTime;
+
+                        if (existingExceptionLocal != null)
+                        {
+                            existingExceptionLocal.Title = ge.Summary ?? "(No Title)";
+                            existingExceptionLocal.StartTime = startTime;
+                            existingExceptionLocal.EndTime = endTime;
+                            existingExceptionLocal.TargetDuration = targetDuration;
+                            existingExceptionLocal.ExceptionDate = originalDate;
+                            await _eventRepository.UpdateAsync(existingExceptionLocal);
+                        }
+                        else
+                        {
+                            var newException = new Event
+                            {
+                                Id = Guid.NewGuid(),
+                                Title = ge.Summary ?? "(No Title)",
+                                StartTime = startTime,
+                                EndTime = endTime,
+                                TargetDuration = targetDuration,
+                                UserId = userId,
+                                GoogleEventId = ge.Id,
+                                ParentEventId = localMaster.Id,
+                                ExceptionDate = originalDate,
+                                IsCompleted = false,
+                                HabitId = string.Empty
+                            };
+                            await _eventRepository.AddAsync(newException);
+                        }
+
+                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
+                        {
+                            localMaster.RecurrenceExceptionDates = originalDateStr;
+                        }
+                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
+                        {
+                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
+                        }
+                        await _eventRepository.UpdateAsync(localMaster);
+                    }
+                }
+
+                // 5. Process Regular Events
+                foreach (var ge in regularEvents)
+                {
+                    var existingLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id && le.ParentEventId == null);
+                    DateTime startTime = GetGoogleDateTime(ge.Start);
+                    DateTime endTime = GetGoogleDateTime(ge.End);
+                    var targetDuration = endTime - startTime;
+
+                    if (existingLocal != null)
+                    {
+                        existingLocal.Title = ge.Summary ?? "(No Title)";
+                        existingLocal.StartTime = startTime;
+                        existingLocal.EndTime = endTime;
+                        existingLocal.TargetDuration = targetDuration;
+                        await _eventRepository.UpdateAsync(existingLocal);
+                    }
+                    else
+                    {
+                        var newEvent = new Event
+                        {
+                            Id = Guid.NewGuid(),
+                            Title = ge.Summary ?? "(No Title)",
+                            StartTime = startTime,
+                            EndTime = endTime,
+                            TargetDuration = targetDuration,
+                            UserId = userId,
+                            GoogleEventId = ge.Id,
+                            IsCompleted = false,
+                            HabitId = string.Empty
+                        };
                         await _eventRepository.AddAsync(newEvent);
                     }
                 }
