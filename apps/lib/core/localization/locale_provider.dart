@@ -937,6 +937,74 @@ class AppTranslations {
       AppLocale.en: 'No categories yet',
       AppLocale.vi: 'Chưa có danh mục nào',
     },
+    'repeat': {
+      AppLocale.en: 'Repeat',
+      AppLocale.vi: 'Lặp lại',
+    },
+    'does_not_repeat': {
+      AppLocale.en: 'Does not repeat',
+      AppLocale.vi: 'Không lặp lại',
+    },
+    'every_day': {
+      AppLocale.en: 'Every day',
+      AppLocale.vi: 'Hàng ngày',
+    },
+    'every_weekday': {
+      AppLocale.en: 'Every weekday (Mon-Fri)',
+      AppLocale.vi: 'Mọi ngày trong tuần (T2-T6)',
+    },
+    'every_week': {
+      AppLocale.en: 'Every week on',
+      AppLocale.vi: 'Mỗi tuần vào',
+    },
+    'every_2_weeks': {
+      AppLocale.en: 'Every 2 weeks on',
+      AppLocale.vi: 'Mỗi 2 tuần vào',
+    },
+    'every_month': {
+      AppLocale.en: 'Every month on day',
+      AppLocale.vi: 'Mỗi tháng vào ngày',
+    },
+    'every_year': {
+      AppLocale.en: 'Every year on',
+      AppLocale.vi: 'Mỗi năm vào',
+    },
+    'custom_dots': {
+      AppLocale.en: 'Custom...',
+      AppLocale.vi: 'Tùy chỉnh...',
+    },
+    'custom': {
+      AppLocale.en: 'Custom',
+      AppLocale.vi: 'Tùy chỉnh',
+    },
+    'monday': {
+      AppLocale.en: 'Monday',
+      AppLocale.vi: 'Thứ Hai',
+    },
+    'tuesday': {
+      AppLocale.en: 'Tuesday',
+      AppLocale.vi: 'Thứ Ba',
+    },
+    'wednesday': {
+      AppLocale.en: 'Wednesday',
+      AppLocale.vi: 'Thứ Tư',
+    },
+    'thursday': {
+      AppLocale.en: 'Thursday',
+      AppLocale.vi: 'Thứ Năm',
+    },
+    'friday': {
+      AppLocale.en: 'Friday',
+      AppLocale.vi: 'Thứ Sáu',
+    },
+    'saturday': {
+      AppLocale.en: 'Saturday',
+      AppLocale.vi: 'Thứ Bảy',
+    },
+    'sunday': {
+      AppLocale.en: 'Sunday',
+      AppLocale.vi: 'Chủ Nhật',
+    },
   };
 
   final AppLocale locale;

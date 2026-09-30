@@ -13,6 +13,8 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/habit_tasks_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/custom_recurrence_dialog.dart';
+
 
 
 class CreateEventSheet extends ConsumerStatefulWidget {
@@ -136,13 +138,13 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
 
   String _getWeekdayName(int weekday, AppTranslations translations) {
     switch (weekday) {
-      case DateTime.monday: return translations.translate('monday') ?? 'Monday';
-      case DateTime.tuesday: return translations.translate('tuesday') ?? 'Tuesday';
-      case DateTime.wednesday: return translations.translate('wednesday') ?? 'Wednesday';
-      case DateTime.thursday: return translations.translate('thursday') ?? 'Thursday';
-      case DateTime.friday: return translations.translate('friday') ?? 'Friday';
-      case DateTime.saturday: return translations.translate('saturday') ?? 'Saturday';
-      case DateTime.sunday: return translations.translate('sunday') ?? 'Sunday';
+      case DateTime.monday: return translations.translate('monday');
+      case DateTime.tuesday: return translations.translate('tuesday');
+      case DateTime.wednesday: return translations.translate('wednesday');
+      case DateTime.thursday: return translations.translate('thursday');
+      case DateTime.friday: return translations.translate('friday');
+      case DateTime.saturday: return translations.translate('saturday');
+      case DateTime.sunday: return translations.translate('sunday');
       default: return '';
     }
   }
@@ -157,7 +159,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
     }
 
     if (preset == 'custom') {
-      final customRule = await showDialog<String>(
+      final customRule = await showShadDialog<String>(
         context: context,
         builder: (context) => CustomRecurrenceDialog(initialRrule: _recurrenceRule),
       );
@@ -405,11 +407,12 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Section: Quick fill from habits
-                  UnscheduledHabitsSelector(
-                    habits: habits,
-                    selectedHabit: _selectedHabit,
-                    onSelect: _fillFromHabit,
-                  ),
+                  if (habits.isNotEmpty)
+                    UnscheduledHabitsSelector(
+                      habits: habits,
+                      selectedHabit: _selectedHabit,
+                      onSelect: _fillFromHabit,
+                    ),
 
                   if (_selectedHabit != null || widget.eventToEdit != null) ...[
                     const SizedBox(height: 16),
@@ -453,7 +456,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                       ),
                     ),
                     loading: () => const CircularProgressIndicator(),
-                    error: (_, __) => const Text('Error loading categories'),
+                    error: (_, ___) => const Text('Error loading categories'),
                   ),
                   const SizedBox(height: 16),
 
@@ -522,7 +525,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
 
                   const SizedBox(height: 16),
 
-                  Text(translations.translate('repeat') ?? 'Repeat', style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  Text(translations.translate('repeat'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 6),
                   SizedBox(
                     width: double.infinity,
@@ -577,249 +580,4 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       ),
     );
   }
-}
-
-class CustomRecurrenceDialog extends StatefulWidget {
-  final String? initialRrule;
-  const CustomRecurrenceDialog({super.key, this.initialRrule});
-
-  @override
-  State<CustomRecurrenceDialog> createState() => _CustomRecurrenceDialogState();
-}
-
-class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
-  String _freq = 'DAILY';
-  int _interval = 1;
-  List<String> _byDays = [];
-  String _endType = 'never'; // 'never', 'date', 'count'
-  DateTime _untilDate = DateTime.now().add(const Duration(days: 30));
-  int _count = 10;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialRrule != null && widget.initialRrule!.isNotEmpty) {
-      final parts = widget.initialRrule!.replaceAll('RRULE:', '').split(';');
-      for (final part in parts) {
-        if (part.startsWith('FREQ=')) _freq = part.substring(5);
-        if (part.startsWith('INTERVAL=')) _interval = int.tryParse(part.substring(9)) ?? 1;
-        if (part.startsWith('BYDAY=')) _byDays = part.substring(6).split(',');
-        if (part.startsWith('UNTIL=')) {
-          _endType = 'date';
-          final dateStr = part.substring(6);
-          if (dateStr.length >= 8) {
-            final y = int.parse(dateStr.substring(0, 4));
-            final m = int.parse(dateStr.substring(4, 6));
-            final d = int.parse(dateStr.substring(6, 8));
-            _untilDate = DateTime(y, m, d);
-          }
-        }
-        if (part.startsWith('COUNT=')) {
-          _endType = 'count';
-          _count = int.tryParse(part.substring(6)) ?? 10;
-        }
-      }
-    }
-  }
-
-  String _buildRrule() {
-    final List<String> rruleParts = [];
-    rruleParts.add('FREQ=$_freq');
-    rruleParts.add('INTERVAL=$_interval');
-    if (_freq == 'WEEKLY' && _byDays.isNotEmpty) {
-      rruleParts.add('BYDAY=${_byDays.join(',')}');
-    }
-    if (_endType == 'date') {
-      rruleParts.add('UNTIL=${_untilDate.toUtc().toString().replaceAll('-', '').replaceAll(':', '').split('.').first}Z');
-    } else if (_endType == 'count') {
-      rruleParts.add('COUNT=$_count');
-    }
-    return 'RRULE:${rruleParts.join(';')}';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = ShadTheme.of(context);
-
-    return AlertDialog(
-      title: const Text('Custom Recurrence'),
-      backgroundColor: theme.colorScheme.background,
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Repeat every', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                SizedBox(
-                  width: 60,
-                  child: ShadInput(
-                    initialValue: _interval.toString(),
-                    keyboardType: TextInputType.number,
-                    onChanged: (val) {
-                      setState(() {
-                        _interval = int.tryParse(val) ?? 1;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ShadSelect<String>(
-                    initialValue: _freq,
-                    onChanged: (val) {
-                      if (val != null) setState(() => _freq = val);
-                    },
-                    options: const [
-                      ShadOption(value: 'DAILY', child: Text('Day(s)')),
-                      ShadOption(value: 'WEEKLY', child: Text('Week(s)')),
-                      ShadOption(value: 'MONTHLY', child: Text('Month(s)')),
-                      ShadOption(value: 'YEARLY', child: Text('Year(s)')),
-                    ],
-                    selectedOptionBuilder: (context, value) => Text(value == 'DAILY' ? 'Day(s)' : value == 'WEEKLY' ? 'Week(s)' : value == 'MONTHLY' ? 'Month(s)' : 'Year(s)'),
-                  ),
-                ),
-              ],
-            ),
-            if (_freq == 'WEEKLY') ...[
-              const SizedBox(height: 16),
-              const Text('Repeat on', style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                children: ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].map((day) {
-                  final isSelected = _byDays.contains(day);
-                  if (isSelected) {
-                    return ShadButton(
-                      size: ShadButtonSize.sm,
-                      onPressed: () {
-                        setState(() {
-                          _byDays.remove(day);
-                        });
-                      },
-                      child: Text(day.substring(0, 1)),
-                    );
-                  } else {
-                    return ShadButton.outline(
-                      size: ShadButtonSize.sm,
-                      onPressed: () {
-                        setState(() {
-                          _byDays.add(day);
-                        });
-                      },
-                      child: Text(day.substring(0, 1)),
-                    );
-                  }
-                }).toList(),
-              ),
-            ],
-            const SizedBox(height: 16),
-            const Text('Ends', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Column(
-              children: [
-                RadioListTile<String>(
-                  title: const Text('Never'),
-                  value: 'never',
-                  groupValue: _endType,
-                  onChanged: (val) => setState(() => _endType = val!),
-                ),
-                RadioListTile<String>(
-                  title: Row(
-                    children: [
-                      const Text('On '),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ShadButton.outline(
-                          size: ShadButtonSize.sm,
-                          onPressed: _endType == 'date' ? () async {
-                            final picked = await showDatePicker(
-                              context: context,
-                              initialDate: _untilDate,
-                              firstDate: DateTime.now(),
-                              lastDate: DateTime(2035),
-                            );
-                            if (picked != null) setState(() => _untilDate = picked);
-                          } : null,
-                          child: Text(DateFormat('yyyy-MM-dd').format(_untilDate)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  value: 'date',
-                  groupValue: _endType,
-                  onChanged: (val) => setState(() => _endType = val!),
-                ),
-                RadioListTile<String>(
-                  title: Row(
-                    children: [
-                      const Text('After '),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 60,
-                        child: ShadInput(
-                          initialValue: _count.toString(),
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) {
-                            setState(() {
-                              _count = int.tryParse(val) ?? 10;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('occurrences'),
-                    ],
-                  ),
-                  value: 'count',
-                  groupValue: _endType,
-                  onChanged: (val) => setState(() => _endType = val!),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        ShadButton.outline(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ShadButton(
-          onPressed: () => Navigator.of(context).pop(_buildRrule()),
-          child: const Text('Done'),
-        ),
-      ],
-    );
-  }
-}
-
-Future<String?> showRecurrenceEditOptionDialog(BuildContext context, AppTranslations translations) async {
-  return showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(translations.translate('edit_recurring_event')),
-      content: Text(translations.translate('edit_recurring_event_prompt')),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('ThisOccurrence'),
-          child: Text(translations.translate('this_occurrence')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('ThisAndFuture'),
-          child: Text(translations.translate('this_and_future_occurrences')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('AllOccurrences'),
-          child: Text(translations.translate('all_occurrences')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(translations.translate('cancel')),
-        ),
-      ],
-    ),
-  );
 }

@@ -17,8 +17,10 @@ import 'package:habit_tracker/features/focus_session/presentation/screens/focus_
 import 'package:habit_tracker/features/focus_session/presentation/widgets/post_session_dialog.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/calendar_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_card.dart';
-import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/sticky_time_ruler_overlay.dart';
+import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_event_data_source.dart';
+import 'package:habit_tracker/features/calendar/presentation/widgets/custom_recurrence_dialog.dart';
 
 /// Width of the time ruler column (logical pixels).
 const double _kTimeRulerWidth = 60.0;
@@ -466,112 +468,3 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
   }
 }
 
-class EventDataSource extends CalendarDataSource {
-  final List<HabitModel> habits;
-  final ShadThemeData theme;
-  final String? currentUserId;
-  final AppTranslations translations;
-
-  EventDataSource(
-    List<EventModel> source, 
-    this.habits, 
-    this.theme, 
-    this.currentUserId,
-    this.translations,
-  ) {
-    appointments = source;
-  }
-
-  @override
-  DateTime getStartTime(int index) => (appointments![index] as EventModel).startTime.toLocal();
-
-  @override
-  DateTime getEndTime(int index) => (appointments![index] as EventModel).endTime.toLocal();
-
-  @override
-  String getSubject(int index) => (appointments![index] as EventModel).title;
-
-  @override
-  Color getColor(int index) {
-    final event = appointments![index] as EventModel;
-    final isPersonal = event.userId == currentUserId;
-    
-    // Dim the color slightly for squad events to distinguish them
-    if (event.id == 'hover_preview') {
-      return theme.colorScheme.primary.withValues(alpha: 0.5);
-    }
-    
-    if (event.isCompleted) {
-      return isPersonal 
-          ? const Color(0xFF10B981) // Emerald 500
-          : const Color(0xFF10B981).withValues(alpha: 0.6); // Dimmer Emerald
-    }
-
-    // Uncompleted events
-    return isPersonal
-        ? theme.colorScheme.primary
-        : theme.colorScheme.primary.withValues(alpha: 0.6);
-  }
-
-  @override
-  Object? getId(int index) => (appointments![index] as EventModel).id;
-
-  @override
-  String? getRecurrenceRule(int index) => (appointments![index] as EventModel).recurrenceRule;
-
-  @override
-  List<DateTime>? getRecurrenceExceptionDates(int index) {
-    final event = appointments![index] as EventModel;
-    if (event.recurrenceExceptionDates == null || event.recurrenceExceptionDates!.isEmpty) return null;
-    try {
-      return event.recurrenceExceptionDates!
-          .split(',')
-          .map((d) => DateTime.parse(d).toLocal())
-          .toList();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  @override
-  Object? convertAppointmentToObject(Object? customData, Appointment appointment) {
-    if (customData is EventModel) {
-      return customData.copyWith(
-        startTime: appointment.startTime.toUtc(),
-        endTime: appointment.endTime.toUtc(),
-      );
-    }
-    return super.convertAppointmentToObject(customData, appointment);
-  }
-
-  @override
-  bool isAllDay(int index) => false;
-}
-
-Future<String?> showRecurrenceEditOptionDialog(BuildContext context, AppTranslations translations) async {
-  return showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text(translations.translate('edit_recurring_event')),
-      content: Text(translations.translate('edit_recurring_event_prompt')),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('ThisOccurrence'),
-          child: Text(translations.translate('this_occurrence')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('ThisAndFuture'),
-          child: Text(translations.translate('this_and_future_occurrences')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop('AllOccurrences'),
-          child: Text(translations.translate('all_occurrences')),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(null),
-          child: Text(translations.translate('cancel')),
-        ),
-      ],
-    ),
-  );
-}
