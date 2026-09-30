@@ -13,6 +13,8 @@ namespace HabitTracker.Infrastructure.Data
         public DbSet<Event> Events { get; set; } = null!;
         public DbSet<EventTask> EventTasks { get; set; } = null!;
         public DbSet<EventCategory> EventCategories { get; set; } = null!;
+        public DbSet<GoogleCalendarSyncCache> GoogleCalendarSyncCaches { get; set; } = null!;
+
 
         public DbSet<Squad> Squads { get; set; } = null!;
         public DbSet<SquadMember> SquadMembers { get; set; } = null!;
@@ -89,6 +91,15 @@ namespace HabitTracker.Infrastructure.Data
                 entity.HasOne(e => e.Sender)
                       .WithMany()
                       .HasForeignKey(e => e.SenderUserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<GoogleCalendarSyncCache>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }

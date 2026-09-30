@@ -84,8 +84,14 @@ class ApiService {
     }
   }
 
-  Future<List<EventModel>> fetchEvents() async {
-    final response = await _dio.get('/events');
+  Future<List<EventModel>> fetchEvents({DateTime? startTime, DateTime? endTime}) async {
+    final response = await _dio.get(
+      '/events',
+      queryParameters: {
+        if (startTime != null) 'startTime': startTime.toUtc().toIso8601String(),
+        if (endTime != null) 'endTime': endTime.toUtc().toIso8601String(),
+      },
+    );
     final data = response.data as List;
     return data.map((json) => EventModel.fromJson(json)).toList();
   }

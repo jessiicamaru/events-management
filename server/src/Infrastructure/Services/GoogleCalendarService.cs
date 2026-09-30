@@ -84,7 +84,7 @@ namespace HabitTracker.Infrastructure.Services
             return DateTime.UtcNow;
         }
 
-        public async Task<bool> SyncEventsAsync(string userId, string refreshToken, CancellationToken cancellationToken)
+        public async Task<bool> SyncEventsAsync(string userId, string refreshToken, DateTime? syncStart, DateTime? syncEnd, CancellationToken cancellationToken)
         {
             try
             {
@@ -116,8 +116,8 @@ namespace HabitTracker.Infrastructure.Services
                 });
 
                 var listRequest = calendarService.Events.List("primary");
-                listRequest.TimeMinDateTimeOffset = DateTime.UtcNow.AddDays(-7);
-                listRequest.TimeMaxDateTimeOffset = DateTime.UtcNow.AddDays(14);
+                listRequest.TimeMinDateTimeOffset = syncStart ?? DateTime.UtcNow.AddDays(-7);
+                listRequest.TimeMaxDateTimeOffset = syncEnd ?? DateTime.UtcNow.AddDays(14);
                 listRequest.SingleEvents = false;
                 listRequest.ShowDeleted = true;
 

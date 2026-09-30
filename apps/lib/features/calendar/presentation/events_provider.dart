@@ -8,11 +8,46 @@ import 'package:habit_tracker/features/squads/presentation/providers/squad_provi
 
 part 'events_provider.g.dart';
 
+class CalendarViewRange {
+  final DateTime startTime;
+  final DateTime endTime;
+
+  CalendarViewRange(this.startTime, this.endTime);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CalendarViewRange &&
+          runtimeType == other.runtimeType &&
+          startTime == other.startTime &&
+          endTime == other.endTime;
+
+  @override
+  int get hashCode => startTime.hashCode ^ endTime.hashCode;
+}
+
+@riverpod
+class CalendarViewRangeNotifier extends _$CalendarViewRangeNotifier {
+  @override
+  CalendarViewRange? build() => null;
+
+  void updateRange(DateTime start, DateTime end) {
+    final nextState = CalendarViewRange(start, end);
+    if (state != nextState) {
+      state = nextState;
+    }
+  }
+}
+
 @riverpod
 class EventsNotifier extends _$EventsNotifier {
   @override
   Future<List<EventModel>> build() async {
+    final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
+    if (range != null) {
+      return await apiService.fetchEvents(startTime: range.startTime, endTime: range.endTime);
+    }
     return await apiService.fetchEvents();
   }
 

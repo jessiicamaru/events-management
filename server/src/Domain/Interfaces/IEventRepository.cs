@@ -8,7 +8,7 @@ namespace HabitTracker.Domain.Interfaces
     public interface IEventRepository
     {
         Task<IEnumerable<Event>> GetAllAsync();
-        Task<IEnumerable<Event>> GetEventsForUserAsync(string userId);
+        Task<IEnumerable<Event>> GetEventsForUserAsync(string userId, DateTime? startTime = null, DateTime? endTime = null);
         Task<Event?> GetByIdAsync(Guid id);
         Task AddAsync(Event ev);
         Task UpdateAsync(Event ev);

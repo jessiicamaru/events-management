@@ -26,12 +26,21 @@ public class Events : EndpointGroupBase
         groupBuilder.MapPut("{id}", UpdateEvent);
     }
 
-    public async Task<IResult> GetEvents(ISender sender, System.Security.Claims.ClaimsPrincipal user)
+    public async Task<IResult> GetEvents(
+        ISender sender, 
+        System.Security.Claims.ClaimsPrincipal user,
+        DateTime? startTime = null,
+        DateTime? endTime = null)
     {
         var userId = user.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
-        var events = await sender.Send(new GetEventsQuery { UserId = userId });
+        var events = await sender.Send(new GetEventsQuery 
+        { 
+            UserId = userId,
+            StartTime = startTime,
+            EndTime = endTime
+        });
         return TypedResults.Ok(events);
     }
 

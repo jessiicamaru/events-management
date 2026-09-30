@@ -15,7 +15,7 @@ class MockApiService implements ApiService {
   EventModel? lastSyncedEvent;
 
   @override
-  Future<List<EventModel>> fetchEvents() async => eventsToReturn;
+  Future<List<EventModel>> fetchEvents({DateTime? startTime, DateTime? endTime}) async => eventsToReturn;
 
   @override
   Future<void> syncEvent(EventModel event) async {

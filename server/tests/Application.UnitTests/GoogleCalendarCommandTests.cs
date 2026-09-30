@@ -96,7 +96,7 @@ namespace HabitTracker.Application.Tests
                 GoogleRefreshToken = "refresh-token" 
             };
             _mockUserRepo.Setup(r => r.GetByIdAsync("user-123")).ReturnsAsync(user);
-            _mockGoogleCalendarService.Setup(s => s.SyncEventsAsync("user-123", "refresh-token", It.IsAny<CancellationToken>()))
+            _mockGoogleCalendarService.Setup(s => s.SyncEventsAsync("user-123", "refresh-token", It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
             var handler = new SyncGoogleCalendarCommandHandler(_mockUserRepo.Object, _mockGoogleCalendarService.Object);
@@ -106,7 +106,7 @@ namespace HabitTracker.Application.Tests
 
             // Assert
             result.Should().BeTrue();
-            _mockGoogleCalendarService.Verify(s => s.SyncEventsAsync("user-123", "refresh-token", It.IsAny<CancellationToken>()), Times.Once);
+            _mockGoogleCalendarService.Verify(s => s.SyncEventsAsync("user-123", "refresh-token", It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

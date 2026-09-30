@@ -239,6 +239,34 @@ class AppTranslations {
       AppLocale.en: 'Failed to synchronize calendar.',
       AppLocale.vi: 'Đồng bộ lịch thất bại.',
     },
+    'this_occurrence': {
+      AppLocale.en: 'This occurrence',
+      AppLocale.vi: 'Sự kiện này',
+    },
+    'this_and_future_occurrences': {
+      AppLocale.en: 'This and future occurrences',
+      AppLocale.vi: 'Sự kiện này và các sự kiện tiếp theo',
+    },
+    'all_occurrences': {
+      AppLocale.en: 'All occurrences',
+      AppLocale.vi: 'Tất cả các sự kiện',
+    },
+    'edit_recurring_event': {
+      AppLocale.en: 'Edit Recurring Event',
+      AppLocale.vi: 'Sửa sự kiện lặp lại',
+    },
+    'edit_recurring_event_prompt': {
+      AppLocale.en: 'Do you want to edit only this occurrence, this and future occurrences, or all occurrences in the series?',
+      AppLocale.vi: 'Bạn muốn sửa chỉ sự kiện này, sự kiện này và các sự kiện tiếp theo, hay tất cả các sự kiện trong chuỗi?',
+    },
+    'delete_recurring_event': {
+      AppLocale.en: 'Delete Recurring Event',
+      AppLocale.vi: 'Xóa sự kiện lặp lại',
+    },
+    'delete_recurring_event_prompt': {
+      AppLocale.en: 'Do you want to delete only this occurrence, this and future occurrences, or all occurrences in the series?',
+      AppLocale.vi: 'Bạn muốn xóa chỉ sự kiện này, sự kiện này và các sự kiện tiếp theo, hay tất cả các sự kiện trong chuỗi?',
+    },
 
     // Create Event Sheet
     'schedule_event': {
