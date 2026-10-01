@@ -52,6 +52,7 @@ dependencies:
   signalr_netcore: ^1.4.4
   google_sign_in: ^6.2.1
   googleapis: ^13.1.0
+  home_widget: ^0.9.1
 
 dev_dependencies:
   flutter_test:
