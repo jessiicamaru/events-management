@@ -180,8 +180,8 @@ void main() {
     });
 
     test('HomeWidgetNames constants are correct', () {
-      expect(HomeWidgetNames.todayHabits, 'TodayHabitsReceiver');
-      expect(HomeWidgetNames.upNext, 'UpNextReceiver');
+      expect(HomeWidgetNames.todayHabits, 'widget.TodayHabitsReceiver');
+      expect(HomeWidgetNames.upNext, 'widget.UpNextReceiver');
     });
   });
 }

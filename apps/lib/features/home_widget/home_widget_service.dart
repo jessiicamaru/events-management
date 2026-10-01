@@ -14,8 +14,8 @@ abstract class HomeWidgetKeys {
 
 /// Android widget class names registered in AndroidManifest.xml.
 abstract class HomeWidgetNames {
-  static const String todayHabits = 'TodayHabitsReceiver';
-  static const String upNext = 'UpNextReceiver';
+  static const String todayHabits = 'widget.TodayHabitsReceiver';
+  static const String upNext = 'widget.UpNextReceiver';
 }
 
 /// Service responsible for syncing Flutter app data to Android Home Screen Widgets.
