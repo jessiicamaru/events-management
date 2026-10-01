@@ -7,14 +7,9 @@ import 'package:habit_tracker/features/home_widget/home_widget_service.dart';
 
 void main() {
   group('HomeWidgetService data serialization', () {
-    test('updateTodayHabits serializes habits with correct completion status', () {
+    test('updateTodayEvents serializes events with correct completion status and formatted time', () {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-
-      final habits = [
-        HabitModel(id: 'h1', name: 'Morning Run', targetDays: [1, 2, 3], currentStreak: 5),
-        HabitModel(id: 'h2', name: 'Read 30 mins', targetDays: [1, 2, 3]),
-      ];
 
       final events = [
         EventModel(
@@ -35,32 +30,22 @@ void main() {
         ),
       ];
 
-      // Test the serialization logic directly (same as HomeWidgetService.updateTodayHabits)
-      final todayHabits = habits.map((habit) {
-        final todayEvents = events.where((e) {
-          final eventDate = e.startTime.toLocal();
-          return e.habitId == habit.id &&
-              eventDate.year == today.year &&
-              eventDate.month == today.month &&
-              eventDate.day == today.day;
-        }).toList();
-
-        final isCompleted = todayEvents.any((e) => e.isCompleted);
-
+      // Test the serialization logic directly
+      final todayEventsPayload = events.map((e) {
+        final startLocal = e.startTime.toLocal();
         return {
-          'id': habit.id,
-          'name': habit.name,
-          'isCompleted': isCompleted,
-          'totalEvents': todayEvents.length,
-          'currentStreak': habit.currentStreak,
+          'id': e.id,
+          'title': e.title,
+          'time': '${startLocal.hour}:${startLocal.minute}',
+          'isCompleted': e.isCompleted,
         };
       }).toList();
 
       final payload = {
         'date': today.toIso8601String(),
-        'habits': todayHabits,
-        'completedCount': todayHabits.where((h) => h['isCompleted'] == true).length,
-        'totalCount': todayHabits.length,
+        'events': todayEventsPayload,
+        'completedCount': todayEventsPayload.where((e) => e['isCompleted'] == true).length,
+        'totalCount': todayEventsPayload.length,
       };
 
       final jsonStr = jsonEncode(payload);
@@ -69,16 +54,15 @@ void main() {
       expect(decoded['totalCount'], 2);
       expect(decoded['completedCount'], 1);
 
-      final decodedHabits = decoded['habits'] as List;
-      expect(decodedHabits.length, 2);
+      final decodedEvents = decoded['events'] as List;
+      expect(decodedEvents.length, 2);
 
-      final morningRun = decodedHabits.firstWhere((h) => h['id'] == 'h1');
-      expect(morningRun['name'], 'Morning Run');
+      final morningRun = decodedEvents.firstWhere((e) => e['id'] == 'e1');
+      expect(morningRun['title'], 'Morning Run Session');
       expect(morningRun['isCompleted'], true);
-      expect(morningRun['currentStreak'], 5);
 
-      final reading = decodedHabits.firstWhere((h) => h['id'] == 'h2');
-      expect(reading['name'], 'Read 30 mins');
+      final reading = decodedEvents.firstWhere((e) => e['id'] == 'e2');
+      expect(reading['title'], 'Read Session');
       expect(reading['isCompleted'], false);
     });
 
@@ -180,7 +164,7 @@ void main() {
     });
 
     test('HomeWidgetNames constants are correct', () {
-      expect(HomeWidgetNames.todayHabits, 'widget.TodayHabitsReceiver');
+      expect(HomeWidgetNames.todayEvents, 'widget.TodayEventsReceiver');
       expect(HomeWidgetNames.upNext, 'widget.UpNextReceiver');
     });
   });

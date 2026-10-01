@@ -4,6 +4,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:intl/intl.dart';
 
 /// Keys used for SharedPreferences data exchange with native Android widgets.
 abstract class HomeWidgetKeys {
@@ -14,7 +15,7 @@ abstract class HomeWidgetKeys {
 
 /// Android widget class names registered in AndroidManifest.xml.
 abstract class HomeWidgetNames {
-  static const String todayHabits = 'widget.TodayHabitsReceiver';
+  static const String todayEvents = 'widget.TodayEventsReceiver';
   static const String upNext = 'widget.UpNextReceiver';
 }
 
@@ -25,41 +26,104 @@ abstract class HomeWidgetNames {
 class HomeWidgetService {
   const HomeWidgetService._();
 
-  /// Updates the "Today's Habits" widget with current habit data and today's events.
-  static Future<void> updateTodayHabits({
-    required List<HabitModel> habits,
+  /// Updates the "Today's Events" widget with today's events.
+  static Future<void> updateTodayEvents({
     required List<EventModel> events,
   }) async {
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    // Find today's events and map habit completion status
-    final todayHabits = habits.map((habit) {
-      final todayEvents = events.where((e) {
-        final eventDate = e.startTime.toLocal();
-        return e.habitId == habit.id &&
-            eventDate.year == today.year &&
-            eventDate.month == today.month &&
-            eventDate.day == today.day;
-      }).toList();
+    final List<EventModel> expandedEvents = [];
 
-      final isCompleted = todayEvents.any((e) => e.isCompleted);
-      final totalEvents = todayEvents.length;
+    for (var event in events) {
+      if (event.recurrenceRule == null || event.recurrenceRule!.isEmpty) {
+        final startLocal = event.startTime.toLocal();
+        if (startLocal.year == todayStart.year &&
+            startLocal.month == todayStart.month &&
+            startLocal.day == todayStart.day) {
+          expandedEvents.add(event);
+        }
+      } else {
+        try {
+          final rrule = event.recurrenceRule!.replaceAll('RRULE:', '');
+          final dates = SfCalendar.getRecurrenceDateTimeCollection(
+            rrule,
+            event.startTime.toLocal(),
+            specificStartDate: todayStart,
+            specificEndDate: todayEnd,
+          );
 
+          final duration = event.endTime.difference(event.startTime);
+
+          for (var date in dates) {
+            bool isException = false;
+            if (event.recurrenceExceptionDates != null &&
+                event.recurrenceExceptionDates!.isNotEmpty) {
+              final exceptionDates = event.recurrenceExceptionDates!.split(',');
+              for (var exDateStr in exceptionDates) {
+                try {
+                  final exDate = DateTime.parse(exDateStr).toLocal();
+                  if (exDate.year == date.year &&
+                      exDate.month == date.month &&
+                      exDate.day == date.day &&
+                      exDate.hour == date.hour &&
+                      exDate.minute == date.minute) {
+                    isException = true;
+                    break;
+                  }
+                } catch (_) {}
+              }
+            }
+            if (isException) continue;
+
+            bool hasCustomException = false;
+            for (var other in events) {
+              if (other.parentEventId == event.id &&
+                  other.exceptionDate != null) {
+                final exDate = other.exceptionDate!.toLocal();
+                if (exDate.year == date.year &&
+                    exDate.month == date.month &&
+                    exDate.day == date.day &&
+                    exDate.hour == date.hour &&
+                    exDate.minute == date.minute) {
+                  hasCustomException = true;
+                  break;
+                }
+              }
+            }
+            if (hasCustomException) continue;
+
+            expandedEvents.add(
+              event.copyWith(
+                startTime: date.toUtc(),
+                endTime: date.add(duration).toUtc(),
+              ),
+            );
+          }
+        } catch (_) {}
+      }
+    }
+
+    expandedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
+
+    final todayEventsPayload = expandedEvents.map((e) {
+      final startLocal = e.startTime.toLocal();
+      final endLocal = e.endTime.toLocal();
+      final timeStr = '${DateFormat('h:mm a').format(startLocal)} - ${DateFormat('h:mm a').format(endLocal)}';
       return {
-        'id': habit.id,
-        'name': habit.name,
-        'isCompleted': isCompleted,
-        'totalEvents': totalEvents,
-        'currentStreak': habit.currentStreak,
+        'id': e.id,
+        'title': e.title,
+        'time': timeStr,
+        'isCompleted': e.isCompleted,
       };
     }).toList();
 
     final payload = {
-      'date': today.toIso8601String(),
-      'habits': todayHabits,
-      'completedCount': todayHabits.where((h) => h['isCompleted'] == true).length,
-      'totalCount': todayHabits.length,
+      'date': todayStart.toIso8601String(),
+      'events': todayEventsPayload,
+      'completedCount': todayEventsPayload.where((e) => e['isCompleted'] == true).length,
+      'totalCount': todayEventsPayload.length,
     };
 
     await HomeWidget.saveWidgetData<String>(
@@ -70,7 +134,7 @@ class HomeWidgetService {
       HomeWidgetKeys.lastUpdated,
       now.toIso8601String(),
     );
-    await HomeWidget.updateWidget(androidName: HomeWidgetNames.todayHabits);
+    await HomeWidget.updateWidget(androidName: HomeWidgetNames.todayEvents);
   }
 
   /// Updates the "Up Next" widget with the next upcoming event.
@@ -211,7 +275,7 @@ class HomeWidgetService {
     required List<EventModel> events,
   }) async {
     await Future.wait([
-      updateTodayHabits(habits: habits, events: events),
+      updateTodayEvents(events: events),
       updateUpNext(events: events),
     ]);
   }

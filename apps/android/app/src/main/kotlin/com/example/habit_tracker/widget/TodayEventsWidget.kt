@@ -16,24 +16,22 @@ import androidx.glance.layout.*
 import androidx.glance.text.*
 import com.example.habit_tracker.MainActivity
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 
-data class HabitItem(
+data class EventItem(
     val id: String = "",
-    val name: String = "",
+    val title: String = "",
+    val time: String = "",
     val isCompleted: Boolean = false,
-    val totalEvents: Int = 0,
-    val currentStreak: Int = 0,
 )
 
-data class TodayHabitsData(
+data class TodayEventsData(
     val date: String = "",
-    val habits: List<HabitItem> = emptyList(),
+    val events: List<EventItem> = emptyList(),
     val completedCount: Int = 0,
     val totalCount: Int = 0,
 )
 
-class TodayHabitsWidget : GlanceAppWidget() {
+class TodayEventsWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
         setOf(
@@ -47,23 +45,23 @@ class TodayHabitsWidget : GlanceAppWidget() {
         val prefs = context.getSharedPreferences(
             "HomeWidgetPreferences", Context.MODE_PRIVATE
         )
-        val json = prefs.getString("habits_json", null)
+        val json = prefs.getString("habits_json", null) // Reusing habits_json key for convenience
 
         val data = if (json != null) {
             try {
-                Gson().fromJson(json, TodayHabitsData::class.java)
+                Gson().fromJson(json, TodayEventsData::class.java)
             } catch (e: Exception) {
                 null
             }
         } else null
 
         provideContent {
-            TodayHabitsContent(data)
+            TodayEventsContent(data)
         }
     }
 
     @Composable
-    private fun TodayHabitsContent(data: TodayHabitsData?) {
+    private fun TodayEventsContent(data: TodayEventsData?) {
         val size = LocalSize.current
 
         Column(
@@ -80,12 +78,12 @@ class TodayHabitsWidget : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "📋",
+                    text = "📅",
                     style = TextStyle(fontSize = 16.sp),
                 )
                 Spacer(modifier = GlanceModifier.width(6.dp))
                 Text(
-                    text = "Today's Habits",
+                    text = "Today's Events",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -106,14 +104,14 @@ class TodayHabitsWidget : GlanceAppWidget() {
 
             Spacer(modifier = GlanceModifier.height(8.dp))
 
-            if (data == null || data.habits.isEmpty()) {
+            if (data == null || data.events.isEmpty()) {
                 // Empty state
                 Box(
                     modifier = GlanceModifier.fillMaxSize(),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No habits today",
+                        text = "No events today",
                         style = TextStyle(
                             fontSize = 13.sp,
                             color = GlanceTheme.colors.secondary,
@@ -121,23 +119,23 @@ class TodayHabitsWidget : GlanceAppWidget() {
                     )
                 }
             } else {
-                // Determine how many habits to show based on widget size
+                // Determine how many events to show based on widget size
                 val maxItems = when {
                     size.height >= 200.dp -> 6
                     size.height >= 120.dp -> 3
                     else -> 1
                 }
 
-                val habitsToShow = data.habits.take(maxItems)
+                val eventsToShow = data.events.take(maxItems)
 
-                habitsToShow.forEach { habit ->
-                    HabitRow(habit)
+                eventsToShow.forEach { event ->
+                    EventRow(event)
                     Spacer(modifier = GlanceModifier.height(4.dp))
                 }
 
-                if (data.habits.size > maxItems) {
+                if (data.events.size > maxItems) {
                     Text(
-                        text = "+${data.habits.size - maxItems} more",
+                        text = "+${data.events.size - maxItems} more",
                         style = TextStyle(
                             fontSize = 11.sp,
                             color = GlanceTheme.colors.secondary,
@@ -149,7 +147,7 @@ class TodayHabitsWidget : GlanceAppWidget() {
     }
 
     @Composable
-    private fun HabitRow(habit: HabitItem) {
+    private fun EventRow(event: EventItem) {
         Row(
             modifier = GlanceModifier
                 .fillMaxWidth()
@@ -159,29 +157,29 @@ class TodayHabitsWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = if (habit.isCompleted) "✅" else "⬜",
+                text = if (event.isCompleted) "✅" else "⬜",
                 style = TextStyle(fontSize = 14.sp),
             )
             Spacer(modifier = GlanceModifier.width(8.dp))
-            Text(
-                text = habit.name,
-                style = TextStyle(
-                    fontSize = 13.sp,
-                    color = if (habit.isCompleted)
-                        GlanceTheme.colors.secondary
-                    else
-                        GlanceTheme.colors.onSurface,
-                ),
-                maxLines = 1,
-            )
-            if (habit.currentStreak > 0) {
-                Spacer(modifier = GlanceModifier.defaultWeight())
+            Column(modifier = GlanceModifier.defaultWeight()) {
                 Text(
-                    text = "🔥${habit.currentStreak}",
+                    text = event.title,
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        color = if (event.isCompleted)
+                            GlanceTheme.colors.secondary
+                        else
+                            GlanceTheme.colors.onSurface,
+                    ),
+                    maxLines = 1,
+                )
+                Text(
+                    text = event.time,
                     style = TextStyle(
                         fontSize = 11.sp,
                         color = GlanceTheme.colors.secondary,
                     ),
+                    maxLines = 1,
                 )
             }
         }

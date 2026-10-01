@@ -98,7 +98,7 @@ class UpNextWidget : GlanceAppWidget() {
                     )
                     Spacer(modifier = GlanceModifier.width(4.dp))
                     Text(
-                        text = if (data.isOngoing) "Now" else "Up Next",
+                        text = if (data.isOngoing) "Now" else "Upcoming",
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
