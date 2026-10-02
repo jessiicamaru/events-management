@@ -13,12 +13,13 @@ namespace HabitTracker.Web.Endpoints.V1;
 
 public class GoogleCalendarWebhook : EndpointGroupBase
 {
+    public override string? GroupName => "webhooks";
     public override string GroupDescription => "Google Calendar Webhook Endpoint";
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
         // This endpoint must be public (Google calls it without authorization)
-        groupBuilder.MapPost("webhooks/google-calendar", HandleWebhook);
+        groupBuilder.MapPost("google-calendar", HandleWebhook);
     }
 
     public async Task<IResult> HandleWebhook(

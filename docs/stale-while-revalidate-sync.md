@@ -50,6 +50,25 @@ Khi Webhook của Google Calendar gọi về endpoint `/api/v1/webhooks/google-c
 Mỗi khi API lấy danh sách sự kiện được gọi:
 1. Truy vấn DB local để lấy các sự kiện hiện có và trả về ngay lập tức cho Client.
 2. Kiểm tra nếu người dùng đã liên kết Google Calendar:
-   * Kích hoạt một tiến trình chạy ngầm sử dụng `IServiceScopeFactory` để gọi lệnh `SyncGoogleCalendarCommand`.
-   * Lệnh này sẽ tự động gọi lên Google API để cập nhật dữ liệu mới nhất vào database.
-3. Khi Client nhận được kết quả tức thì, nó vẫn hiển thị lịch bình thường. Sau khi tiến trình đồng bộ ngầm hoàn tất, nếu DB có sự thay đổi, màn hình Lịch sẽ tự động hiển thị dữ liệu mới.
+   * Nếu cache đồng bộ cho khoảng thời gian này cũ hơn **1 phút**, kích hoạt tiến trình đồng bộ ngầm sử dụng `IServiceScopeFactory` độc lập.
+   * Tiến trình ngầm gọi Google API, lấy dữ liệu mới lưu vào DB và cập nhật lại thời gian đồng bộ cuối cùng.
+
+### C. Cơ chế Cập nhật Tức thì (Client-side SWR & SignalR)
+Do tiến trình đồng bộ ngầm chạy sau khi HTTP response kết thúc, Client (Flutter App) cần một kênh phản hồi để biết khi nào dữ liệu trong DB local thay đổi.
+
+1. **SignalR Push (Real-time)**:
+   * Sau khi Backend hoàn thành đồng bộ dữ liệu Google Calendar (cả từ Webhook hoặc SWR ngầm), nó sẽ gửi một sự kiện `CalendarUpdatedEvent` thông qua MediatR.
+   * Bộ xử lý sự kiện `CalendarUpdatedEventHandler` nhận thông tin và gửi tín hiệu `"CalendarUpdated"` đến Client được chỉ định qua SignalR Hub `/socialHub`:
+     ```csharp
+     await _hubContext.Clients.User(notification.UserId).SendAsync("CalendarUpdated", cancellationToken);
+     ```
+2. **Xác thực kết nối WebSocket**:
+   * Do client di động kết nối WebSocket qua query string `?access_token=...` và mặc định ASP.NET Core Identity Bearer Token không tự động trích xuất query string này, một Middleware tùy biến được thêm vào `Program.cs` để sao chép token vào Header `Authorization: Bearer <token>` trước khi tiến trình Authentication chạy.
+3. **Flutter Client-side SWR**:
+   * Lớp `EventsNotifier` lắng nghe tín hiệu `"CalendarUpdated"` từ SignalR toàn cục (`signalrConnectionProvider`). Khi nhận được, nó kích hoạt `ref.invalidateSelf()` để kéo dữ liệu mới vẽ lại giao diện mà không cần chuyển tab hay Hot Reload.
+   * Để tránh lặp vô hạn (Infinite Loop) do việc kéo dữ liệu làm hàm `build()` chạy lại, trạng thái `GoogleCalendarSyncTracker` được bật `@Riverpod(keepAlive: true)` để ghi nhớ thời gian đồng bộ cuối cùng và chỉ cho phép kích hoạt sync ngầm mới sau 1 phút.
+   * Kết nối SignalR được cấu hình `.withAutomaticReconnect()` để tự động phục hồi kết nối tức thì khi server bị ngắt quãng hoặc khởi động lại.
+
+### D. Định tuyến Webhook chuẩn xác
+* Class `GoogleCalendarWebhook` kế thừa từ `EndpointGroupBase` được ghi đè `GroupName => "webhooks"` để ghi đè route group mặc định của .NET.
+* Điều này giúp endpoint webhook của Google được khớp chính xác tuyệt đối với đường dẫn callback đăng ký `/api/v1/webhooks/google-calendar`, tránh lỗi `404 Not Found` khi Google Calendar gửi cập nhật.

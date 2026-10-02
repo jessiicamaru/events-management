@@ -38,19 +38,35 @@ class SignalrConnection extends _$SignalrConnection {
             },
           ),
         )
+        .withAutomaticReconnect()
         .build();
 
     _connection!.onclose(({error}) {
       print("SignalR Connection closed: $error");
     });
 
-    try {
-      await _connection!.start();
-      print("SignalR Connected successfully to $hubUrl");
-      return _connection;
-    } catch (e) {
-      print("SignalR Connection failed: $e");
-      return null;
+    _connection!.onreconnecting(({error}) {
+      print("SignalR Reconnecting: $error");
+    });
+
+    _connection!.onreconnected(({connectionId}) {
+      print("SignalR Reconnected successfully: $connectionId");
+    });
+
+    int retryCount = 0;
+    while (true) {
+      try {
+        await _connection!.start();
+        print("SignalR Connected successfully to $hubUrl");
+        return _connection;
+      } catch (e) {
+        retryCount++;
+        print("SignalR Connection failed (attempt $retryCount/5): $e");
+        if (retryCount >= 5) {
+          throw Exception("SignalR could not connect after 5 attempts: $e");
+        }
+        await Future.delayed(const Duration(seconds: 2));
+      }
     }
   }
 }
