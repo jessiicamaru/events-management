@@ -26,10 +26,17 @@ namespace HabitTracker.Application.Features.Events.Commands
     public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
     {
         private readonly IEventRepository _eventRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IGoogleCalendarOutboxRepository _outboxRepository;
 
-        public UpdateEventCommandHandler(IEventRepository eventRepository)
+        public UpdateEventCommandHandler(
+            IEventRepository eventRepository,
+            IUserRepository userRepository,
+            IGoogleCalendarOutboxRepository outboxRepository)
         {
             _eventRepository = eventRepository;
+            _userRepository = userRepository;
+            _outboxRepository = outboxRepository;
         }
 
         public async Task<bool> Handle(UpdateEventCommand request, CancellationToken cancellationToken)
@@ -45,6 +52,9 @@ namespace HabitTracker.Application.Features.Events.Commands
             {
                 return false;
             }
+
+            var user = await _userRepository.GetByIdAsync(request.UserId ?? string.Empty);
+            bool hasGoogle = user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken);
 
             var editScope = request.EditScope ?? "AllOccurrences";
 
@@ -80,6 +90,32 @@ namespace HabitTracker.Application.Features.Events.Commands
                     IsCompleted = false
                 };
                 await _eventRepository.AddAsync(exceptionEvent);
+
+                if (hasGoogle)
+                {
+                    // Enqueue Update for Master (to sync EXDATE)
+                    var masterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = existingEvent.Title,
+                        StartTime = existingEvent.StartTime,
+                        EndTime = existingEvent.EndTime,
+                        RecurrenceRule = existingEvent.RecurrenceRule,
+                        RecurrenceExceptionDates = existingEvent.RecurrenceExceptionDates
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Update", masterPayload, cancellationToken);
+
+                    // Enqueue Insert for Exception Event
+                    var excPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = exceptionEvent.Title,
+                        StartTime = exceptionEvent.StartTime,
+                        EndTime = exceptionEvent.EndTime,
+                        ParentEventId = exceptionEvent.ParentEventId,
+                        ExceptionDate = exceptionEvent.ExceptionDate
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, exceptionEvent.Id, null, "Insert", excPayload, cancellationToken);
+                }
+
                 return true;
             }
             else if (!string.IsNullOrEmpty(existingEvent.RecurrenceRule) && editScope == "ThisAndFuture")
@@ -106,6 +142,30 @@ namespace HabitTracker.Application.Features.Events.Commands
                     RecurrenceRule = request.RecurrenceRule ?? oldRule
                 };
                 await _eventRepository.AddAsync(newMasterEvent);
+
+                if (hasGoogle)
+                {
+                    // Enqueue Update for Old Master (UNTIL rule updated)
+                    var oldMasterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = existingEvent.Title,
+                        StartTime = existingEvent.StartTime,
+                        EndTime = existingEvent.EndTime,
+                        RecurrenceRule = existingEvent.RecurrenceRule
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Update", oldMasterPayload, cancellationToken);
+
+                    // Enqueue Insert for New Master Event
+                    var newMasterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = newMasterEvent.Title,
+                        StartTime = newMasterEvent.StartTime,
+                        EndTime = newMasterEvent.EndTime,
+                        RecurrenceRule = newMasterEvent.RecurrenceRule
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, newMasterEvent.Id, null, "Insert", newMasterPayload, cancellationToken);
+                }
+
                 return true;
             }
             else
@@ -120,6 +180,19 @@ namespace HabitTracker.Application.Features.Events.Commands
                 existingEvent.RecurrenceRule = request.RecurrenceRule ?? existingEvent.RecurrenceRule;
 
                 await _eventRepository.UpdateAsync(existingEvent);
+
+                if (hasGoogle)
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = existingEvent.Title,
+                        StartTime = existingEvent.StartTime,
+                        EndTime = existingEvent.EndTime,
+                        RecurrenceRule = existingEvent.RecurrenceRule
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Update", payload, cancellationToken);
+                }
+
                 return true;
             }
         }

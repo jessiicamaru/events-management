@@ -26,10 +26,17 @@ namespace HabitTracker.Application.Features.Events.Commands
     public class DeleteEventCommandHandler : IRequestHandler<DeleteEventCommand, bool>
     {
         private readonly IEventRepository _eventRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IGoogleCalendarOutboxRepository _outboxRepository;
 
-        public DeleteEventCommandHandler(IEventRepository eventRepository)
+        public DeleteEventCommandHandler(
+            IEventRepository eventRepository,
+            IUserRepository userRepository,
+            IGoogleCalendarOutboxRepository outboxRepository)
         {
             _eventRepository = eventRepository;
+            _userRepository = userRepository;
+            _outboxRepository = outboxRepository;
         }
 
         public async Task<bool> Handle(DeleteEventCommand request, CancellationToken cancellationToken)
@@ -45,6 +52,9 @@ namespace HabitTracker.Application.Features.Events.Commands
             {
                 return false;
             }
+
+            var user = await _userRepository.GetByIdAsync(request.UserId ?? string.Empty);
+            bool hasGoogle = user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken);
 
             var deleteScope = request.DeleteScope ?? "AllOccurrences";
 
@@ -63,6 +73,21 @@ namespace HabitTracker.Application.Features.Events.Commands
                     existingEvent.RecurrenceExceptionDates += "," + exceptionDateStr;
                 }
                 await _eventRepository.UpdateAsync(existingEvent);
+
+                if (hasGoogle)
+                {
+                    // Enqueue Update for Master (to sync EXDATE)
+                    var masterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = existingEvent.Title,
+                        StartTime = existingEvent.StartTime,
+                        EndTime = existingEvent.EndTime,
+                        RecurrenceRule = existingEvent.RecurrenceRule,
+                        RecurrenceExceptionDates = existingEvent.RecurrenceExceptionDates
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Update", masterPayload, cancellationToken);
+                }
+
                 return true;
             }
             else if (!string.IsNullOrEmpty(existingEvent.RecurrenceRule) && deleteScope == "ThisAndFuture")
@@ -75,14 +100,31 @@ namespace HabitTracker.Application.Features.Events.Commands
                 existingEvent.RecurrenceRule = string.Join(";", parts) + ";UNTIL=" + untilDate;
                 await _eventRepository.UpdateAsync(existingEvent);
 
+                if (hasGoogle)
+                {
+                    // Enqueue Update for Master (recurrence rule UNTIL updated)
+                    var masterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        Title = existingEvent.Title,
+                        StartTime = existingEvent.StartTime,
+                        EndTime = existingEvent.EndTime,
+                        RecurrenceRule = existingEvent.RecurrenceRule
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Update", masterPayload, cancellationToken);
+                }
+
                 // 2. Delete any child exceptions from this date forward
                 if (!string.IsNullOrEmpty(request.UserId))
                 {
                     var allEvents = await _eventRepository.GetEventsForUserAsync(request.UserId);
-                    var childExceptionsToDelete = allEvents.Where(e => e.ParentEventId == existingEvent.Id && e.ExceptionDate >= splitDate);
+                    var childExceptionsToDelete = allEvents.Where(e => e.ParentEventId == existingEvent.Id && e.ExceptionDate >= splitDate).ToList();
                     foreach (var childEvent in childExceptionsToDelete)
                     {
                         await _eventRepository.DeleteAsync(childEvent.Id);
+                        if (hasGoogle && !string.IsNullOrEmpty(childEvent.GoogleEventId))
+                        {
+                            await _outboxRepository.EnqueueAsync(request.UserId!, childEvent.Id, childEvent.GoogleEventId, "Delete", string.Empty, cancellationToken);
+                        }
                     }
                 }
                 return true;
@@ -94,14 +136,24 @@ namespace HabitTracker.Application.Features.Events.Commands
                 if (!string.IsNullOrEmpty(existingEvent.RecurrenceRule) && !string.IsNullOrEmpty(request.UserId))
                 {
                     var allEvents = await _eventRepository.GetEventsForUserAsync(request.UserId);
-                    var childExceptionsToDelete = allEvents.Where(e => e.ParentEventId == existingEvent.Id);
+                    var childExceptionsToDelete = allEvents.Where(e => e.ParentEventId == existingEvent.Id).ToList();
                     foreach (var childEvent in childExceptionsToDelete)
                     {
                         await _eventRepository.DeleteAsync(childEvent.Id);
+                        if (hasGoogle && !string.IsNullOrEmpty(childEvent.GoogleEventId))
+                        {
+                            await _outboxRepository.EnqueueAsync(request.UserId!, childEvent.Id, childEvent.GoogleEventId, "Delete", string.Empty, cancellationToken);
+                        }
                     }
                 }
 
                 await _eventRepository.DeleteAsync(request.EventId);
+
+                if (hasGoogle && !string.IsNullOrEmpty(existingEvent.GoogleEventId))
+                {
+                    await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Delete", string.Empty, cancellationToken);
+                }
+
                 return true;
             }
         }

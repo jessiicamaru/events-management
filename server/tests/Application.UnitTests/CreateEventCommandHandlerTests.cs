@@ -19,6 +19,8 @@ namespace HabitTracker.Application.Tests
             var mockRepo = new Mock<IEventRepository>();
             var mockHabitTaskRepo = new Mock<IHabitTaskRepository>();
             var mockEventTaskRepo = new Mock<IEventTaskRepository>();
+            var mockUserRepo = new Mock<IUserRepository>();
+            var mockOutboxRepo = new Mock<IGoogleCalendarOutboxRepository>();
 
             Event? savedEvent = null;
             
@@ -26,14 +28,23 @@ namespace HabitTracker.Application.Tests
                 .Callback<Event>(e => savedEvent = e)
                 .Returns(Task.CompletedTask);
 
-            var handler = new CreateEventCommandHandler(mockRepo.Object, mockHabitTaskRepo.Object, mockEventTaskRepo.Object);
+            mockUserRepo.Setup(r => r.GetByIdAsync(It.IsAny<string>()))
+                .ReturnsAsync((ApplicationUser?)null);
+
+            var handler = new CreateEventCommandHandler(
+                mockRepo.Object, 
+                mockHabitTaskRepo.Object, 
+                mockEventTaskRepo.Object,
+                mockUserRepo.Object,
+                mockOutboxRepo.Object);
 
             var command = new CreateEventCommand
             {
                 Title = "Morning Run",
                 StartTime = DateTime.UtcNow.AddHours(1),
                 EndTime = DateTime.UtcNow.AddHours(2),
-                HabitId = "habit-123"
+                HabitId = "habit-123",
+                UserId = "user-123"
             };
 
             // Act

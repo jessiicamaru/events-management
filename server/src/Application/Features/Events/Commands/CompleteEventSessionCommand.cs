@@ -24,17 +24,20 @@ namespace HabitTracker.Application.Features.Events.Commands
         private readonly IHabitRepository _habitRepository;
         private readonly IUserRepository _userRepository;
         private readonly ISquadRepository _squadRepository;
+        private readonly IGoogleCalendarOutboxRepository _outboxRepository;
 
         public CompleteEventSessionCommandHandler(
             IEventRepository eventRepository, 
             IHabitRepository habitRepository,
             IUserRepository userRepository,
-            ISquadRepository squadRepository)
+            ISquadRepository squadRepository,
+            IGoogleCalendarOutboxRepository outboxRepository)
         {
             _eventRepository = eventRepository;
             _habitRepository = habitRepository;
             _userRepository = userRepository;
             _squadRepository = squadRepository;
+            _outboxRepository = outboxRepository;
         }
 
         public async Task<bool> Handle(CompleteEventSessionCommand request, CancellationToken cancellationToken)
@@ -59,6 +62,19 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             await _eventRepository.UpdateAsync(ev);
 
+            var user = await _userRepository.GetByIdAsync(request.UserId);
+            if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken))
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    Title = ev.Title,
+                    StartTime = ev.StartTime,
+                    EndTime = ev.EndTime,
+                    RecurrenceRule = ev.RecurrenceRule
+                });
+                await _outboxRepository.EnqueueAsync(request.UserId, ev.Id, ev.GoogleEventId, "Update", payload, cancellationToken);
+            }
+
             if (!wasCompleted)
             {
                 // Recalculate streaks for the associated habit (if any)
@@ -81,7 +97,6 @@ namespace HabitTracker.Application.Features.Events.Commands
                     int userStreak = CalculateActivityStreak(completedEvents);
                     xpGained = 10 + Math.Max(0, (userStreak - 1) * 2);
 
-                    var user = await _userRepository.GetByIdAsync(ev.UserId);
                     if (user != null)
                     {
                         user.TotalXP += xpGained;

@@ -1,0 +1,13 @@
+services:
+  tunnel:
+    image: ngrok/ngrok:latest
+    container_name: habit_tracker_tunnel
+    restart: always
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:?set NGROK_AUTHTOKEN in .env}
+    command:
+      - http
+      - host.docker.internal:5000
+      - --domain=${NGROK_DOMAIN:?set NGROK_DOMAIN in .env}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

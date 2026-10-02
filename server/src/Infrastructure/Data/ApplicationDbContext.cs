@@ -14,6 +14,8 @@ namespace HabitTracker.Infrastructure.Data
         public DbSet<EventTask> EventTasks { get; set; } = null!;
         public DbSet<EventCategory> EventCategories { get; set; } = null!;
         public DbSet<GoogleCalendarSyncCache> GoogleCalendarSyncCaches { get; set; } = null!;
+        public DbSet<GoogleCalendarOutbox> GoogleCalendarOutboxes { get; set; } = null!;
+        public DbSet<GoogleCalendarChannel> GoogleCalendarChannels { get; set; } = null!;
 
 
         public DbSet<Squad> Squads { get; set; } = null!;
@@ -95,6 +97,24 @@ namespace HabitTracker.Infrastructure.Data
             });
 
             modelBuilder.Entity<GoogleCalendarSyncCache>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<GoogleCalendarOutbox>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<GoogleCalendarChannel>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.HasOne(e => e.User)

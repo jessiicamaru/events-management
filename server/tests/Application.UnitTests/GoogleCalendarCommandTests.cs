@@ -99,7 +99,14 @@ namespace HabitTracker.Application.Tests
             _mockGoogleCalendarService.Setup(s => s.SyncEventsAsync("user-123", "refresh-token", It.IsAny<DateTime?>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
 
-            var handler = new SyncGoogleCalendarCommandHandler(_mockUserRepo.Object, _mockGoogleCalendarService.Object);
+            var mockChannelRepo = new Mock<IGoogleCalendarChannelRepository>();
+            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+
+            var handler = new SyncGoogleCalendarCommandHandler(
+                _mockUserRepo.Object, 
+                _mockGoogleCalendarService.Object,
+                mockChannelRepo.Object,
+                mockConfig.Object);
 
             // Act
             var result = await handler.Handle(new SyncGoogleCalendarCommand { UserId = "user-123" }, CancellationToken.None);
@@ -115,7 +122,15 @@ namespace HabitTracker.Application.Tests
             // Arrange
             var user = new ApplicationUser { Id = "user-123" }; // No token
             _mockUserRepo.Setup(r => r.GetByIdAsync("user-123")).ReturnsAsync(user);
-            var handler = new SyncGoogleCalendarCommandHandler(_mockUserRepo.Object, _mockGoogleCalendarService.Object);
+
+            var mockChannelRepo = new Mock<IGoogleCalendarChannelRepository>();
+            var mockConfig = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+
+            var handler = new SyncGoogleCalendarCommandHandler(
+                _mockUserRepo.Object, 
+                _mockGoogleCalendarService.Object,
+                mockChannelRepo.Object,
+                mockConfig.Object);
 
             // Act
             var result = await handler.Handle(new SyncGoogleCalendarCommand { UserId = "user-123" }, CancellationToken.None);
