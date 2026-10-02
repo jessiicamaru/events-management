@@ -63,6 +63,59 @@ abstract class _$CalendarViewRangeNotifier
   }
 }
 
+@ProviderFor(GoogleCalendarSyncTracker)
+final googleCalendarSyncTrackerProvider = GoogleCalendarSyncTrackerProvider._();
+
+final class GoogleCalendarSyncTrackerProvider
+    extends $NotifierProvider<GoogleCalendarSyncTracker, DateTime?> {
+  GoogleCalendarSyncTrackerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'googleCalendarSyncTrackerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$googleCalendarSyncTrackerHash();
+
+  @$internal
+  @override
+  GoogleCalendarSyncTracker create() => GoogleCalendarSyncTracker();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(DateTime? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<DateTime?>(value),
+    );
+  }
+}
+
+String _$googleCalendarSyncTrackerHash() =>
+    r'dc653073091f43994325bbffc80f5f3112241101';
+
+abstract class _$GoogleCalendarSyncTracker extends $Notifier<DateTime?> {
+  DateTime? build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<DateTime?, DateTime?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<DateTime?, DateTime?>,
+              DateTime?,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 @ProviderFor(EventsNotifier)
 final eventsProvider = EventsNotifierProvider._();
 
@@ -87,7 +140,7 @@ final class EventsNotifierProvider
   EventsNotifier create() => EventsNotifier();
 }
 
-String _$eventsNotifierHash() => r'f4feb17470b7546adcdc38dc61e76d370bd42b86';
+String _$eventsNotifierHash() => r'7b19449d912f2201b82a7bd3e0a3dd242e5fdd0b';
 
 abstract class _$EventsNotifier extends $AsyncNotifier<List<EventModel>> {
   FutureOr<List<EventModel>> build();

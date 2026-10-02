@@ -15,21 +15,21 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Queries
     {
         private readonly Mock<IEventRepository> _mockEventRepo;
         private readonly Mock<IUserRepository> _mockUserRepo;
-        private readonly Mock<IGoogleCalendarService> _mockGoogleCalendarService;
         private readonly Mock<IGoogleCalendarSyncCacheRepository> _mockSyncCacheRepo;
+        private readonly Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory> _mockScopeFactory;
         private readonly GetEventsQueryHandler _handler;
 
         public GetEventsQueryHandlerTests()
         {
             _mockEventRepo = new Mock<IEventRepository>();
             _mockUserRepo = new Mock<IUserRepository>();
-            _mockGoogleCalendarService = new Mock<IGoogleCalendarService>();
             _mockSyncCacheRepo = new Mock<IGoogleCalendarSyncCacheRepository>();
+            _mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
             _handler = new GetEventsQueryHandler(
                 _mockEventRepo.Object,
                 _mockUserRepo.Object,
-                _mockGoogleCalendarService.Object,
-                _mockSyncCacheRepo.Object);
+                _mockSyncCacheRepo.Object,
+                _mockScopeFactory.Object);
         }
 
         [Fact]

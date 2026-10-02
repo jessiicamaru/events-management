@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
 
 namespace HabitTracker.Web.Endpoints.V1;
@@ -22,8 +23,8 @@ public class GoogleCalendarWebhook : EndpointGroupBase
 
     public async Task<IResult> HandleWebhook(
         HttpContext httpContext,
-        ISender sender,
-        IGoogleCalendarChannelRepository channelRepository)
+        IGoogleCalendarChannelRepository channelRepository,
+        IServiceScopeFactory scopeFactory)
     {
         if (!httpContext.Request.Headers.TryGetValue("X-Goog-Channel-ID", out var channelIdValues))
         {
@@ -45,11 +46,14 @@ public class GoogleCalendarWebhook : EndpointGroupBase
         }
 
         // Offload sync to prevent blocking Google webhook and timeout
+        // Use IServiceScopeFactory to avoid ObjectDisposedException
         _ = Task.Run(async () =>
         {
+            using var scope = scopeFactory.CreateScope();
+            var scopedSender = scope.ServiceProvider.GetRequiredService<ISender>();
             try
             {
-                await sender.Send(new SyncGoogleCalendarCommand { UserId = channel.UserId });
+                await scopedSender.Send(new SyncGoogleCalendarCommand { UserId = channel.UserId });
             }
             catch (System.Exception ex)
             {

@@ -39,16 +39,53 @@ class CalendarViewRangeNotifier extends _$CalendarViewRangeNotifier {
   }
 }
 
+@Riverpod(keepAlive: true)
+class GoogleCalendarSyncTracker extends _$GoogleCalendarSyncTracker {
+  @override
+  DateTime? build() => null;
+
+  void updateLastSync() {
+    state = DateTime.now();
+  }
+}
+
 @riverpod
 class EventsNotifier extends _$EventsNotifier {
   @override
   Future<List<EventModel>> build() async {
     final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
+    
+    // Kích hoạt đồng bộ nền an toàn sau khi màn hình được render xong
+    Future.microtask(() => _triggerBackgroundSync());
+
     if (range != null) {
       return await apiService.fetchEvents(startTime: range.startTime, endTime: range.endTime);
     }
     return await apiService.fetchEvents();
+  }
+
+  Future<void> _triggerBackgroundSync() async {
+    final lastSync = ref.read(googleCalendarSyncTrackerProvider);
+    final now = DateTime.now();
+    
+    // Nếu vừa đồng bộ trong vòng 1 phút, không đồng bộ lại để tránh loop vô hạn
+    if (lastSync != null && now.difference(lastSync).inMinutes < 1) {
+      return;
+    }
+
+    // Đánh dấu thời điểm đồng bộ lập tức để chặn các luồng gọi đồng thời
+    ref.read(googleCalendarSyncTrackerProvider.notifier).updateLastSync();
+
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      await apiService.syncGoogleCalendar();
+      
+      // Sau khi backend đồng bộ xong và cập nhật DB, invalidate để kéo dữ liệu mới
+      ref.invalidateSelf();
+    } catch (e) {
+      // Bỏ qua lỗi đồng bộ nền để không crash giao diện chính
+    }
   }
 
   Future<void> addEvent(EventModel event) async {

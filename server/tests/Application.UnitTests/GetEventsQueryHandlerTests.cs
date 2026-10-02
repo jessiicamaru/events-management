@@ -28,14 +28,14 @@ namespace HabitTracker.Application.Tests
             mockRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(events);
 
             var mockUserRepo = new Mock<IUserRepository>();
-            var mockGoogleService = new Mock<IGoogleCalendarService>();
             var mockSyncCacheRepo = new Mock<IGoogleCalendarSyncCacheRepository>();
+            var mockScopeFactory = new Mock<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>();
 
             var handler = new GetEventsQueryHandler(
                 mockRepo.Object, 
                 mockUserRepo.Object, 
-                mockGoogleService.Object, 
-                mockSyncCacheRepo.Object);
+                mockSyncCacheRepo.Object,
+                mockScopeFactory.Object);
             var query = new GetEventsQuery();
 
             // Act

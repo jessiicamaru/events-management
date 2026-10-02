@@ -39,6 +39,7 @@ sequenceDiagram
 ## 2. Các Thực thể & Cấu trúc Dữ liệu Cốt lõi
 
 ### GoogleCalendarOutbox
+
 Đóng vai trò là nhật ký giao dịch (transaction log) cho các thay đổi được bắt đầu từ ứng dụng.
 
 ```json
@@ -62,6 +63,7 @@ sequenceDiagram
 ```
 
 ### GoogleCalendarChannel
+
 Theo dõi các đăng ký webhook hoạt động (Google Calendar Watch).
 
 ```json
@@ -78,20 +80,22 @@ Theo dõi các đăng ký webhook hoạt động (Google Calendar Watch).
 ## 3. Luồng Dữ liệu Chi tiết
 
 ### A. Từ App đến Google (Đẩy / Xử lý Outbox)
+
 1. **Kích hoạt**: Bất kỳ lệnh MediatR nào sửa đổi sự kiện (`CreateEvent`, `UpdateEvent`, `DeleteEvent`, `CompleteEventSession`) đều ghi nhận thay đổi vào `GoogleCalendarOutbox` nếu người dùng đã bật đồng bộ Google Calendar.
 2. **Thực thi Worker**: `GoogleCalendarSyncWorker` chạy như một dịch vụ nền được lưu trữ (`IHostedService`).
 3. **Logic thực thi**:
-    - **Insert**: Tải sự kiện lên. Khi thành công, Google trả về `GoogleEventId`, mã này sẽ được ghi ngược lại vào bản ghi `Event` local.
-    - **Update**: Cập nhật Google Calendar bằng `GoogleEventId` đã đăng ký. Hỗ trợ ghi đè phiên bản sự kiện lặp lại (exception dates).
-    - **Delete**: Xóa sự kiện khỏi Google Calendar.
+   - **Insert**: Tải sự kiện lên. Khi thành công, Google trả về `GoogleEventId`, mã này sẽ được ghi ngược lại vào bản ghi `Event` local.
+   - **Update**: Cập nhật Google Calendar bằng `GoogleEventId` đã đăng ký. Hỗ trợ ghi đè phiên bản sự kiện lặp lại (exception dates).
+   - **Delete**: Xóa sự kiện khỏi Google Calendar.
 
 ### B. Từ Google đến App (Nhận thông báo / Xử lý Webhook)
+
 1. **Xác minh**: Khi đăng ký Webhook qua `Events.Watch`, Google gửi một ping xác minh với tiêu đề `X-Goog-Resource-State: sync`. Endpoint Webhook phản hồi `200 OK` ngay lập tức.
 2. **Cập nhật**: Khi có bất kỳ thay đổi nào trực tiếp trên Google Calendar (web hoặc app chính chủ):
-    - Google gọi `POST /api/v1/webhooks/google-calendar`.
-    - Webhook tìm người dùng liên kết qua `ChannelId` trong bảng `GoogleCalendarChannels`.
-    - Nó kích hoạt một tiến trình **Đồng bộ hóa gia tăng** (`SyncEventsAsync`) trong một luồng nền để tránh chặn webhook của Google (ngăn lỗi timeout).
-    - Tiến trình đồng bộ sẽ cập nhật DB local và làm mới các widget trên màn hình chính Android trong thời gian thực.
+   - Google gọi `POST /api/v1/webhooks/google-calendar`.
+   - Webhook tìm người dùng liên kết qua `ChannelId` trong bảng `GoogleCalendarChannels`.
+   - Nó kích hoạt một tiến trình **Đồng bộ hóa gia tăng** (`SyncEventsAsync`) trong một luồng nền để tránh chặn webhook của Google (ngăn lỗi timeout).
+   - Tiến trình đồng bộ sẽ cập nhật DB local và làm mới các widget trên màn hình chính Android trong thời gian thực.
 
 ---
 
@@ -111,4 +115,4 @@ Trong quá trình phát triển ở local, Google phải có thể tiếp cận 
      "WebhookBaseUrl": "https://xyz.ngrok-free.app"
    }
    ```
-   *Lưu ý: Đảm bảo WebhookBaseUrl không kết thúc bằng dấu gạch chéo (/).*
+   _Lưu ý: Đảm bảo WebhookBaseUrl không kết thúc bằng dấu gạch chéo (/)._
