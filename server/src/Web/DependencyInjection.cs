@@ -10,6 +10,7 @@ public static class DependencyInjection
         services.AddSwaggerGen();
         services.AddAuthorization();
         services.AddSignalR();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         
         services.AddCors(options =>
         {

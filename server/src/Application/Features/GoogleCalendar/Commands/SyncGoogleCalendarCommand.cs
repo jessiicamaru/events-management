@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using HabitTracker.Domain.Interfaces;
+using HabitTracker.Application.Features.GoogleCalendar.Events;
 using MediatR;
 
 namespace HabitTracker.Application.Features.GoogleCalendar.Commands
@@ -16,17 +17,20 @@ namespace HabitTracker.Application.Features.GoogleCalendar.Commands
         private readonly IGoogleCalendarService _googleCalendarService;
         private readonly IGoogleCalendarChannelRepository _channelRepository;
         private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
+        private readonly IPublisher _publisher;
 
         public SyncGoogleCalendarCommandHandler(
             IUserRepository userRepository, 
             IGoogleCalendarService googleCalendarService,
             IGoogleCalendarChannelRepository channelRepository,
-            Microsoft.Extensions.Configuration.IConfiguration configuration)
+            Microsoft.Extensions.Configuration.IConfiguration configuration,
+            IPublisher publisher)
         {
             _userRepository = userRepository;
             _googleCalendarService = googleCalendarService;
             _channelRepository = channelRepository;
             _configuration = configuration;
+            _publisher = publisher;
         }
 
         public async Task<bool> Handle(SyncGoogleCalendarCommand request, CancellationToken cancellationToken)
@@ -63,6 +67,11 @@ namespace HabitTracker.Application.Features.GoogleCalendar.Commands
                 {
                     System.Console.WriteLine($"Webhook Registration Error: {ex.Message}");
                 }
+            }
+
+            if (isSynced)
+            {
+                await _publisher.Publish(new CalendarUpdatedEvent(user.Id), cancellationToken);
             }
 
             return isSynced;

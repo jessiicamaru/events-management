@@ -5,6 +5,7 @@ import 'package:habit_tracker/features/habits/presentation/habits_provider.dart'
 import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
+import 'package:habit_tracker/core/network/signalr_provider.dart';
 
 part 'events_provider.g.dart';
 
@@ -55,6 +56,21 @@ class EventsNotifier extends _$EventsNotifier {
   Future<List<EventModel>> build() async {
     final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
+    
+    // Lắng nghe sự kiện đồng bộ thời gian thực từ SignalR
+    final connectionAsync = ref.watch(signalrConnectionProvider);
+    final connection = connectionAsync.value;
+    if (connection != null) {
+      connection.off("CalendarUpdated");
+      connection.on("CalendarUpdated", (arguments) {
+        print("SignalR: Received CalendarUpdated event, invalidating EventsNotifier...");
+        ref.invalidateSelf();
+      });
+      
+      ref.onDispose(() {
+        connection.off("CalendarUpdated");
+      });
+    }
     
     // Kích hoạt đồng bộ nền an toàn sau khi màn hình được render xong
     Future.microtask(() => _triggerBackgroundSync());
