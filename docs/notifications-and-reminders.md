@@ -248,6 +248,12 @@ Neither is a bug in this feature, and neither is worked around.
 - **No test-notification button.** It lived on the reminders settings screen, which was
   removed when reminders became per-event. Worth re-adding somewhere if permission
   problems turn out to be common.
+- **Reminders do not sync with Google Calendar, in either direction.** Confirmed by reading
+  the outbox payloads in `UpdateEventCommand` / `CompleteEventSessionCommand`: they carry
+  title, times and recurrence, not `ReminderMinutesBefore`. So a reminder set here never
+  reaches Google, and a reminder set in Google Calendar never arrives here. Google has its
+  own reminder model (`overrides` on an event), so mapping between them is real work, not a
+  field to add to the payload.
 - **No reminders for habits that have no event.** Reminders attach to scheduled events.
   A habit with `TargetDays` but nothing on the calendar gets nothing. Roadmap 1.2
   (streak-at-risk) is the feature that covers that case.

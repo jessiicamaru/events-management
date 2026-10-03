@@ -186,6 +186,11 @@ class EventsNotifier extends _$EventsNotifier {
         'editScope': ?editScope,
         'originalOccurrenceDate': ?originalOccurrenceDate?.toUtc().toIso8601String(),
         'recurrenceRule': ?event.recurrenceRule,
+        // Always sent, including when empty: the server reads an ABSENT field as
+        // "not supplied, keep what is stored", so omitting it silently discarded the
+        // user's reminder change. Sending the list - empty or not - makes the edit
+        // sheet's selection authoritative, which is what the user expects.
+        'reminderMinutesBefore': event.reminderMinutesBefore,
       });
       ref.invalidateSelf();
       ref.invalidate(habitsProvider);
