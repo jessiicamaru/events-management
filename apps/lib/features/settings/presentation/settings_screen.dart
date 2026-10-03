@@ -7,6 +7,8 @@ import 'package:habit_tracker/features/profile/presentation/providers/user_profi
 import 'package:habit_tracker/features/settings/presentation/appearance_screen.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_settings_sheet.dart';
 import 'package:habit_tracker/features/settings/presentation/google_calendar_sync_screen.dart';
 
@@ -116,6 +118,26 @@ class SettingsScreen extends ConsumerWidget {
                         builder: (context) => const CalendarSettingsSheet(),
                       );
                     },
+                  ),
+                  const Divider(),
+
+                  // Streak nudge toggle. A notification the user did not ask for needs a
+                  // switch in reach, not buried behind another screen.
+                  ListTile(
+                    leading: const Icon(LucideIcons.flame),
+                    title: Text(translations.translate('streak_nudge_title')),
+                    subtitle: Text(
+                      translations.translate(
+                        'streak_nudge_desc',
+                        params: {'hour': '${AppConstants.streakAtRiskHour}'},
+                      ),
+                    ),
+                    trailing: ShadSwitch(
+                      value: ref.watch(appSettingsProvider).streakNudges,
+                      onChanged: (value) => ref
+                          .read(appSettingsProvider.notifier)
+                          .updateStreakNudges(value),
+                    ),
                   ),
                   const Divider(),
 

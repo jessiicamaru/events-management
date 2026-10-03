@@ -50,15 +50,30 @@ month cancelled every pending reminder.
 Scheduled on-device notifications a configurable number of minutes before an event starts.
 No server, no FCM, works offline.
 
-### ⚪ 1.2 Streak-at-risk nudge
+### 🟢 1.2 Streak-at-risk nudge
 
-A habit whose streak is alive, whose occurrence today is still incomplete, and where the day
-is running out. Pure heuristic on top of `StreakCalculator` — no new data.
+**Done — branch `feat/streak-at-risk`.** A habit counts as at risk when its streak is
+alive, it has an unfinished occurrence today, and the local time has passed
+`AppConstants.streakAtRiskHour` (20:00). `StreakAtRisk.evaluate` decides it, Home shows a
+card above the agenda, and `StreakNudgePlanner` schedules one notification per evening at
+the cutoff — one for the evening, not one per habit — for the next
+`AppConstants.streakNudgeEvenings` (2) evenings, so a day the app is never opened still gets
+its nudge. The switch is in Settings, on by default.
 
-- Surface in-app, on the home widget, and as a notification (needs 1.1).
-- Decide the "running out" threshold: a fixed local hour, or a proportion of the user's
-  usual completion time for that habit (data exists for the second; start with the first).
-- Feels intelligent, costs a query.
+The threshold is a fixed hour, not a per-habit one: the data for the second exists, but a
+single hour is what makes the rule explainable. It is *not* the same decision as 5.1's day
+boundary — see the note there: the cutoff is device-local while the streak day is a
+hardcoded UTC+7, so 5.1 still has both halves to reconcile.
+
+A habit already ticked today is not flagged even if another slot is still open: the streak
+needs one completion per calendar day (`StreakCalculator` distincts on date), so the open
+slot is a plan not followed through rather than a streak about to break.
+
+Still open: a habit with **nothing booked** today is not flagged, because whether its
+streak survives an unplanned day is exactly 5.1. The Android widgets do not show it either
+— they would need the habits request, which they do not make today. And the nudge reaches
+two evenings, so a phone that never opens the app for longer than that stops getting one;
+extending it is a matter of raising the constant, bounded by how many alarms Android allows.
 
 ### ⚪ 1.3 Weekly review
 
@@ -155,7 +170,7 @@ Cheap, and the empty-state problem is real for a new user.
 
 ### ⚪ 4.1 Offline-first
 
-`docs/project-plan.md` specified `isar`/`hive` for this and it was never built — there is no
+`docs/archive/project-plan.md` specified `isar`/`hive` for this and it was never built — there is no
 local database, and providers call `ApiService` directly. This is a design task, not a library
 swap: it has to fit the existing stale-while-revalidate + SignalR sync
 (`docs/stale-while-revalidate-sync.md`), and the Flutter side has no repository layer to put a
@@ -190,6 +205,29 @@ Carried over from the audit; these are not features but they block or slow the a
 heatmaps are off by a day for any user outside that zone. The seam exists (every method takes
 an optional offset); the product decision does not. **Device timezone or a profile setting?**
 Either way it shifts every existing user's streak, so decide before the user base grows.
+
+The server's streak grace also caps how far 1.2 may plan ahead: `StreakCalculator` counts a
+streak as alive only while its last completion is today or yesterday, so a `currentStreak`
+read now is true for today and tomorrow and no further. That is why
+`AppConstants.streakNudgeEvenings` is 2 and cannot rise without raising the grace — a nudge
+for D+2 can fire about a streak that is already broken.
+
+There are now **two** clocks to reconcile, not one. 1.2 added a second: the streak-at-risk
+cutoff (`AppConstants.streakAtRiskHour`) is the *device's* local 20:00, while the day it is
+protecting is the server's UTC+7 day. Measured — the same 20:00 device-local moment, and the
+calendar day the backend files it under:
+
+| Device zone | 20:00 local, in UTC | Server's day |
+| --- | --- | --- |
+| UTC+7 | 13:00Z | same day |
+| UTC+0 | 20:00Z | **next day** |
+| UTC−5 | 01:00Z | **next day** |
+| UTC−8 | 04:00Z | **next day** |
+
+So for everyone west of UTC+7 the nudge already fires inside what the server counts as
+tomorrow. Streaks still survive (the shift is uniform day to day, and `isAlive` accepts today
+or yesterday), but whatever this item decides has to set both the boundary and the cutoff,
+and in the same clock.
 
 ### ⚪ 5.2 Flutter repository layer
 
@@ -299,7 +337,7 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 One loop at a time beats five disconnected features:
 
 1. ~~**1.1 reminders**~~ — done (PR #24)
-2. **1.2 streak-at-risk** — reuses 1.1's plumbing; Home is the natural place to show it
+2. ~~**1.2 streak-at-risk**~~ — done (`feat/streak-at-risk`)
 3. **2.1 plan vs actual** — best value-to-effort chart
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own

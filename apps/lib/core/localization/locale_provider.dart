@@ -95,6 +95,10 @@ class AppTranslations {
       AppLocale.en: '{n}-day streak',
       AppLocale.vi: 'Chuỗi {n} ngày',
     },
+    'home_streak_at_risk': {
+      AppLocale.en: 'Streak about to break',
+      AppLocale.vi: 'Chuỗi sắp mất',
+    },
     'home_open_calendar': {
       AppLocale.en: 'Open calendar',
       AppLocale.vi: 'Mở lịch',
@@ -571,6 +575,22 @@ class AppTranslations {
           'This device has not granted exact alarms, so the system may delay a reminder by several minutes to save battery.',
       AppLocale.vi:
           'Thiết bị này chưa cấp quyền báo thức chính xác, nên hệ thống có thể trì hoãn nhắc nhở vài phút để tiết kiệm pin.',
+    },
+    'streak_nudge_title': {
+      AppLocale.en: 'Evening streak nudge',
+      AppLocale.vi: 'Nhắc chuỗi buổi tối',
+    },
+    'streak_nudge_desc': {
+      AppLocale.en: 'At {hour}:00, if a habit with a streak is still unfinished',
+      AppLocale.vi: 'Vào {hour}:00, nếu một thói quen đang có chuỗi vẫn chưa xong',
+    },
+    'streak_nudge_body': {
+      AppLocale.en: 'Still open today — finish it to keep your streak',
+      AppLocale.vi: 'Hôm nay vẫn chưa xong — hoàn thành để giữ chuỗi',
+    },
+    'streak_nudge_body_multi': {
+      AppLocale.en: 'Still open today, with {n} more — finish them to keep your streaks',
+      AppLocale.vi: 'Hôm nay vẫn chưa xong, cùng {n} thói quen khác — hoàn thành để giữ chuỗi',
     },
     'reminder_starting_now': {
       AppLocale.en: 'Starting now',

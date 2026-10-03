@@ -61,6 +61,55 @@ class AppConstants {
   /// Android notification channel for event reminders.
   static const String reminderChannelId = 'event_reminders';
 
+  // Streak-at-risk nudge
+  /// Local hour from which a day counts as "running out", so an unfinished habit that
+  /// has a streak to lose is worth a nudge.
+  ///
+  /// A fixed hour on purpose. The data for a per-habit time exists (the hour each habit
+  /// is usually completed at), but a single hour is what makes the rule explainable.
+  ///
+  /// It is **not** yet the same decision as roadmap 5.1's day boundary, and the two are
+  /// currently made in different clocks: this is the device's local hour, while the
+  /// server's streak day is a hardcoded UTC+7 (`StreakCalculator.DefaultDayBoundaryOffset`).
+  /// For a user west of UTC+7 the cutoff therefore falls inside what the backend already
+  /// counts as the next day. Reconciling them is 5.1's job; until then this constant is
+  /// the one place to change the client half.
+  static const int streakAtRiskHour = 20;
+
+  /// Base notification id for the evening nudge. A fixed base, unlike event reminders,
+  /// which hash theirs from the occurrence: there is one nudge per planned evening
+  /// ([streakNudgeEvenings]), at consecutive ids from this base, so re-planning replaces
+  /// each evening's nudge rather than stacking a second one.
+  ///
+  /// Above [eventReminderIdMask], so it cannot be the id a hashed event reminder lands on.
+  /// The two are scheduled in one `applyPlan` call with no shared dedupe between them, so
+  /// an overlap would mean one silently overwriting the other.
+  static const int streakNudgeNotificationId = 0x7FFFFFF0;
+
+  /// How many evenings ahead the nudge is planned, counting the next cutoff as one.
+  ///
+  /// Two, so a day the app is never opened still gets its nudge: planning only tonight
+  /// meant the feature covered exactly the days somebody already used the app, and the
+  /// evening after a quiet day is when it matters most. Tomorrow's state is unknowable —
+  /// nothing booked for tomorrow can be completed yet — so tomorrow's nudge is scheduled on
+  /// the assumption that it will not be, and dropped the moment it is: completing anything
+  /// re-plans the whole set.
+  ///
+  /// **Two is the ceiling, and the limit is the server's.** `StreakCalculator` reports a
+  /// streak as alive only while its last completion is today or yesterday, so the
+  /// `currentStreak` the client plans from stays true for today and tomorrow and no longer.
+  /// A nudge planned further out would fire about a streak that is already broken — "finish
+  /// it to keep your streak" for a streak lost two nights ago, which is how the switch gets
+  /// turned off. Raising this needs that grace period raised first.
+  ///
+  /// (Ids also run from [streakNudgeNotificationId] upwards, one per evening, but they are
+  /// not what binds: the space below the signed 32-bit ceiling allows 16.)
+  static const int streakNudgeEvenings = 2;
+
+  /// Mask applied to hashed event-reminder ids (`ReminderPlanner.reminderId`), keeping
+  /// them positive **and** below every fixed notification id above.
+  static const int eventReminderIdMask = 0x3FFFFFFF;
+
   // Routing
   /// Where a signed-in user lands: after login, and when opening the app.
   ///
