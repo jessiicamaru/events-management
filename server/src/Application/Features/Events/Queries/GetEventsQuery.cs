@@ -54,19 +54,26 @@ namespace HabitTracker.Application.Features.Events.Queries
 
                     if (!isSynced)
                     {
-                        Console.WriteLine($"GetEventsQueryHandler: Range [{request.StartTime.Value:yyyy-MM-dd} to {request.EndTime.Value:yyyy-MM-dd}] not fully synced for User {request.UserId}. Triggering Google sync...");
-                        await _googleCalendarService.SyncEventsAsync(
-                            request.UserId, 
-                            user.GoogleRefreshToken, 
-                            request.StartTime.Value, 
-                            request.EndTime.Value, 
-                            cancellationToken);
+                        try
+                        {
+                            Console.WriteLine($"GetEventsQueryHandler: Range [{request.StartTime.Value:yyyy-MM-dd} to {request.EndTime.Value:yyyy-MM-dd}] not fully synced for User {request.UserId}. Triggering Google sync...");
+                            await _googleCalendarService.SyncEventsAsync(
+                                request.UserId, 
+                                user.GoogleRefreshToken, 
+                                request.StartTime.Value, 
+                                request.EndTime.Value, 
+                                cancellationToken);
 
-                        await _syncCacheRepository.SaveSyncRangeAsync(
-                            request.UserId, 
-                            request.StartTime.Value, 
-                            request.EndTime.Value, 
-                            cancellationToken);
+                            await _syncCacheRepository.SaveSyncRangeAsync(
+                                request.UserId, 
+                                request.StartTime.Value, 
+                                request.EndTime.Value, 
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"GetEventsQueryHandler: Google calendar sync failed: {ex.Message}");
+                        }
                     }
                 }
             }

@@ -8,9 +8,10 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:habit_tracker/features/home_widget/home_widget_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +34,7 @@ class HabitTrackerApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(homeWidgetSyncProvider);
     final router = ref.watch(routerProvider);
     final appSettings = ref.watch(appSettingsProvider);
     final appLocale = ref.watch(localeProvider);
