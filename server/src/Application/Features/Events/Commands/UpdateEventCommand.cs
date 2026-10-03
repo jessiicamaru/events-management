@@ -1,4 +1,5 @@
 using HabitTracker.Domain.Interfaces;
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Entities;
 using MediatR;
 using System;
@@ -21,6 +22,9 @@ namespace HabitTracker.Application.Features.Events.Commands
         public string? EditScope { get; set; } // "ThisOccurrence", "ThisAndFuture", "AllOccurrences"
         public DateTime? OriginalOccurrenceDate { get; set; }
         public string? RecurrenceRule { get; set; }
+
+        /// <summary>Minutes before the start to remind; empty means no reminders.</summary>
+        public List<int>? ReminderMinutesBefore { get; set; }
     }
 
     public class UpdateEventCommandHandler : IRequestHandler<UpdateEventCommand, bool>
@@ -87,7 +91,11 @@ namespace HabitTracker.Application.Features.Events.Commands
                     CategoryId = request.CategoryId,
                     ParentEventId = existingEvent.Id,
                     ExceptionDate = exceptionDateUtc,
-                    IsCompleted = false
+                    IsCompleted = false,
+                    // The whole point of editing one occurrence: this child keeps its own
+                    // reminder set, so one day of a series can differ from the others.
+                    ReminderMinutesBefore = ReminderOptions.Normalise(
+                        request.ReminderMinutesBefore ?? existingEvent.ReminderMinutesBefore)
                 };
                 await _eventRepository.AddAsync(exceptionEvent);
 
@@ -139,7 +147,9 @@ namespace HabitTracker.Application.Features.Events.Commands
                     TargetDuration = request.TargetDuration ?? (request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime()),
                     UserId = request.UserId,
                     CategoryId = request.CategoryId,
-                    RecurrenceRule = request.RecurrenceRule ?? oldRule
+                    RecurrenceRule = request.RecurrenceRule ?? oldRule,
+                    ReminderMinutesBefore = ReminderOptions.Normalise(
+                        request.ReminderMinutesBefore ?? existingEvent.ReminderMinutesBefore)
                 };
                 await _eventRepository.AddAsync(newMasterEvent);
 
@@ -178,6 +188,14 @@ namespace HabitTracker.Application.Features.Events.Commands
                 existingEvent.CategoryId = request.CategoryId;
                 existingEvent.TargetDuration = request.TargetDuration ?? (request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime());
                 existingEvent.RecurrenceRule = request.RecurrenceRule ?? existingEvent.RecurrenceRule;
+
+                // Null = field not supplied, keep what is stored. An empty list is a
+                // deliberate "no reminders" and must not be treated as missing.
+                if (request.ReminderMinutesBefore != null)
+                {
+                    existingEvent.ReminderMinutesBefore =
+                        ReminderOptions.Normalise(request.ReminderMinutesBefore);
+                }
 
                 await _eventRepository.UpdateAsync(existingEvent);
 

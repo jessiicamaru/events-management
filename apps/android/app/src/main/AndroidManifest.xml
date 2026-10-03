@@ -1,6 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Event reminders (flutter_local_notifications). -->
+    <!-- Android 13+ (API 33) asks the user before any notification may be posted. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 12+ (API 31) gates alarms that must fire at a precise time. Without it
+         NotificationService falls back to inexact scheduling, which still delivers but
+         may drift by minutes. USE_EXACT_ALARM is deliberately NOT used: Play restricts
+         it to alarm-clock-style apps, and this is a reminder, not an alarm. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Alarms are dropped on reboot; the receiver below re-registers pending ones. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:label="habit_tracker"
         android:name="${applicationName}"
@@ -45,6 +57,22 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/up_next_widget_info" />
+        </receiver>
+
+        <!-- Posts a scheduled reminder when its alarm fires. -->
+        <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+
+        <!-- Re-registers pending reminders after a reboot or an app update, since
+             Android clears alarms on both. -->
+        <receiver android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
         </receiver>
 
         <!-- Don't delete the meta-data below.

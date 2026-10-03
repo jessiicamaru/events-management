@@ -237,3 +237,9 @@ server/src/Web/appsettings.Development.json
 server/src/Web/appsettings.Local.json
 # ngrok token / tunnel domain for docker-compose
 .env
+
+/local-dev
+
+# Local-only Docker stack (postgres + pgAdmin) for development. Pairs with /local-dev,
+# which holds the database dump it restores.
+docker-compose.override.yml

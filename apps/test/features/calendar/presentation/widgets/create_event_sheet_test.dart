@@ -128,10 +128,50 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      // The form grew a Reminders field, pushing the button past the viewport. Without
+      // this the tap lands off-screen and silently does nothing.
+      await tester.ensureVisible(find.text('Create Event'));
+      await tester.pumpAndSettle();
+
       await tester.tap(find.text('Create Event'));
       await tester.pumpAndSettle();
 
       expect(find.text('Please enter an event title'), findsOneWidget);
+    });
+
+    testWidgets('defaults a new event to no reminders', (WidgetTester tester) async {
+      await tester.pumpWidget(buildTestableWidget(
+        const CreateEventSheet(),
+        habits: const [],
+      ));
+      await tester.pumpAndSettle();
+
+      // Reminders are opt-in per event: there is no global default to inherit.
+      expect(find.text('Reminders'), findsOneWidget);
+      expect(find.text('No reminder'), findsOneWidget);
+    });
+
+    testWidgets('pre-selects the reminders of the event being edited', (WidgetTester tester) async {
+      final existing = EventModel(
+        id: 'evt-1',
+        title: 'Jogging',
+        habitId: '',
+        startTime: DateTime(2026, 3, 2, 18).toUtc(),
+        endTime: DateTime(2026, 3, 2, 19).toUtc(),
+        reminderMinutesBefore: const [60, 30, 5],
+      );
+
+      await tester.pumpWidget(buildTestableWidget(
+        CreateEventSheet(eventToEdit: existing),
+        habits: const [],
+      ));
+      await tester.pumpAndSettle();
+
+      // Summarised earliest-first, the way it is stored.
+      expect(
+        find.text('1 hour before, 30 minutes before, 5 minutes before'),
+        findsOneWidget,
+      );
     });
   });
 }

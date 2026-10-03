@@ -33,6 +33,11 @@ _EventModel _$EventModelFromJson(Map<String, dynamic> json) => _EventModel(
   exceptionDate: json['exceptionDate'] == null
       ? null
       : DateTime.parse(json['exceptionDate'] as String),
+  reminderMinutesBefore:
+      (json['reminderMinutesBefore'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ??
+      const <int>[],
 );
 
 Map<String, dynamic> _$EventModelToJson(
@@ -54,4 +59,5 @@ Map<String, dynamic> _$EventModelToJson(
   'recurrenceExceptionDates': instance.recurrenceExceptionDates,
   'parentEventId': instance.parentEventId,
   'exceptionDate': instance.exceptionDate?.toIso8601String(),
+  'reminderMinutesBefore': instance.reminderMinutesBefore,
 };

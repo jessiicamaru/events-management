@@ -418,6 +418,60 @@ class AppTranslations {
       AppLocale.en: 'Drop to schedule',
       AppLocale.vi: 'Thả để lên lịch',
     },
+
+    // Event reminders
+    'reminders_label': {
+      AppLocale.en: 'Reminders',
+      AppLocale.vi: 'Nhắc nhở',
+    },
+    'reminders_none': {
+      AppLocale.en: 'No reminder',
+      AppLocale.vi: 'Không nhắc',
+    },
+    'reminders_lead_at_start': {
+      AppLocale.en: 'When the event starts',
+      AppLocale.vi: 'Khi sự kiện bắt đầu',
+    },
+    'reminders_lead_minutes': {
+      AppLocale.en: '{n} minutes before',
+      AppLocale.vi: '{n} phút trước',
+    },
+    'reminders_lead_hour': {
+      AppLocale.en: '1 hour before',
+      AppLocale.vi: '1 giờ trước',
+    },
+    'reminders_permission_needed': {
+      AppLocale.en: 'Notifications are blocked',
+      AppLocale.vi: 'Thông báo đang bị chặn',
+    },
+    'reminders_permission_needed_desc': {
+      AppLocale.en:
+          'Allow notifications for this app in system settings, otherwise reminders cannot be delivered.',
+      AppLocale.vi:
+          'Hãy cho phép thông báo cho ứng dụng này trong cài đặt hệ thống, nếu không nhắc nhở sẽ không được gửi.',
+    },
+    'reminders_inexact_warning': {
+      AppLocale.en: 'Reminders may arrive late',
+      AppLocale.vi: 'Nhắc nhở có thể đến muộn',
+    },
+    'reminders_inexact_warning_desc': {
+      AppLocale.en:
+          'This device has not granted exact alarms, so the system may delay a reminder by several minutes to save battery.',
+      AppLocale.vi:
+          'Thiết bị này chưa cấp quyền báo thức chính xác, nên hệ thống có thể trì hoãn nhắc nhở vài phút để tiết kiệm pin.',
+    },
+    'reminder_starting_now': {
+      AppLocale.en: 'Starting now',
+      AppLocale.vi: 'Bắt đầu ngay',
+    },
+    'reminder_starts_in_minutes': {
+      AppLocale.en: 'Starts in {n} min',
+      AppLocale.vi: 'Bắt đầu sau {n} phút',
+    },
+    'reminder_starts_in_hours': {
+      AppLocale.en: 'Starts in {n} h',
+      AppLocale.vi: 'Bắt đầu sau {n} giờ',
+    },
     'no_habits_to_schedule': {
       AppLocale.en: 'No habits to schedule',
       AppLocale.vi: 'Không có thói quen nào cần lên lịch',
@@ -1014,8 +1068,22 @@ class AppTranslations {
   final AppLocale locale;
   AppTranslations(this.locale);
 
-  String translate(String key) {
-    return _keys[key]?[locale] ?? key;
+  /// Looks up [key] for the active locale, falling back to the key itself.
+  ///
+  /// [params] replaces `{name}` placeholders, e.g.
+  /// `translate('reminder_starts_in_minutes', params: {'n': '10'})`. Keeps counts
+  /// inside the translated string so word order stays the translator's choice rather
+  /// than being fixed by Dart concatenation.
+  String translate(String key, {Map<String, String>? params}) {
+    var value = _keys[key]?[locale] ?? key;
+
+    if (params != null) {
+      for (final entry in params.entries) {
+        value = value.replaceAll('{${entry.key}}', entry.value);
+      }
+    }
+
+    return value;
   }
 
   String translateBackendError(String error) {

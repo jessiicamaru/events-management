@@ -17,9 +17,15 @@ class MockApiService implements ApiService {
   }
 
   bool updateEventCalled = false;
+
+  /// The payload of the last updateEvent call. Asserting on this rather than just
+  /// `updateEventCalled` is what catches a field being dropped from the hand-built map.
+  Map<String, dynamic>? lastUpdatePayload;
+
   @override
   Future<void> updateEvent(String id, Map<String, dynamic> data) async {
     updateEventCalled = true;
+    lastUpdatePayload = data;
     final index = eventsToReturn.indexWhere((e) => e.id == id);
     if (index != -1) {
       eventsToReturn[index] = eventsToReturn[index].copyWith(
@@ -135,5 +141,61 @@ void main() {
     final events = container.read(eventsProvider).value;
     expect(events?.isEmpty, true);
     expect(mockApiService.deleteEventCalled, true);
+  });
+
+  test('EventsNotifier sends reminderMinutesBefore when updating an event', () async {
+    // Regression: updateEvent builds its request map by hand rather than from
+    // EventModel.toJson(), and reminderMinutesBefore was missing from it. The server
+    // reads an absent field as "not supplied, keep stored", so editing an event's
+    // reminders silently did nothing and reverted on the next refresh.
+    mockApiService.eventsToReturn = <EventModel>[
+      EventModel(
+        id: '1',
+        title: 'Jogging',
+        habitId: 'habit_1',
+        startTime: DateTime(2026, 3, 2, 18),
+        endTime: DateTime(2026, 3, 2, 19),
+        reminderMinutesBefore: const [30],
+      ),
+    ];
+
+    await container.read(eventsProvider.future);
+
+    final edited = mockApiService.eventsToReturn.first.copyWith(
+      reminderMinutesBefore: const [60, 30, 5],
+    );
+
+    await container.read(eventsProvider.notifier).updateEvent(edited);
+
+    expect(
+      mockApiService.lastUpdatePayload?['reminderMinutesBefore'],
+      const [60, 30, 5],
+    );
+  });
+
+  test('EventsNotifier sends an empty reminder list, so reminders can be cleared', () async {
+    // The empty case is the one most easily lost: "no reminders" must be sent
+    // explicitly, because an absent field means "keep what is stored".
+    mockApiService.eventsToReturn = <EventModel>[
+      EventModel(
+        id: '1',
+        title: 'Jogging',
+        habitId: 'habit_1',
+        startTime: DateTime(2026, 3, 2, 18),
+        endTime: DateTime(2026, 3, 2, 19),
+        reminderMinutesBefore: const [30],
+      ),
+    ];
+
+    await container.read(eventsProvider.future);
+
+    final cleared = mockApiService.eventsToReturn.first.copyWith(
+      reminderMinutesBefore: const [],
+    );
+
+    await container.read(eventsProvider.notifier).updateEvent(cleared);
+
+    expect(mockApiService.lastUpdatePayload, contains('reminderMinutesBefore'));
+    expect(mockApiService.lastUpdatePayload?['reminderMinutesBefore'], isEmpty);
   });
 }

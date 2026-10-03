@@ -19,6 +19,21 @@ namespace HabitTracker.Domain.Entities
         /// </summary>
         public int AwardedXp { get; set; }
 
+        /// <summary>
+        /// Minutes before <see cref="StartTime"/> at which to remind the user, one entry per
+        /// reminder. `0` means "when it starts"; an empty list means no reminders.
+        /// <para>
+        /// Held on the event rather than in global settings so each event carries its own
+        /// set. A single occurrence of a recurring event can differ simply by editing it
+        /// with <c>editScope: "ThisOccurrence"</c> — that already creates a child event,
+        /// which carries its own reminders.
+        /// </para>
+        /// <para>
+        /// Reminders are scheduled on the device; the server only stores the preference.
+        /// </para>
+        /// </summary>
+        public List<int> ReminderMinutesBefore { get; set; } = new();
+
         public TimeSpan TargetDuration { get; set; }
         public TimeSpan? ActualDuration { get; set; }
         public string? UserId { get; set; }

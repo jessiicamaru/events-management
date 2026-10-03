@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
@@ -28,6 +29,9 @@ namespace HabitTracker.Application.Features.Events.Commands
         public Guid? CategoryId { get; set; }
         public List<CreateEventTaskDto>? Tasks { get; set; }
         public string? RecurrenceRule { get; set; }
+
+        /// <summary>Minutes before the start to remind; empty means no reminders.</summary>
+        public List<int>? ReminderMinutesBefore { get; set; }
     }
 
     public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
@@ -63,7 +67,8 @@ namespace HabitTracker.Application.Features.Events.Commands
                 TargetDuration = request.TargetDuration ?? request.EndTime.ToUniversalTime() - request.StartTime.ToUniversalTime(),
                 UserId = request.UserId,
                 CategoryId = request.CategoryId,
-                RecurrenceRule = request.RecurrenceRule
+                RecurrenceRule = request.RecurrenceRule,
+                ReminderMinutesBefore = ReminderOptions.Normalise(request.ReminderMinutesBefore)
             };
 
             await _repository.AddAsync(ev);

@@ -13,6 +13,8 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/event_tasks
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/habit_tasks_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/providers/event_category_provider.dart';
+import 'package:habit_tracker/core/notifications/reminder_sync_provider.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/custom_recurrence_dialog.dart';
 
 
@@ -48,6 +50,69 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
   String _selectedRepeatPreset = 'none';
   String? _recurrenceRule;
 
+  /// Offsets in minutes before the start. Empty means no reminder, which is the
+  /// default for a new event - reminders are opt-in per event.
+  Set<int> _reminderMinutes = <int>{};
+
+  String _reminderOptionLabel(AppTranslations translations, int minutes) {
+    if (minutes == 0) return translations.translate('reminders_lead_at_start');
+    if (minutes >= Duration.minutesPerHour) {
+      return translations.translate('reminders_lead_hour');
+    }
+
+    return translations.translate(
+      'reminders_lead_minutes',
+      params: {'n': '$minutes'},
+    );
+  }
+
+  /// Earliest reminder first, e.g. "1 hour before, 30 minutes before, 5 minutes before".
+  String _reminderSummary(AppTranslations translations, Iterable<int> minutes) {
+    final ordered = minutes.toList()..sort((a, b) => b.compareTo(a));
+
+    return ordered.map((m) => _reminderOptionLabel(translations, m)).join(', ');
+  }
+
+  Future<void> _handleRemindersChanged(Set<int> selected) async {
+    final wasEmpty = _reminderMinutes.isEmpty;
+
+    setState(() => _reminderMinutes = selected);
+
+    // Nothing to ask for if they just cleared the reminders.
+    if (selected.isEmpty || !wasEmpty) return;
+
+    // There is no reminders settings screen, so this is the moment to ask: the user has
+    // just said they want one, which is the context that makes the prompt make sense.
+    final translations = ref.read(translationsProvider);
+    final toaster = ShadToaster.of(context);
+    final status =
+        await ref.read(notificationServiceProvider).requestPermissions();
+
+    if (!mounted) return;
+
+    if (!status.notificationsAllowed) {
+      toaster.show(
+        ShadToast.destructive(
+          title: Text(translations.translate('reminders_permission_needed')),
+          description:
+              Text(translations.translate('reminders_permission_needed_desc')),
+        ),
+      );
+      return;
+    }
+
+    if (!status.exactAlarmsAllowed) {
+      // Not fatal - reminders still arrive, just not punctually. Worth saying once.
+      toaster.show(
+        ShadToast(
+          title: Text(translations.translate('reminders_inexact_warning')),
+          description:
+              Text(translations.translate('reminders_inexact_warning_desc')),
+        ),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +128,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       } else {
         _updateTargetDuration();
       }
+      _reminderMinutes = evt.reminderMinutesBefore.toSet();
       _recurrenceRule = evt.recurrenceRule;
       if (_recurrenceRule == null || _recurrenceRule!.isEmpty) {
         _selectedRepeatPreset = 'none';
@@ -293,6 +359,9 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
       userId: widget.eventToEdit?.userId,
       categoryId: _selectedCategoryId,
       recurrenceRule: _recurrenceRule,
+      // Ordered earliest-first so it reads the way it is shown; the server
+      // normalises again, since it cannot trust a client.
+      reminderMinutesBefore: (_reminderMinutes.toList()..sort((a, b) => b.compareTo(a))),
     );
 
     String? editScope;
@@ -521,6 +590,35 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                     controller: _targetDurationController,
                     placeholder: Text(translations.translate('duration_placeholder')),
                     keyboardType: TextInputType.number,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Text(translations.translate('reminders_label'), style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ShadSelect<int>.multiple(
+                      placeholder: Text(translations.translate('reminders_none')),
+                      initialValues: _reminderMinutes,
+                      // Several reminders per event is the point, so keep the list open
+                      // while the user picks more than one.
+                      closeOnSelect: false,
+                      onChanged: _handleRemindersChanged,
+                      options: AppConstants.reminderOptionsMinutes
+                          .map(
+                            (minutes) => ShadOption(
+                              value: minutes,
+                              child: Text(_reminderOptionLabel(translations, minutes)),
+                            ),
+                          )
+                          .toList(),
+                      selectedOptionsBuilder: (context, values) => Text(
+                        values.isEmpty
+                            ? translations.translate('reminders_none')
+                            : _reminderSummary(translations, values),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 16),
