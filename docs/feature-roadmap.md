@@ -3,7 +3,7 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-12 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-13 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
 **Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
 needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
@@ -119,11 +119,29 @@ Limits worth knowing before building on it:
   rate down. Undecided whether the card should count only the user's own habits/events.
 - Focus minutes have none of these problems — `ActualDuration` is written per focus session.
 
-### ⚪ 2.1 Plan vs actual time
+### 🟢 2.1 Plan vs actual time
 
-`ActualDuration` vs `TargetDuration`, grouped by habit and by category. The single best
-value-to-effort item in this document: one aggregate query over a field the app already
-writes on every focus session, telling the user something they genuinely do not know.
+**Done — branch `feat/plan-vs-actual`.** `GET /api/v1/analytics/plan-vs-actual?days=N` →
+two `GROUP BY` queries in Postgres (one joining `Habits`, one joining `EventCategories`),
+shown on Home under the activity card: the totals as a sentence, then a bar per habit with
+how far over or under it ran, and the same sessions by category behind a tap.
+
+Only sessions with an `ActualDuration` take part, so both sides describe the same sessions.
+Counting every booked event's target against the recorded time of the few that were done
+would read as "you always overrun" when the honest answer is "you did 4 of the 9 you
+booked" — which the activity card already says.
+
+Limits worth knowing: a zero `TargetDuration` gives no ratio rather than 0% (the card says
+so instead of drawing a bar); and **the totals are their own query, not a sum of either
+grouping** —
+an event need not have a habit or a category, so summing one under-counts and summing both
+double-counts. Each grouping carries a row for what it cannot
+show — "Not linked to a habit" and "No category" — derived on the client from what its rows
+leave unaccounted, so either view adds up to the headline above it.
+
+Review finding worth remembering: deriving the totals from the habit grouping made the card
+say "nothing here yet" to the one account in the dev database with sessions in the window —
+15 of them, 790 minutes, every one on a plain event.
 
 ### ⚪ 2.2 Completion rate by weekday and hour
 
@@ -211,6 +229,10 @@ streak as alive only while its last completion is today or yesterday, so a `curr
 read now is true for today and tomorrow and no further. That is why
 `AppConstants.streakNudgeEvenings` is 2 and cannot rise without raising the grace — a nudge
 for D+2 can fire about a streak that is already broken.
+
+Three things now read it, not one: the streak and heatmap queries, the activity summary's
+14-day window, and 2.1's plan-vs-actual window. For a user outside UTC+7 the two dashboard
+cards cover the same 14 days as each other but not the 14 days that user lived.
 
 There are now **two** clocks to reconcile, not one. 1.2 added a second: the streak-at-risk
 cutoff (`AppConstants.streakAtRiskHour`) is the *device's* local 20:00, while the day it is
@@ -338,7 +360,7 @@ One loop at a time beats five disconnected features:
 
 1. ~~**1.1 reminders**~~ — done (PR #24)
 2. ~~**1.2 streak-at-risk**~~ — done (`feat/streak-at-risk`)
-3. **2.1 plan vs actual** — best value-to-effort chart
+3. ~~**2.1 plan vs actual**~~ — done (`feat/plan-vs-actual`)
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own
 
