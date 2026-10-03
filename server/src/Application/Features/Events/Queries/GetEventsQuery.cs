@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HabitTracker.Application.Features.Events.Queries
 {
@@ -19,19 +20,19 @@ namespace HabitTracker.Application.Features.Events.Queries
     {
         private readonly IEventRepository _repository;
         private readonly IUserRepository _userRepository;
-        private readonly IGoogleCalendarService _googleCalendarService;
         private readonly IGoogleCalendarSyncCacheRepository _syncCacheRepository;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         public GetEventsQueryHandler(
             IEventRepository repository,
             IUserRepository userRepository,
-            IGoogleCalendarService googleCalendarService,
-            IGoogleCalendarSyncCacheRepository syncCacheRepository)
+            IGoogleCalendarSyncCacheRepository syncCacheRepository,
+            IServiceScopeFactory scopeFactory)
         {
             _repository = repository;
             _userRepository = userRepository;
-            _googleCalendarService = googleCalendarService;
             _syncCacheRepository = syncCacheRepository;
+            _scopeFactory = scopeFactory;
         }
 
         public async Task<IEnumerable<Event>> Handle(GetEventsQuery request, CancellationToken cancellationToken)
@@ -41,6 +42,10 @@ namespace HabitTracker.Application.Features.Events.Queries
                 return await _repository.GetAllAsync();
             }
 
+            // 1. Stale: Lấy dữ liệu local và trả về ngay lập tức để UI hiển thị tức thì
+            var localEvents = await _repository.GetEventsForUserAsync(request.UserId, request.StartTime, request.EndTime);
+
+            // 2. Revalidate: Nếu người dùng liên kết Google Calendar, kích hoạt đồng bộ ngầm
             if (request.StartTime.HasValue && request.EndTime.HasValue)
             {
                 var user = await _userRepository.GetByIdAsync(request.UserId);
@@ -54,31 +59,32 @@ namespace HabitTracker.Application.Features.Events.Queries
 
                     if (!isSynced)
                     {
-                        try
-                        {
-                            Console.WriteLine($"GetEventsQueryHandler: Range [{request.StartTime.Value:yyyy-MM-dd} to {request.EndTime.Value:yyyy-MM-dd}] not fully synced for User {request.UserId}. Triggering Google sync...");
-                            await _googleCalendarService.SyncEventsAsync(
-                                request.UserId, 
-                                user.GoogleRefreshToken, 
-                                request.StartTime.Value, 
-                                request.EndTime.Value, 
-                                cancellationToken);
+                        var startTime = request.StartTime.Value;
+                        var endTime = request.EndTime.Value;
+                        var userId = request.UserId;
+                        var refreshToken = user.GoogleRefreshToken;
 
-                            await _syncCacheRepository.SaveSyncRangeAsync(
-                                request.UserId, 
-                                request.StartTime.Value, 
-                                request.EndTime.Value, 
-                                cancellationToken);
-                        }
-                        catch (Exception ex)
+                        // Chạy ngầm tiến trình gọi API Google trong scope độc lập
+                        _ = Task.Run(async () =>
                         {
-                            Console.WriteLine($"GetEventsQueryHandler: Google calendar sync failed: {ex.Message}");
-                        }
+                            using var scope = _scopeFactory.CreateScope();
+                            var googleCalendarService = scope.ServiceProvider.GetRequiredService<IGoogleCalendarService>();
+                            var scopedSyncCacheRepo = scope.ServiceProvider.GetRequiredService<IGoogleCalendarSyncCacheRepository>();
+                            try
+                            {
+                                await googleCalendarService.SyncEventsAsync(userId, refreshToken, startTime, endTime, CancellationToken.None);
+                                await scopedSyncCacheRepo.SaveSyncRangeAsync(userId, startTime, endTime, CancellationToken.None);
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Background SWR Google Sync Failed: {ex.Message}");
+                            }
+                        });
                     }
                 }
             }
 
-            return await _repository.GetEventsForUserAsync(request.UserId, request.StartTime, request.EndTime);
+            return localEvents;
         }
     }
 }

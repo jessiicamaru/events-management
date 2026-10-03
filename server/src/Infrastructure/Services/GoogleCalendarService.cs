@@ -84,36 +84,41 @@ namespace HabitTracker.Infrastructure.Services
             return DateTime.UtcNow;
         }
 
+        private async Task<CalendarService> GetCalendarServiceAsync(string userId, string refreshToken, CancellationToken cancellationToken)
+        {
+            var clientId = _configuration["GoogleCalendar:ClientId"];
+            var clientSecret = _configuration["GoogleCalendar:ClientSecret"];
+
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = clientId,
+                    ClientSecret = clientSecret
+                },
+                Scopes = new[] { CalendarService.Scope.Calendar }
+            });
+
+            var tokenResponse = new TokenResponse
+            {
+                RefreshToken = refreshToken
+            };
+
+            var credential = new UserCredential(flow, userId, tokenResponse);
+            await credential.RefreshTokenAsync(cancellationToken);
+
+            return new CalendarService(new BaseClientService.Initializer
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "Habit Tracker"
+            });
+        }
+
         public async Task<bool> SyncEventsAsync(string userId, string refreshToken, DateTime? syncStart, DateTime? syncEnd, CancellationToken cancellationToken)
         {
             try
             {
-                var clientId = _configuration["GoogleCalendar:ClientId"];
-                var clientSecret = _configuration["GoogleCalendar:ClientSecret"];
-
-                var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
-                {
-                    ClientSecrets = new ClientSecrets
-                    {
-                        ClientId = clientId,
-                        ClientSecret = clientSecret
-                    },
-                    Scopes = new[] { CalendarService.Scope.Calendar }
-                });
-
-                var tokenResponse = new TokenResponse
-                {
-                    RefreshToken = refreshToken
-                };
-
-                var credential = new UserCredential(flow, userId, tokenResponse);
-                await credential.RefreshTokenAsync(cancellationToken);
-
-                var calendarService = new CalendarService(new BaseClientService.Initializer
-                {
-                    HttpClientInitializer = credential,
-                    ApplicationName = "Habit Tracker"
-                });
+                var calendarService = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
 
                 var listRequest = calendarService.Events.List("primary");
                 listRequest.TimeMinDateTimeOffset = syncStart ?? DateTime.UtcNow.AddDays(-7);
@@ -303,6 +308,210 @@ namespace HabitTracker.Infrastructure.Services
                 Console.WriteLine($"Google Sync Events Error: {ex}");
                 return false;
             }
+        }
+
+        public async Task<string?> PushInsertAsync(string userId, string refreshToken, Guid eventId, string payload, CancellationToken cancellationToken)
+        {
+            var service = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
+            var data = System.Text.Json.JsonSerializer.Deserialize<PushPayload>(payload);
+            if (data == null) return null;
+
+            var googleEvent = new Google.Apis.Calendar.v3.Data.Event
+            {
+                Summary = data.Title,
+                Start = new Google.Apis.Calendar.v3.Data.EventDateTime { DateTimeDateTimeOffset = data.StartTime },
+                End = new Google.Apis.Calendar.v3.Data.EventDateTime { DateTimeDateTimeOffset = data.EndTime },
+            };
+
+            if (!string.IsNullOrEmpty(data.RecurrenceRule))
+            {
+                googleEvent.Recurrence = new List<string> { data.RecurrenceRule };
+            }
+
+            if (data.ParentEventId.HasValue && data.ExceptionDate.HasValue)
+            {
+                var parentLocal = await _eventRepository.GetByIdAsync(data.ParentEventId.Value);
+                if (parentLocal != null && !string.IsNullOrEmpty(parentLocal.GoogleEventId))
+                {
+                    var instancesReq = service.Events.Instances("primary", parentLocal.GoogleEventId);
+                    instancesReq.TimeMinDateTimeOffset = data.ExceptionDate.Value.AddMinutes(-5);
+                    instancesReq.TimeMaxDateTimeOffset = data.ExceptionDate.Value.AddMinutes(5);
+                    var instances = await instancesReq.ExecuteAsync(cancellationToken);
+                    
+                    var targetInstance = instances.Items?.FirstOrDefault(x => 
+                        GetGoogleDateTime(x.OriginalStartTime ?? x.Start).Date == data.ExceptionDate.Value.Date);
+
+                    if (targetInstance != null)
+                    {
+                        targetInstance.Summary = data.Title;
+                        targetInstance.Start = googleEvent.Start;
+                        targetInstance.End = googleEvent.End;
+                        var updated = await service.Events.Update(targetInstance, "primary", targetInstance.Id).ExecuteAsync(cancellationToken);
+                        return updated.Id;
+                    }
+                }
+            }
+
+            var inserted = await service.Events.Insert(googleEvent, "primary").ExecuteAsync(cancellationToken);
+            return inserted.Id;
+        }
+
+        public async Task PushUpdateAsync(string userId, string refreshToken, string googleEventId, string payload, CancellationToken cancellationToken)
+        {
+            var service = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
+            var data = System.Text.Json.JsonSerializer.Deserialize<PushPayload>(payload);
+            if (data == null) return;
+
+            Google.Apis.Calendar.v3.Data.Event? existing = null;
+            try
+            {
+                existing = await service.Events.Get("primary", googleEventId).ExecuteAsync(cancellationToken);
+            }
+            catch
+            {
+                // Ignored
+            }
+
+            if (existing != null)
+            {
+                existing.Summary = data.Title;
+                existing.Start = new Google.Apis.Calendar.v3.Data.EventDateTime { DateTimeDateTimeOffset = data.StartTime };
+                existing.End = new Google.Apis.Calendar.v3.Data.EventDateTime { DateTimeDateTimeOffset = data.EndTime };
+                
+                if (!string.IsNullOrEmpty(data.RecurrenceRule))
+                {
+                    existing.Recurrence = new List<string> { data.RecurrenceRule };
+                }
+                else
+                {
+                    existing.Recurrence = null;
+                }
+
+                if (!string.IsNullOrEmpty(data.RecurrenceExceptionDates))
+                {
+                    var exceptionDates = data.RecurrenceExceptionDates.Split(',');
+                    foreach (var dateStr in exceptionDates)
+                    {
+                        if (DateTime.TryParse(dateStr, out var exDate))
+                        {
+                            var instancesReq = service.Events.Instances("primary", googleEventId);
+                            instancesReq.TimeMinDateTimeOffset = exDate.AddMinutes(-5);
+                            instancesReq.TimeMaxDateTimeOffset = exDate.AddMinutes(5);
+                            var instances = await instancesReq.ExecuteAsync(cancellationToken);
+                            var targetInstance = instances.Items?.FirstOrDefault(x => 
+                                GetGoogleDateTime(x.OriginalStartTime ?? x.Start).Date == exDate.Date);
+
+                            if (targetInstance != null && targetInstance.Status != "cancelled")
+                            {
+                                targetInstance.Status = "cancelled";
+                                await service.Events.Update(targetInstance, "primary", targetInstance.Id).ExecuteAsync(cancellationToken);
+                            }
+                        }
+                    }
+                }
+
+                await service.Events.Update(existing, "primary", googleEventId).ExecuteAsync(cancellationToken);
+            }
+        }
+
+        public async Task PushDeleteAsync(string userId, string refreshToken, string googleEventId, CancellationToken cancellationToken)
+        {
+            var service = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
+            try
+            {
+                await service.Events.Delete("primary", googleEventId).ExecuteAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Google Push Delete Error: {ex.Message}");
+            }
+        }
+
+        public async Task<GoogleCalendarChannel?> WatchCalendarAsync(string userId, string refreshToken, string webhookUrl, CancellationToken cancellationToken)
+        {
+            var service = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
+            
+            var channelId = Guid.NewGuid().ToString();
+            var channel = new Google.Apis.Calendar.v3.Data.Channel
+            {
+                Id = channelId,
+                Type = "web_hook",
+                Address = webhookUrl,
+                Token = userId
+            };
+
+            try
+            {
+                var response = await service.Events.Watch(channel, "primary").ExecuteAsync(cancellationToken);
+                
+                var expirationTime = DateTime.UtcNow.AddDays(7);
+                if (response.Expiration.HasValue)
+                {
+                    expirationTime = DateTimeOffset.FromUnixTimeMilliseconds(response.Expiration.Value).UtcDateTime;
+                }
+
+                return new GoogleCalendarChannel
+                {
+                    Id = response.Id,
+                    ResourceId = response.ResourceId,
+                    UserId = userId,
+                    Expiration = expirationTime
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Google Watch Calendar Error: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task StopWatchingCalendarAsync(string refreshToken, string channelId, string resourceId, CancellationToken cancellationToken)
+        {
+            var flow = new GoogleAuthorizationCodeFlow(new GoogleAuthorizationCodeFlow.Initializer
+            {
+                ClientSecrets = new ClientSecrets
+                {
+                    ClientId = _configuration["GoogleCalendar:ClientId"],
+                    ClientSecret = _configuration["GoogleCalendar:ClientSecret"]
+                },
+                Scopes = new[] { CalendarService.Scope.Calendar }
+            });
+
+            var tokenResponse = new TokenResponse { RefreshToken = refreshToken };
+            var credential = new UserCredential(flow, "stop-watch", tokenResponse);
+            await credential.RefreshTokenAsync(cancellationToken);
+
+            var service = new CalendarService(new BaseClientService.Initializer
+            {
+                HttpClientInitializer = credential,
+                ApplicationName = "Habit Tracker"
+            });
+
+            var channel = new Google.Apis.Calendar.v3.Data.Channel
+            {
+                Id = channelId,
+                ResourceId = resourceId
+            };
+
+            try
+            {
+                await service.Channels.Stop(channel).ExecuteAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Google Stop Watch Error: {ex.Message}");
+            }
+        }
+
+        private class PushPayload
+        {
+            public string Title { get; set; } = string.Empty;
+            public DateTime StartTime { get; set; }
+            public DateTime EndTime { get; set; }
+            public string? RecurrenceRule { get; set; }
+            public string? RecurrenceExceptionDates { get; set; }
+            public Guid? ParentEventId { get; set; }
+            public DateTime? ExceptionDate { get; set; }
         }
     }
 }

@@ -28,8 +28,12 @@ namespace HabitTracker.Infrastructure.Repositories
 
         public async Task<bool> IsRangeSyncedAsync(string userId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default)
         {
+            var oneMinuteAgo = DateTime.UtcNow.AddMinutes(-1);
             return await _context.GoogleCalendarSyncCaches
-                .AnyAsync(c => c.UserId == userId && c.SyncedFrom <= startTime && c.SyncedTo >= endTime, cancellationToken);
+                .AnyAsync(c => c.UserId == userId 
+                    && c.SyncedFrom <= startTime 
+                    && c.SyncedTo >= endTime 
+                    && c.LastSyncedAt >= oneMinuteAgo, cancellationToken);
         }
 
         public async Task SaveSyncRangeAsync(string userId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default)

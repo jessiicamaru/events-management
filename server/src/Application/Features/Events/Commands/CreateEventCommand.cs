@@ -35,12 +35,21 @@ namespace HabitTracker.Application.Features.Events.Commands
         private readonly IEventRepository _repository;
         private readonly IHabitTaskRepository _habitTaskRepository;
         private readonly IEventTaskRepository _eventTaskRepository;
+        private readonly IUserRepository _userRepository;
+        private readonly IGoogleCalendarOutboxRepository _outboxRepository;
 
-        public CreateEventCommandHandler(IEventRepository repository, IHabitTaskRepository habitTaskRepository, IEventTaskRepository eventTaskRepository)
+        public CreateEventCommandHandler(
+            IEventRepository repository, 
+            IHabitTaskRepository habitTaskRepository, 
+            IEventTaskRepository eventTaskRepository,
+            IUserRepository userRepository,
+            IGoogleCalendarOutboxRepository outboxRepository)
         {
             _repository = repository;
             _habitTaskRepository = habitTaskRepository;
             _eventTaskRepository = eventTaskRepository;
+            _userRepository = userRepository;
+            _outboxRepository = outboxRepository;
         }
 
         public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
@@ -58,6 +67,19 @@ namespace HabitTracker.Application.Features.Events.Commands
             };
 
             await _repository.AddAsync(ev);
+
+            var user = await _userRepository.GetByIdAsync(request.UserId);
+            if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken))
+            {
+                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    Title = ev.Title,
+                    StartTime = ev.StartTime,
+                    EndTime = ev.EndTime,
+                    RecurrenceRule = ev.RecurrenceRule
+                });
+                await _outboxRepository.EnqueueAsync(request.UserId, ev.Id, null, "Insert", payload, cancellationToken);
+            }
 
             if (request.Tasks != null && request.Tasks.Any())
             {

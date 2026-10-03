@@ -27,8 +27,12 @@ public static class DependencyInjection
         services.AddScoped<IHabitTaskRepository, HabitTaskRepository>();
         services.AddScoped<IEventTaskRepository, EventTaskRepository>();
         services.AddScoped<IGoogleCalendarSyncCacheRepository, GoogleCalendarSyncCacheRepository>();
+        services.AddScoped<IGoogleCalendarOutboxRepository, GoogleCalendarOutboxRepository>();
+        services.AddScoped<IGoogleCalendarChannelRepository, GoogleCalendarChannelRepository>();
         services.AddScoped<IGoogleCalendarService, GoogleCalendarService>();
         services.AddScoped<ApplicationDbContextInitialiser>();
+
+        services.AddHostedService<GoogleCalendarSyncWorker>();
 
         return services;
     }

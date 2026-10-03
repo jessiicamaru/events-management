@@ -15,6 +15,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
         private readonly Mock<IHabitRepository> _mockHabitRepo;
         private readonly Mock<IUserRepository> _mockUserRepo;
         private readonly Mock<ISquadRepository> _mockSquadRepo;
+        private readonly Mock<IGoogleCalendarOutboxRepository> _mockOutboxRepo;
         private readonly CompleteEventSessionCommandHandler _handler;
 
         public CompleteEventSessionCommandTests()
@@ -23,11 +24,13 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             _mockHabitRepo = new Mock<IHabitRepository>();
             _mockUserRepo = new Mock<IUserRepository>();
             _mockSquadRepo = new Mock<ISquadRepository>();
+            _mockOutboxRepo = new Mock<IGoogleCalendarOutboxRepository>();
             _handler = new CompleteEventSessionCommandHandler(
                 _mockEventRepo.Object, 
                 _mockHabitRepo.Object,
                 _mockUserRepo.Object,
-                _mockSquadRepo.Object);
+                _mockSquadRepo.Object,
+                _mockOutboxRepo.Object);
         }
 
         [Fact]

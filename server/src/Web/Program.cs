@@ -33,6 +33,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFlutter");
 app.UseHttpsRedirection();
+
+// Middleware hỗ trợ SignalR WebSocket lấy token từ query string gắn vào Header Authorization
+app.Use(async (context, next) =>
+{
+    var accessToken = context.Request.Query["access_token"];
+    var path = context.Request.Path;
+    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/socialHub"))
+    {
+        context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
+    }
+    await next();
+});
+
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Map Minimal APIs
