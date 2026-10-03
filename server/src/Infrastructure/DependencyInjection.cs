@@ -12,12 +12,25 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection") ?? "Host=localhost;Database=habit-tracker;Username=postgres;Password=postgres";
+        var connectionString = configuration.GetConnectionString("DefaultConnection");
+
+        // Fail loudly. The old fallback silently guessed a password, so a missing setting
+        // surfaced later as a confusing authentication error from Postgres.
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "ConnectionStrings:DefaultConnection is not configured. Copy " +
+                "src/Web/appsettings.Development.example.json to appsettings.Development.json " +
+                "and fill it in, or set the connection string via user-secrets or the " +
+                "ConnectionStrings__DefaultConnection environment variable.");
+        }
         
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseNpgsql(connectionString));
 
 
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         services.AddScoped<IHabitRepository, HabitRepository>();
         services.AddScoped<IEventRepository, EventRepository>();

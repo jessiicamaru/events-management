@@ -25,12 +25,22 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             _mockUserRepo = new Mock<IUserRepository>();
             _mockSquadRepo = new Mock<ISquadRepository>();
             _mockOutboxRepo = new Mock<IGoogleCalendarOutboxRepository>();
+
+            // Sensible empty defaults so a test only sets up what it actually cares about.
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(It.IsAny<string>()))
+                .ReturnsAsync(new System.Collections.Generic.List<Event>());
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForHabitAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new System.Collections.Generic.List<Event>());
+            _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(It.IsAny<string>()))
+                .ReturnsAsync(new System.Collections.Generic.List<Squad>());
+
             _handler = new CompleteEventSessionCommandHandler(
-                _mockEventRepo.Object, 
+                _mockEventRepo.Object,
                 _mockHabitRepo.Object,
                 _mockUserRepo.Object,
                 _mockSquadRepo.Object,
-                _mockOutboxRepo.Object);
+                _mockOutboxRepo.Object,
+                new HabitTracker.Application.Tests.TestDoubles.PassThroughUnitOfWork());
         }
 
         [Fact]
@@ -129,6 +139,9 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             Assert.Equal(60, user.TotalXP); // 50 + 10
             Assert.Equal(110, squad1.TotalSquadXP); // 100 + 10 (contribution enabled)
             Assert.Equal(200, squad2.TotalSquadXP); // 200 (contribution disabled, should not change)
+
+            // The award is recorded on the event so un-completing it refunds this exact amount.
+            Assert.Equal(10, ev.AwardedXp);
 
             _mockUserRepo.Verify(repo => repo.UpdateAsync(user), Times.Once);
             _mockSquadRepo.Verify(repo => repo.UpdateAsync(squad1), Times.Once);

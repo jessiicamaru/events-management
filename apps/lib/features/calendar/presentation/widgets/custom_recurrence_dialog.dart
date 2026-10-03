@@ -68,8 +68,11 @@ class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
     return GestureDetector(
       onTap: () {
         setState(() {
-          if (isSelected) _byDays.remove(dayCode);
-          else _byDays.add(dayCode);
+          if (isSelected) {
+            _byDays.remove(dayCode);
+          } else {
+            _byDays.add(dayCode);
+          }
         });
       },
       child: Container(
@@ -79,7 +82,7 @@ class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
           shape: BoxShape.circle,
           color: isSelected 
               ? theme.colorScheme.primary 
-              : (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)),
+              : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)),
         ),
         alignment: Alignment.center,
         child: Text(
@@ -137,13 +140,23 @@ class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
     final isDark = theme.brightness == Brightness.dark;
     
     final inputDecoration = BoxDecoration(
-      color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(8),
       border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
     );
 
     return ShadDialog(
       title: const Text('Repeat'),
+      actions: [
+        ShadButton.outline(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ShadButton(
+          onPressed: () => Navigator.of(context).pop(_buildRrule()),
+          child: const Text('Done'),
+        ),
+      ],
       child: SizedBox(
         width: 320,
         child: SingleChildScrollView(
@@ -239,7 +252,7 @@ class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: inputDecoration,
                     alignment: Alignment.centerLeft,
-                    child: Text(DateFormat('E MMM d').format(_untilDate), style: TextStyle(color: theme.colorScheme.foreground.withOpacity(0.8))),
+                    child: Text(DateFormat('E MMM d').format(_untilDate), style: TextStyle(color: theme.colorScheme.foreground.withValues(alpha: 0.8))),
                   ),
                 ),
               ),
@@ -273,16 +286,6 @@ class _CustomRecurrenceDialogState extends State<CustomRecurrenceDialog> {
           ),
         ),
       ),
-      actions: [
-        ShadButton.outline(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ShadButton(
-          onPressed: () => Navigator.of(context).pop(_buildRrule()),
-          child: const Text('Done'),
-        ),
-      ],
     );
   }
 }

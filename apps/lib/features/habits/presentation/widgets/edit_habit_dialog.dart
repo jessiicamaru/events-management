@@ -56,17 +56,19 @@ class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
             ),
             ShadButton.destructive(
               onPressed: () async {
+                // Captured before both dialogs close: their contexts are defunct by the
+                // time the delete finishes, but the toaster lives above them.
+                final toaster = ShadToaster.of(context);
+
                 Navigator.of(context).pop(); // close confirm dialog
                 Navigator.of(context).pop(); // close edit dialog
                 await notifier.deleteHabit(habitId);
-                
-                if (mounted) {
-                  ShadToaster.of(context).show(
-                    ShadToast(
-                      title: Text(translations.translate('habit_deleted_toast')),
-                    ),
-                  );
-                }
+
+                toaster.show(
+                  ShadToast(
+                    title: Text(translations.translate('habit_deleted_toast')),
+                  ),
+                );
               },
               child: Text(translations.translate('delete_btn')),
             ),
@@ -93,16 +95,17 @@ class _EditHabitDialogState extends ConsumerState<EditHabitDialog> {
       categoryId: _selectedCategoryId,
       targetDays: _selectedDays,
     );
+    // Captured before the dialog closes: this screen's context is defunct once it pops.
+    final toaster = ShadToaster.of(context);
+
     Navigator.of(context).pop();
     await ref.read(habitsProvider.notifier).editHabit(updatedHabit);
-    
-    if (context.mounted) {
-      ShadToaster.of(context).show(
-        ShadToast(
-          title: Text(translations.translate('habit_updated_toast')),
-        ),
-      );
-    }
+
+    toaster.show(
+      ShadToast(
+        title: Text(translations.translate('habit_updated_toast')),
+      ),
+    );
   }
 
   @override

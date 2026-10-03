@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
@@ -20,219 +22,159 @@ namespace HabitTracker.Application.Features.Events.Commands
 
     public class CompleteEventSessionCommandHandler : IRequestHandler<CompleteEventSessionCommand, bool>
     {
+        /// <summary>A session shorter than this still books this much calendar time.</summary>
+        private static readonly TimeSpan MinimumCalendarBlock = TimeSpan.FromMinutes(15);
+
         private readonly IEventRepository _eventRepository;
         private readonly IHabitRepository _habitRepository;
         private readonly IUserRepository _userRepository;
         private readonly ISquadRepository _squadRepository;
         private readonly IGoogleCalendarOutboxRepository _outboxRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
         public CompleteEventSessionCommandHandler(
-            IEventRepository eventRepository, 
+            IEventRepository eventRepository,
             IHabitRepository habitRepository,
             IUserRepository userRepository,
             ISquadRepository squadRepository,
-            IGoogleCalendarOutboxRepository outboxRepository)
+            IGoogleCalendarOutboxRepository outboxRepository,
+            IUnitOfWork unitOfWork)
         {
             _eventRepository = eventRepository;
             _habitRepository = habitRepository;
             _userRepository = userRepository;
             _squadRepository = squadRepository;
             _outboxRepository = outboxRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<bool> Handle(CompleteEventSessionCommand request, CancellationToken cancellationToken)
         {
+            if (string.IsNullOrEmpty(request.UserId))
+            {
+                throw new ArgumentException("UserId is required.", nameof(request));
+            }
+
             var ev = await _eventRepository.GetByIdAsync(request.EventId);
             if (ev == null || ev.UserId != request.UserId)
             {
                 return false;
             }
 
-            var wasCompleted = ev.IsCompleted;
-            ev.IsCompleted = true;
-            ev.ActualDuration = request.ActualDuration;
-
-            if (request.UpdateCalendar)
+            // The event, the outbox row, the user's XP, squad XP and the habit streak are one
+            // logical operation — see IUnitOfWork.
+            return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
-                var duration = request.ActualDuration < TimeSpan.FromMinutes(15) 
-                    ? TimeSpan.FromMinutes(15) 
-                    : request.ActualDuration;
-                ev.EndTime = ev.StartTime.Add(duration);
-            }
+                var wasCompleted = ev.IsCompleted;
 
-            await _eventRepository.UpdateAsync(ev);
+                ev.IsCompleted = true;
+                ev.ActualDuration = request.ActualDuration;
 
-            var user = await _userRepository.GetByIdAsync(request.UserId);
-            if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken))
-            {
-                var payload = System.Text.Json.JsonSerializer.Serialize(new
+                if (request.UpdateCalendar)
                 {
-                    Title = ev.Title,
-                    StartTime = ev.StartTime,
-                    EndTime = ev.EndTime,
-                    RecurrenceRule = ev.RecurrenceRule
-                });
-                await _outboxRepository.EnqueueAsync(request.UserId, ev.Id, ev.GoogleEventId, "Update", payload, cancellationToken);
-            }
-
-            if (!wasCompleted)
-            {
-                // Recalculate streaks for the associated habit (if any)
-                if (Guid.TryParse(ev.HabitId, out Guid habitId))
-                {
-                    var habit = await _habitRepository.GetByIdAsync(habitId);
-                    if (habit != null)
-                    {
-                        await RecalculateStreaks(habit);
-                        await _habitRepository.UpdateAsync(habit);
-                    }
+                    var duration = request.ActualDuration < MinimumCalendarBlock
+                        ? MinimumCalendarBlock
+                        : request.ActualDuration;
+                    ev.EndTime = ev.StartTime.Add(duration);
                 }
 
-                int xpGained = 10;
-                // Calculate XP based on overall user activity streak
-                if (!string.IsNullOrEmpty(ev.UserId))
+                var user = await _userRepository.GetByIdAsync(request.UserId);
+
+                if (!wasCompleted)
                 {
-                    var allEvents = await _eventRepository.GetEventsForUserAsync(ev.UserId);
-                    var completedEvents = allEvents.Where(e => e.IsCompleted);
-                    int userStreak = CalculateActivityStreak(completedEvents);
-                    xpGained = 10 + Math.Max(0, (userStreak - 1) * 2);
+                    // Record the award on the event so un-completing it later refunds this exact
+                    // amount instead of recalculating from a streak that has since moved on.
+                    ev.AwardedXp = XpRules.ForStreak(await CalculateActivityStreakAsync(ev));
+                }
 
-                    if (user != null)
+                await _eventRepository.UpdateAsync(ev);
+
+                if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken))
+                {
+                    var payload = System.Text.Json.JsonSerializer.Serialize(new
                     {
-                        user.TotalXP += xpGained;
-                        await _userRepository.UpdateAsync(user);
+                        Title = ev.Title,
+                        StartTime = ev.StartTime,
+                        EndTime = ev.EndTime,
+                        RecurrenceRule = ev.RecurrenceRule
+                    });
+                    await _outboxRepository.EnqueueAsync(request.UserId, ev.Id, ev.GoogleEventId, "Update", payload, cancellationToken);
+                }
 
-                        var squads = await _squadRepository.GetSquadsByUserIdAsync(user.Id);
-                        foreach (var squad in squads)
+                if (!wasCompleted)
+                {
+                    if (Guid.TryParse(ev.HabitId, out Guid habitId))
+                    {
+                        var habit = await _habitRepository.GetByIdAsync(habitId);
+                        if (habit != null)
                         {
-                            var membership = await _squadRepository.GetMembershipAsync(squad.Id, user.Id);
-                            if (membership != null && membership.XpContributionEnabled && membership.IsApproved)
-                            {
-                                squad.TotalSquadXP += xpGained;
-                                await _squadRepository.UpdateAsync(squad);
-                            }
+                            await RecalculateStreaks(habit, ev);
+                            await _habitRepository.UpdateAsync(habit);
                         }
                     }
-                }
-            }
 
-            return true;
+                    if (user != null && ev.AwardedXp != 0)
+                    {
+                        await ApplyXpAsync(user, ev.AwardedXp);
+                    }
+                }
+
+                return true;
+            }, cancellationToken);
         }
 
-        private int CalculateActivityStreak(IEnumerable<Event> completedEvents)
+        /// <summary>
+        /// Scores the user's activity streak as it will stand once <paramref name="ev"/> counts
+        /// as completed. The repository read still reflects the pre-completion state, so the
+        /// event is folded into a scratch list rather than mutated in place.
+        /// </summary>
+        private async Task<int> CalculateActivityStreakAsync(Event ev)
         {
-            if (!completedEvents.Any()) return 0;
-
-            var completionDates = completedEvents
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
-
-            int currentStreak = 0;
-            int tempStreak = 0;
-            DateTime? previousDate = null;
-
-            foreach (var date in completionDates)
+            if (string.IsNullOrEmpty(ev.UserId))
             {
-                if (previousDate == null)
-                {
-                    tempStreak = 1;
-                }
-                else
-                {
-                    if (date == previousDate.Value.AddDays(1))
-                    {
-                        tempStreak++;
-                    }
-                    else
-                    {
-                        tempStreak = 1;
-                    }
-                }
-                previousDate = date;
+                return 0;
             }
 
-            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
-            if (previousDate.HasValue && (previousDate.Value == today || previousDate.Value == today.AddDays(-1)))
-            {
-                currentStreak = tempStreak;
-            }
-            else
-            {
-                currentStreak = 0;
-            }
+            var completedEvents = await _eventRepository.GetCompletedEventsForUserAsync(ev.UserId);
 
-            return currentStreak;
+            var startTimes = completedEvents
+                .Where(e => e.Id != ev.Id)
+                .Select(e => e.StartTime)
+                .Append(ev.StartTime);
+
+            return StreakCalculator.FromStartTimes(startTimes).Current;
         }
 
-        private static DateTime ToLocalTimeUtc7(DateTime dt)
+        private async Task ApplyXpAsync(ApplicationUser user, int xpDelta)
         {
-            if (dt.Kind == DateTimeKind.Utc) return dt.AddHours(7);
-            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime().AddHours(7);
-            return DateTime.SpecifyKind(dt, DateTimeKind.Utc).AddHours(7);
+            user.TotalXP = Math.Max(0, user.TotalXP + xpDelta);
+            await _userRepository.UpdateAsync(user);
+
+            var squads = await _squadRepository.GetSquadsByUserIdAsync(user.Id);
+            foreach (var squad in squads)
+            {
+                var membership = await _squadRepository.GetMembershipAsync(squad.Id, user.Id);
+                if (membership != null && membership.XpContributionEnabled && membership.IsApproved)
+                {
+                    squad.TotalSquadXP = Math.Max(0, squad.TotalSquadXP + xpDelta);
+                    await _squadRepository.UpdateAsync(squad);
+                }
+            }
         }
 
-        private async Task RecalculateStreaks(Habit habit)
+        private async Task RecalculateStreaks(Habit habit, Event completed)
         {
-            var allEvents = await _eventRepository.GetAllAsync();
-            var completedEvents = allEvents
-                .Where(e => e.IsCompleted && string.Equals(e.HabitId, habit.Id.ToString(), StringComparison.OrdinalIgnoreCase))
-                .OrderBy(e => e.StartTime)
-                .ToList();
+            var completedEvents = await _eventRepository.GetCompletedEventsForHabitAsync(habit.Id);
 
-            if (!completedEvents.Any())
-            {
-                habit.CurrentStreak = 0;
-                return;
-            }
+            var startTimes = completedEvents
+                .Where(e => e.Id != completed.Id)
+                .Select(e => e.StartTime)
+                .Append(completed.StartTime);
 
-            var completionDates = completedEvents
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
+            var streaks = StreakCalculator.FromStartTimes(startTimes);
 
-            int currentStreak = 0;
-            int longestStreak = 0;
-            int tempStreak = 0;
-            DateTime? previousDate = null;
-
-            foreach (var date in completionDates)
-            {
-                if (previousDate == null)
-                {
-                    tempStreak = 1;
-                }
-                else
-                {
-                    if (date == previousDate.Value.AddDays(1))
-                    {
-                        tempStreak++;
-                    }
-                    else
-                    {
-                        if (tempStreak > longestStreak) longestStreak = tempStreak;
-                        tempStreak = 1;
-                    }
-                }
-                previousDate = date;
-            }
-
-            if (tempStreak > longestStreak) longestStreak = tempStreak;
-
-            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
-            if (previousDate.HasValue && (previousDate.Value == today || previousDate.Value == today.AddDays(-1)))
-            {
-                currentStreak = tempStreak;
-            }
-            else
-            {
-                currentStreak = 0;
-            }
-
-            habit.CurrentStreak = currentStreak;
-            habit.LongestStreak = Math.Max(habit.LongestStreak, longestStreak);
+            habit.CurrentStreak = streaks.Current;
+            habit.LongestStreak = Math.Max(habit.LongestStreak, streaks.Longest);
         }
     }
 }

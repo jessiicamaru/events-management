@@ -33,25 +33,18 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Queries
         }
 
         [Fact]
-        public async Task Handle_ShouldReturnAllEvents_WhenUserIdIsEmpty()
+        public async Task Handle_ShouldThrow_WhenUserIdIsEmpty()
         {
-            // Arrange
+            // An unset UserId used to fall back to every user's events. Refusing is the safe
+            // direction: a forgotten assignment must fail, not widen the query.
             var query = new GetEventsQuery { UserId = string.Empty };
-            var events = new List<Event> 
-            { 
-                new Event { Id = Guid.NewGuid(), Title = "Event 1" },
-                new Event { Id = Guid.NewGuid(), Title = "Event 2" }
-            };
-            
-            _mockEventRepo.Setup(repo => repo.GetAllAsync()).ReturnsAsync(events);
 
-            // Act
-            var result = await _handler.Handle(query, CancellationToken.None);
+            await Assert.ThrowsAsync<ArgumentException>(
+                () => _handler.Handle(query, CancellationToken.None));
 
-            // Assert
-            Assert.Equal(2, result.Count());
-            _mockEventRepo.Verify(repo => repo.GetAllAsync(), Times.Once);
-            _mockEventRepo.Verify(repo => repo.GetEventsForUserAsync(It.IsAny<string>()), Times.Never);
+            _mockEventRepo.Verify(
+                repo => repo.GetEventsForUserAsync(It.IsAny<string>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
+                Times.Never);
         }
 
         [Fact]
@@ -71,7 +64,6 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Queries
 
             // Assert
             Assert.Single(result);
-            _mockEventRepo.Verify(repo => repo.GetAllAsync(), Times.Never);
             _mockEventRepo.Verify(repo => repo.GetEventsForUserAsync("user123"), Times.Once);
         }
     }

@@ -93,7 +93,7 @@ class SquadChatNotifier extends ValueNotifier<SquadChatState> {
             final msg = SquadChatMessageModel.fromJson(data);
             value = value.copyWith(messages: [...value.messages, msg]);
           } catch (e) {
-            print("Error parsing chat message: $e");
+            debugPrint("Error parsing chat message: $e");
           }
         }
       });

@@ -56,7 +56,7 @@ namespace HabitTracker.Application.Tests
             mockSquadRepo.Setup(r => r.GetSquadByIdAsync(squadId)).ReturnsAsync(squad);
             mockSquadRepo.Setup(r => r.GetMembershipAsync(squadId, userId)).ReturnsAsync(callerMembership);
             mockSquadRepo.Setup(r => r.GetSquadMembersAsync(squadId)).ReturnsAsync(members);
-            mockEventRepo.Setup(r => r.GetEventsForUserAsync(userId)).ReturnsAsync(events);
+            mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(userId)).ReturnsAsync(events);
 
             var handler = new GetMySquadQueryHandler(mockSquadRepo.Object, mockHabitRepo.Object, mockEventRepo.Object);
             var query = new GetMySquadQuery { UserId = userId, SquadId = squadId };
@@ -80,7 +80,7 @@ namespace HabitTracker.Application.Tests
             mockSquadRepo.Verify(r => r.GetSquadByIdAsync(squadId), Times.Once);
             mockSquadRepo.Verify(r => r.GetMembershipAsync(squadId, userId), Times.Once);
             mockSquadRepo.Verify(r => r.GetSquadMembersAsync(squadId), Times.Once);
-            mockEventRepo.Verify(r => r.GetEventsForUserAsync(userId), Times.Once);
+            mockEventRepo.Verify(r => r.GetCompletedEventsForUserAsync(userId), Times.Once);
         }
     }
 }

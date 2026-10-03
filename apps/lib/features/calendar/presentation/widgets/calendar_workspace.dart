@@ -163,11 +163,11 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
             if (_hoverEvent?.startTime != hoverDate) {
               setState(() {
                 _hoverEvent = EventModel(
-                  id: 'hover_preview',
-                  title: 'Drop to schedule',
+                  id: AppConstants.hoverPreviewEventId,
+                  title: translations.translate('drop_to_schedule'),
                   habitId: details.data.id,
                   startTime: hoverDate,
-                  endTime: hoverDate.add(const Duration(hours: 1)),
+                  endTime: hoverDate.add(AppConstants.defaultDroppedEventDuration),
                 );
               });
             }
@@ -182,20 +182,13 @@ class _CalendarWorkspaceState extends ConsumerState<CalendarWorkspace> {
         if (widget.calendarKey.currentContext != null) {
           final box = widget.calendarKey.currentContext!.findRenderObject() as RenderBox;
           final localOffset = box.globalToLocal(details.offset);
-          final centerOffset = localOffset + const Offset(70, 35);
+          final centerOffset = localOffset + AppConstants.draggedHabitCentreOffset;
           final tapDetails = widget.calendarController.getCalendarDetailsAtOffset?.call(centerOffset);
-          
-          if (tapDetails != null && tapDetails.date != null) {
-            initialDate = tapDetails.date!;
-          } else {
-            if (context.mounted) {
-              ShadToaster.of(context).show(
-                ShadToast.destructive(
-                  title: const Text('Debug'),
-                  description: Text('Offset: $centerOffset -> NULL'),
-                ),
-              );
-            }
+
+          // A drop outside any time slot keeps the day already on screen, which is the
+          // sensible default. Nothing to tell the user about.
+          if (tapDetails?.date != null) {
+            initialDate = tapDetails!.date!;
           }
         }
         

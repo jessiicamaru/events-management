@@ -108,8 +108,8 @@ class ApiService {
     await _dio.delete(
       '/events/$id',
       queryParameters: {
-        if (deleteScope != null) 'deleteScope': deleteScope,
-        if (originalOccurrenceDate != null) 'originalOccurrenceDate': originalOccurrenceDate.toUtc().toIso8601String(),
+        'deleteScope': ?deleteScope,
+        'originalOccurrenceDate': ?originalOccurrenceDate?.toUtc().toIso8601String(),
       },
     );
   }

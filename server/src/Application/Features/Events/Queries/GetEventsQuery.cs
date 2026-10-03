@@ -37,9 +37,11 @@ namespace HabitTracker.Application.Features.Events.Queries
 
         public async Task<IEnumerable<Event>> Handle(GetEventsQuery request, CancellationToken cancellationToken)
         {
+            // Refuse rather than widen: an unset UserId used to fall back to every user's events,
+            // so one forgotten assignment turned into a cross-user data leak.
             if (string.IsNullOrEmpty(request.UserId))
             {
-                return await _repository.GetAllAsync();
+                throw new ArgumentException("UserId is required.", nameof(request));
             }
 
             // 1. Stale: Lấy dữ liệu local và trả về ngay lập tức để UI hiển thị tức thì

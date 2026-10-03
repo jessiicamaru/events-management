@@ -5,6 +5,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/widgets/category_list_view.dart';
 import 'package:habit_tracker/features/settings/presentation/widgets/add_category_dialog.dart';
+import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 
 final colorPalette = {
   'Slate': Colors.blueGrey,
@@ -25,6 +26,7 @@ class CategoryManagementScreen extends ConsumerWidget {
     final theme = ShadTheme.of(context);
     final categoriesAsync = ref.watch(eventCategoriesProvider(squadId: null));
     final translations = ref.watch(translationsProvider);
+    final activeSquadId = ref.watch(activeSquadIdProvider);
 
     return DefaultTabController(
       length: 2,
@@ -108,13 +110,21 @@ class CategoryManagementScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           ShadButton.secondary(
+                            // No squad selected means there is nothing to attach the
+                            // category to, so the action is unavailable rather than broken.
+                            onPressed: activeSquadId == null
+                                ? null
+                                : () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AddCategoryDialog(
+                                        isSquad: true,
+                                        squadId: activeSquadId,
+                                        translations: translations,
+                                      ),
+                                    );
+                                  },
                             child: Text(translations.translate('add_squad_category')),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AddCategoryDialog(isSquad: true, translations: translations),
-                              );
-                            },
                           ),
                         ],
                       ),

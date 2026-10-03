@@ -23,9 +23,11 @@ namespace HabitTracker.Application.Features.Habits.Queries
 
         public async Task<IEnumerable<Habit>> Handle(GetHabitsQuery request, CancellationToken cancellationToken)
         {
+            // Refuse rather than widen: an unset UserId used to fall back to every user's habits,
+            // so one forgotten assignment turned into a cross-user data leak.
             if (string.IsNullOrEmpty(request.UserId))
-                return await _repository.GetAllAsync();
-                
+                throw new ArgumentException("UserId is required.", nameof(request));
+
             return await _repository.GetHabitsForUserAsync(request.UserId);
         }
     }

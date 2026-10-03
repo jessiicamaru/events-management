@@ -109,7 +109,7 @@ Trong quá trình phát triển ở local, Google phải có thể tiếp cận 
    # Hoặc sử dụng ngrok:
    ngrok http 5000
    ```
-2. **Cập nhật appsettings.json**:
+2. **Cập nhật `appsettings.Development.json`** (file này được gitignore, copy từ `appsettings.Development.example.json`):
    ```json
    "GoogleCalendar": {
      "WebhookBaseUrl": "https://xyz.ngrok-free.app"

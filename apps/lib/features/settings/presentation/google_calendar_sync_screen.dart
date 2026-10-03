@@ -33,6 +33,9 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
   Future<void> _connect() async {
     setState(() => _isLoading = true);
     final translations = ref.read(translationsProvider);
+    // Captured before the first await: the widget may be gone by the time we
+    // want to show a toast, and the toaster itself lives above this screen.
+    final toaster = ShadToaster.of(context);
 
     try {
       // Force sign out first to ensure we get a fresh serverAuthCode on retry
@@ -49,7 +52,7 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
       final email = account.email;
 
       if (authCode == null || authCode.isEmpty) {
-        ShadToaster.of(context).show(
+        toaster.show(
           const ShadToast.destructive(
             title: Text('Google Auth Error'),
             description: Text('Server auth code was not returned. Ensure serverClientId is configured correctly.'),
@@ -67,14 +70,14 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
       ref.invalidate(userProfileProvider);
       ref.invalidate(eventsProvider);
 
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast(
           title: Text(translations.translate('google_sync_title')),
           description: Text(translations.translate('google_sync_success')),
         ),
       );
     } catch (e) {
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast.destructive(
           title: Text(translations.translate('google_sync_title')),
           description: Text('${translations.translate('google_sync_failed')}: ${e.toString()}'),
@@ -90,6 +93,9 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
   Future<void> _syncNow() async {
     setState(() => _isLoading = true);
     final translations = ref.read(translationsProvider);
+    // Captured before the first await: the widget may be gone by the time we
+    // want to show a toast, and the toaster itself lives above this screen.
+    final toaster = ShadToaster.of(context);
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -97,14 +103,14 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
 
       ref.invalidate(eventsProvider);
 
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast(
           title: Text(translations.translate('google_sync_title')),
           description: Text(translations.translate('google_sync_success')),
         ),
       );
     } catch (e) {
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast.destructive(
           title: Text(translations.translate('google_sync_title')),
           description: Text('${translations.translate('google_sync_failed')}: ${e.toString()}'),
@@ -120,6 +126,9 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
   Future<void> _disconnect() async {
     setState(() => _isLoading = true);
     final translations = ref.read(translationsProvider);
+    // Captured before the first await: the widget may be gone by the time we
+    // want to show a toast, and the toaster itself lives above this screen.
+    final toaster = ShadToaster.of(context);
 
     try {
       final apiService = ref.read(apiServiceProvider);
@@ -131,14 +140,14 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
       ref.invalidate(userProfileProvider);
       ref.invalidate(eventsProvider);
 
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast(
           title: Text(translations.translate('google_sync_title')),
           description: const Text('Google Calendar disconnected.'),
         ),
       );
     } catch (e) {
-      ShadToaster.of(context).show(
+      toaster.show(
         ShadToast.destructive(
           title: Text(translations.translate('google_sync_title')),
           description: Text('Disconnect failed: ${e.toString()}'),
@@ -207,7 +216,7 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
                             );
                           },
                           loading: () => const Text('Loading account status...'),
-                          error: (_, __) => const Text('Error loading account status'),
+                          error: (_, _) => const Text('Error loading account status'),
                         ),
                       ),
                     ],
@@ -264,7 +273,7 @@ class _GoogleCalendarSyncScreenState extends ConsumerState<GoogleCalendarSyncScr
                   }
                 },
                 loading: () => const SizedBox(),
-                error: (_, __) => const SizedBox(),
+                error: (_, _) => const SizedBox(),
               ),
             ],
           ),
