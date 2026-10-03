@@ -34,6 +34,32 @@ class AppConstants {
   /// dragged card. Half the habit card's size, used to shift the hit test to its centre.
   static const Offset draggedHabitCentreOffset = Offset(70, 35);
 
+  // Event reminders (local notifications)
+  /// Default gap between the reminder and the event starting.
+  static const Duration defaultReminderLeadTime = Duration(minutes: 10);
+
+  /// Lead times offered in settings.
+  static const List<Duration> reminderLeadTimeOptions = [
+    Duration(minutes: 0),
+    Duration(minutes: 5),
+    Duration(minutes: 10),
+    Duration(minutes: 15),
+    Duration(minutes: 30),
+    Duration(hours: 1),
+  ];
+
+  /// How far ahead reminders are scheduled. Android limits how many alarms one app
+  /// may hold, and the event data changes daily, so scheduling further out would
+  /// mostly be scheduling things that are about to be rescheduled anyway.
+  static const Duration reminderHorizon = Duration(days: 7);
+
+  /// Ceiling on pending reminders. Android starts rejecting alarms somewhere above
+  /// this; the soonest ones are kept.
+  static const int maxScheduledReminders = 64;
+
+  /// Android notification channel for event reminders.
+  static const String reminderChannelId = 'event_reminders';
+
   // Magic Numbers
   static const int defaultPomodoroDurationMinutes = 30;
   static const List<int> defaultTargetDays = [1, 2, 3, 4, 5];

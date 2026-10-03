@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:home_widget/home_widget.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
-import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:habit_tracker/features/calendar/domain/event_occurrence_expander.dart';
 import 'package:intl/intl.dart';
 
 /// Keys used for SharedPreferences data exchange with native Android widgets.
@@ -34,78 +34,19 @@ class HomeWidgetService {
     final todayStart = DateTime(now.year, now.month, now.day);
     final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    final List<EventModel> expandedEvents = [];
+    // Expand recurrences for today, then keep only what actually falls on today.
+    final expandedEvents = EventOccurrenceExpander.expand(
+      events: events,
+      rangeStart: todayStart,
+      rangeEnd: todayEnd,
+    ).where((event) {
+      final startLocal = event.startTime.toLocal();
 
-    for (var event in events) {
-      if (event.recurrenceRule == null || event.recurrenceRule!.isEmpty) {
-        final startLocal = event.startTime.toLocal();
-        if (startLocal.year == todayStart.year &&
-            startLocal.month == todayStart.month &&
-            startLocal.day == todayStart.day) {
-          expandedEvents.add(event);
-        }
-      } else {
-        try {
-          final rrule = event.recurrenceRule!.replaceAll('RRULE:', '');
-          final dates = SfCalendar.getRecurrenceDateTimeCollection(
-            rrule,
-            event.startTime.toLocal(),
-            specificStartDate: todayStart,
-            specificEndDate: todayEnd,
-          );
+      return startLocal.year == todayStart.year &&
+          startLocal.month == todayStart.month &&
+          startLocal.day == todayStart.day;
+    }).toList();
 
-          final duration = event.endTime.difference(event.startTime);
-
-          for (var date in dates) {
-            bool isException = false;
-            if (event.recurrenceExceptionDates != null &&
-                event.recurrenceExceptionDates!.isNotEmpty) {
-              final exceptionDates = event.recurrenceExceptionDates!.split(',');
-              for (var exDateStr in exceptionDates) {
-                try {
-                  final exDate = DateTime.parse(exDateStr).toLocal();
-                  if (exDate.year == date.year &&
-                      exDate.month == date.month &&
-                      exDate.day == date.day &&
-                      exDate.hour == date.hour &&
-                      exDate.minute == date.minute) {
-                    isException = true;
-                    break;
-                  }
-                } catch (_) {}
-              }
-            }
-            if (isException) continue;
-
-            bool hasCustomException = false;
-            for (var other in events) {
-              if (other.parentEventId == event.id &&
-                  other.exceptionDate != null) {
-                final exDate = other.exceptionDate!.toLocal();
-                if (exDate.year == date.year &&
-                    exDate.month == date.month &&
-                    exDate.day == date.day &&
-                    exDate.hour == date.hour &&
-                    exDate.minute == date.minute) {
-                  hasCustomException = true;
-                  break;
-                }
-              }
-            }
-            if (hasCustomException) continue;
-
-            expandedEvents.add(
-              event.copyWith(
-                startTime: date.toUtc(),
-                endTime: date.add(duration).toUtc(),
-              ),
-            );
-          }
-        } catch (_) {}
-      }
-    }
-
-    expandedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     final todayEventsPayload = expandedEvents.map((e) {
       final startLocal = e.startTime.toLocal();
@@ -145,77 +86,14 @@ class HomeWidgetService {
     final rangeStart = now.subtract(const Duration(days: 1));
     final rangeEnd = now.add(const Duration(days: 7));
 
-    // Expand recurring events (same logic as CommandCenterPanel)
-    final List<EventModel> expandedEvents = [];
+    // Non-recurring events are passed through unfiltered on purpose: one that began
+    // before rangeStart may still be running, and that is the event to show.
+    final expandedEvents = EventOccurrenceExpander.expand(
+      events: events,
+      rangeStart: rangeStart,
+      rangeEnd: rangeEnd,
+    );
 
-    for (var event in events) {
-      if (event.recurrenceRule == null || event.recurrenceRule!.isEmpty) {
-        expandedEvents.add(event);
-      } else {
-        try {
-          final rrule = event.recurrenceRule!.replaceAll('RRULE:', '');
-          final dates = SfCalendar.getRecurrenceDateTimeCollection(
-            rrule,
-            event.startTime.toLocal(),
-            specificStartDate: rangeStart,
-            specificEndDate: rangeEnd,
-          );
-
-          final duration = event.endTime.difference(event.startTime);
-
-          for (var date in dates) {
-            bool isException = false;
-            if (event.recurrenceExceptionDates != null &&
-                event.recurrenceExceptionDates!.isNotEmpty) {
-              final exceptionDates =
-                  event.recurrenceExceptionDates!.split(',');
-              for (var exDateStr in exceptionDates) {
-                try {
-                  final exDate = DateTime.parse(exDateStr).toLocal();
-                  if (exDate.year == date.year &&
-                      exDate.month == date.month &&
-                      exDate.day == date.day &&
-                      exDate.hour == date.hour &&
-                      exDate.minute == date.minute) {
-                    isException = true;
-                    break;
-                  }
-                } catch (_) {}
-              }
-            }
-            if (isException) continue;
-
-            bool hasCustomException = false;
-            for (var other in events) {
-              if (other.parentEventId == event.id &&
-                  other.exceptionDate != null) {
-                final exDate = other.exceptionDate!.toLocal();
-                if (exDate.year == date.year &&
-                    exDate.month == date.month &&
-                    exDate.day == date.day &&
-                    exDate.hour == date.hour &&
-                    exDate.minute == date.minute) {
-                  hasCustomException = true;
-                  break;
-                }
-              }
-            }
-            if (hasCustomException) continue;
-
-            expandedEvents.add(
-              event.copyWith(
-                startTime: date.toUtc(),
-                endTime: date.add(duration).toUtc(),
-              ),
-            );
-          }
-        } catch (_) {
-          expandedEvents.add(event);
-        }
-      }
-    }
-
-    expandedEvents.sort((a, b) => a.startTime.compareTo(b.startTime));
 
     // Find the next upcoming or currently active event
     EventModel? activeEvent;

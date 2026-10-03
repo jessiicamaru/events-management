@@ -11,6 +11,7 @@ import 'package:habit_tracker/features/settings/presentation/providers/app_setti
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:habit_tracker/features/home_widget/home_widget_provider.dart';
+import 'package:habit_tracker/core/notifications/reminder_sync_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
@@ -35,6 +36,9 @@ class HabitTrackerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(homeWidgetSyncProvider);
+    // Keeps the OS's pending event reminders in step with the user's events and
+    // settings, the same way widgets are kept in step above.
+    ref.watch(reminderSyncProvider);
     final router = ref.watch(routerProvider);
     final appSettings = ref.watch(appSettingsProvider);
     final appLocale = ref.watch(localeProvider);

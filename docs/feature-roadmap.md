@@ -1,0 +1,258 @@
+# Feature roadmap
+
+Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
+without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
+
+**Last updated:** 2026-09-10 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+
+**Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
+needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
+aggregate or a small heuristic over data the app already stores.
+
+---
+
+## Why this list looks the way it does
+
+The app already records several things it never shows the user. That is where the cheapest
+wins are: no new data collection, no schema change, just a query and a chart.
+
+| Field | Where it comes from | Currently | Could tell the user |
+| --- | --- | --- | --- |
+| `Event.ActualDuration` | every completed focus session | written, shown once in the post-session dialog, never aggregated | "You schedule 30 min for Reading, you average 18" |
+| `EventTask.EstimatedMinutes` | task editor | written, never read back | how far off your time estimates are, by category |
+| `Habit.TargetDays` | habit editor (1=Mon … 7=Sun) | used to suggest scheduling only | "You keep Mon–Wed 90%, Friday 20%" |
+| `Event.StartTime` hour | every event | — | "85% of your 7am sessions finish; 40% of evening ones" |
+| `Event.RecurrenceExceptionDates` | skipping an occurrence | rendering only | which occurrences get skipped, and when in the week |
+| `Event.AwardedXp` | added 2026-09-09 (PR #23) | XP refunds | per-event effort signal over time |
+| `Event.CreatedAt` vs `StartTime` | every event | — | how far ahead this user plans |
+
+⚠️ **Hard constraint for anything in the Analytics section.** PR #23 fixed several handlers
+that loaded the whole `Events` table into memory to compute one number. Analytics is exactly
+where that instinct returns. Every panel must be a `GROUP BY` in Postgres returning a handful
+of rows — never "fetch events, aggregate in C#". If a panel gets slow, add a nightly rollup
+table; do not write a cleverer in-memory loop. See
+`docs/review-code-reports/review-main-codebase-audit.md` findings 1 and 4.
+
+---
+
+## 1. Engagement — the loop
+
+The app can track a habit but never asks for attention. This section is the biggest gap and
+should come before charts.
+
+### 🟡 1.1 Event reminders (local notifications)
+
+**In progress — branch `feat/event-reminders`.** See
+`docs/notifications-and-reminders.md` for the design, the Android permission matrix, and how
+to test it on an emulator.
+
+Scheduled on-device notifications a configurable number of minutes before an event starts.
+No server, no FCM, works offline.
+
+### ⚪ 1.2 Streak-at-risk nudge
+
+A habit whose streak is alive, whose occurrence today is still incomplete, and where the day
+is running out. Pure heuristic on top of `StreakCalculator` — no new data.
+
+- Surface in-app, on the home widget, and as a notification (needs 1.1).
+- Decide the "running out" threshold: a fixed local hour, or a proportion of the user's
+  usual completion time for that habit (data exists for the second; start with the first).
+- Feels intelligent, costs a query.
+
+### ⚪ 1.3 Weekly review
+
+A Sunday screen: what you did this week, what slipped, pick ≤3 habits to focus on next week.
+
+This is what turns the Analytics section from decoration into a loop — notice → nudge →
+reflect → act. Build it *after* 2.1 and 2.2 exist, and reuse their queries rather than
+writing new ones.
+
+### ⚪ 1.4 Squad challenges
+
+Time-boxed team goals ("the squad logs 100 sessions this month") on top of the squad XP that
+already exists. Squads currently have infrastructure but little to actually do together.
+
+- Needs a `SquadChallenge` entity: goal metric, target, window, progress.
+- Reuse `TotalSquadXP` accounting rather than inventing a second scoring path.
+
+---
+
+## 2. Analytics
+
+Read the hard constraint above before starting any of these.
+
+### ⚪ 2.1 Plan vs actual time
+
+`ActualDuration` vs `TargetDuration`, grouped by habit and by category. The single best
+value-to-effort item in this document: one aggregate query over a field the app already
+writes on every focus session, telling the user something they genuinely do not know.
+
+### ⚪ 2.2 Completion rate by weekday and hour
+
+Two views from `Habit.TargetDays` + `Event.StartTime` + `IsCompleted`:
+
+- **By weekday** — planned days vs kept days per habit.
+- **By hour** — which time of day actually works for this user.
+
+Feeds 1.2 (when is "running out") and 3.1 (when to suggest scheduling).
+
+### ⚪ 2.3 Recurring-series funnel
+
+For one recurring habit: scheduled → completed → skipped → deleted. The recurrence rule gives
+expected occurrences; `RecurrenceExceptionDates`, child exception events and `IsCompleted`
+give the drop-off. Shows *where* a habit died, not just that it did.
+
+### ⚪ 2.4 Category time budget over time
+
+Hours per `EventCategory` per week/month, with a trend. Categories already carry colours, so
+the chart is half-built. Answers "is my life drifting".
+
+### ⚪ 2.5 Estimate accuracy
+
+`EventTask.EstimatedMinutes` vs reality. Uncomfortable and compelling; cheap once 2.1 exists.
+
+---
+
+## 3. Scheduling
+
+### ⚪ 3.1 Smart scheduling suggestion
+
+"When should I do this habit?" = free slots in the calendar (Google Calendar events already
+sync in) ∩ the user's historically best completion hour (2.2). Two queries and a sort; reads
+as intelligence. Depends on 2.2.
+
+### ⚪ 3.2 Habit templates / starter packs
+
+A handful of pre-built habits with sensible `TargetDays` and durations, offered at first run.
+Cheap, and the empty-state problem is real for a new user.
+
+---
+
+## 4. Platform and data
+
+### ⚪ 4.1 Offline-first
+
+`docs/project-plan.md` specified `isar`/`hive` for this and it was never built — there is no
+local database, and providers call `ApiService` directly. This is a design task, not a library
+swap: it has to fit the existing stale-while-revalidate + SignalR sync
+(`docs/stale-while-revalidate-sync.md`), and the Flutter side has no repository layer to put a
+cache behind. Decide the conflict-resolution story before writing code.
+
+Worth it if people use the app while commuting. Not worth it as a checkbox.
+
+### ⚪ 4.2 Export
+
+CSV for events/habits, ICS for the calendar. Cheap, and it makes the data feel like the
+user's own.
+
+### ⚪ 4.3 Streak / heatmap home widget
+
+A third Android widget beside `TodayEventsWidget` and `UpNextWidget`. The heatmap query
+already exists (`/api/v1/analytics/heatmap`, now per-user).
+
+### ⚪ 4.4 iOS widget parity
+
+Widgets are Android-only today. The Dart bridge in `features/home_widget/` is reusable; the
+native side is not.
+
+---
+
+## 5. Technical debt worth scheduling
+
+Carried over from the audit; these are not features but they block or slow the above.
+
+### ⚪ 5.1 Decide the streak day boundary
+
+`StreakCalculator.DefaultDayBoundaryOffset` is a single app-wide UTC+7, so streaks and
+heatmaps are off by a day for any user outside that zone. The seam exists (every method takes
+an optional offset); the product decision does not. **Device timezone or a profile setting?**
+Either way it shifts every existing user's streak, so decide before the user base grows.
+
+### ⚪ 5.2 Flutter repository layer
+
+`ApiService` is one class holding every endpoint for every feature. There is nowhere to put a
+cache (4.1) and widget tests must mock HTTP rather than an interface. Split per feature behind
+interfaces.
+
+### 🟡 5.3 De-duplicate recurrence expansion
+
+`SfCalendar.getRecurrenceDateTimeCollection` expansion is copy-pasted **three times**: twice
+inside `home_widget_service.dart` and once in `command_center_panel.dart`. Being extracted to
+a shared expander on `feat/event-reminders` so the reminder scheduler is its third consumer
+rather than a fourth copy. `command_center_panel.dart` is **not** migrated on that branch —
+follow-up.
+
+### ⚪ 5.3a A malformed RRULE silently hides an event
+
+Found while extracting the expander. `SfCalendar.getRecurrenceDateTimeCollection` returns
+an **empty collection** for a malformed rule rather than throwing — measured:
+`'not an rrule'`, `''` and `'FREQ=BOGUS'` all give 0 occurrences. An event with a corrupt
+rule therefore disappears from the calendar, the widgets and (now) reminders, with no
+error anywhere.
+
+Pre-existing: the `catch` blocks in the original three copies never fired either. Not
+fixed in `feat/event-reminders` because an empty result is indistinguishable from a rule
+that legitimately has no occurrences in range (a spent `COUNT`), so falling back to the
+base event would duplicate real events. **The fix is to validate the rule when it is
+saved**, not when it is expanded. Both behaviours are locked by tests so a change is
+deliberate.
+
+### ⚪ 5.4 Rotate the leaked credentials
+
+The Google `ClientSecret` and ngrok token removed from the working tree in PR #23 are still
+valid and still in git history. Removing them did not revoke them. Rotate by hand in the
+Google Cloud console and the ngrok dashboard.
+
+### ⚪ 5.5 Squad category authorization
+
+`GET /api/v1/event-categories?squadId=<any>` returns any squad's categories with no
+membership check, and the create path carries a comment admitting the same gap
+("Ideally check if user is admin of squad. For now, let anyone add to squad"). Confirmed by
+reading the code; blast radius across PUT/DELETE not yet traced. Same class as audit finding
+1, one level less severe because it needs a login.
+
+### ⚪ 5.6 Audit the never-reviewed backend
+
+`GoogleCalendarService.cs` (517 lines), `UpdateEventCommand`/`DeleteEventCommand` (the
+recurrence scopes — the most intricate logic in the app), `Squads.cs` (358 lines), and the
+event/habit task commands were never reviewed. 5.5 was found by glancing at one of them.
+
+### ⚪ 5.6a A migration exists in the database but not in the codebase
+
+Found while setting up the local Docker database from the original dump. The dump's
+`__EFMigrationsHistory` has 18 rows; `server/src/Infrastructure/Migrations/` has 17. The
+missing one is:
+
+```
+20260802120420_AddDailyAnalyticsTables
+```
+
+It created `DailyUserSummaries`, `DailyCategorySummaries` and
+`HourlyActivityDistributions`, and they hold data (33 / 65 rows in the dump). So **the
+analytics rollup groundwork for §2 was already started and never merged into this repo.**
+
+Nothing breaks today — EF ignores history rows it does not recognise, so the app runs
+against the restored database — but the model snapshot knows nothing about those tables,
+so nothing maintains them. Before starting §2, decide whether to recover that migration
+(the schema is reconstructable from the dump) or design the rollup fresh. See
+`local-dev/README.md`.
+
+### ⚪ 5.7 Background sync has no logging
+
+The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fire-and-forget
+`Task.Run`. If Google sync breaks in production there is no signal — which matches the
+"sometimes works" symptom the sync docs describe. Use `ILogger`.
+
+---
+
+## Suggested order
+
+One loop at a time beats five disconnected features:
+
+1. **1.1 reminders** — clearest gap, no backend work
+2. **1.2 streak-at-risk** — reuses 1.1's plumbing
+3. **2.1 plan vs actual** — best value-to-effort chart
+4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
+5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own
+
+Slot **5.1** in before the user base grows, and **5.4** whenever you next have ten minutes.

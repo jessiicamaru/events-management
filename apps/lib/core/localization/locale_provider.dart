@@ -418,6 +418,88 @@ class AppTranslations {
       AppLocale.en: 'Drop to schedule',
       AppLocale.vi: 'Thả để lên lịch',
     },
+
+    // Event reminders
+    'reminders_title': {
+      AppLocale.en: 'Reminders',
+      AppLocale.vi: 'Nhắc nhở',
+    },
+    'reminders_desc': {
+      AppLocale.en: 'Get notified before an event starts',
+      AppLocale.vi: 'Nhận thông báo trước khi sự kiện bắt đầu',
+    },
+    'reminders_enable': {
+      AppLocale.en: 'Enable reminders',
+      AppLocale.vi: 'Bật nhắc nhở',
+    },
+    'reminders_enable_desc': {
+      AppLocale.en: 'Schedules a notification before each upcoming event',
+      AppLocale.vi: 'Lên lịch thông báo trước mỗi sự kiện sắp tới',
+    },
+    'reminders_lead_time': {
+      AppLocale.en: 'Remind me',
+      AppLocale.vi: 'Nhắc tôi trước',
+    },
+    'reminders_lead_at_start': {
+      AppLocale.en: 'When the event starts',
+      AppLocale.vi: 'Khi sự kiện bắt đầu',
+    },
+    'reminders_lead_minutes': {
+      AppLocale.en: '{n} minutes before',
+      AppLocale.vi: '{n} phút trước',
+    },
+    'reminders_lead_hour': {
+      AppLocale.en: '1 hour before',
+      AppLocale.vi: '1 giờ trước',
+    },
+    'reminders_permission_needed': {
+      AppLocale.en: 'Notifications are blocked',
+      AppLocale.vi: 'Thông báo đang bị chặn',
+    },
+    'reminders_permission_needed_desc': {
+      AppLocale.en:
+          'Allow notifications for this app in system settings, otherwise reminders cannot be delivered.',
+      AppLocale.vi:
+          'Hãy cho phép thông báo cho ứng dụng này trong cài đặt hệ thống, nếu không nhắc nhở sẽ không được gửi.',
+    },
+    'reminders_inexact_warning': {
+      AppLocale.en: 'Reminders may arrive late',
+      AppLocale.vi: 'Nhắc nhở có thể đến muộn',
+    },
+    'reminders_inexact_warning_desc': {
+      AppLocale.en:
+          'This device has not granted exact alarms, so the system may delay a reminder by several minutes to save battery.',
+      AppLocale.vi:
+          'Thiết bị này chưa cấp quyền báo thức chính xác, nên hệ thống có thể trì hoãn nhắc nhở vài phút để tiết kiệm pin.',
+    },
+    'reminders_test': {
+      AppLocale.en: 'Send a test notification',
+      AppLocale.vi: 'Gửi thông báo thử',
+    },
+    'reminders_test_title': {
+      AppLocale.en: 'Reminders are working',
+      AppLocale.vi: 'Nhắc nhở đang hoạt động',
+    },
+    'reminders_test_body': {
+      AppLocale.en: 'This is what an event reminder looks like.',
+      AppLocale.vi: 'Đây là hình dạng của một nhắc nhở sự kiện.',
+    },
+    'reminders_scheduled_count': {
+      AppLocale.en: '{n} reminders scheduled',
+      AppLocale.vi: 'Đã lên lịch {n} nhắc nhở',
+    },
+    'reminder_starting_now': {
+      AppLocale.en: 'Starting now',
+      AppLocale.vi: 'Bắt đầu ngay',
+    },
+    'reminder_starts_in_minutes': {
+      AppLocale.en: 'Starts in {n} min',
+      AppLocale.vi: 'Bắt đầu sau {n} phút',
+    },
+    'reminder_starts_in_hours': {
+      AppLocale.en: 'Starts in {n} h',
+      AppLocale.vi: 'Bắt đầu sau {n} giờ',
+    },
     'no_habits_to_schedule': {
       AppLocale.en: 'No habits to schedule',
       AppLocale.vi: 'Không có thói quen nào cần lên lịch',
@@ -1014,8 +1096,22 @@ class AppTranslations {
   final AppLocale locale;
   AppTranslations(this.locale);
 
-  String translate(String key) {
-    return _keys[key]?[locale] ?? key;
+  /// Looks up [key] for the active locale, falling back to the key itself.
+  ///
+  /// [params] replaces `{name}` placeholders, e.g.
+  /// `translate('reminder_starts_in_minutes', params: {'n': '10'})`. Keeps counts
+  /// inside the translated string so word order stays the translator's choice rather
+  /// than being fixed by Dart concatenation.
+  String translate(String key, {Map<String, String>? params}) {
+    var value = _keys[key]?[locale] ?? key;
+
+    if (params != null) {
+      for (final entry in params.entries) {
+        value = value.replaceAll('{${entry.key}}', entry.value);
+      }
+    }
+
+    return value;
   }
 
   String translateBackendError(String error) {
