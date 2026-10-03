@@ -37,6 +37,8 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
                 .ReturnsAsync(new System.Collections.Generic.List<Event>());
             _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(It.IsAny<string>()))
                 .ReturnsAsync(new System.Collections.Generic.List<Squad>());
+            _mockEventRepo.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>()))
+                .ReturnsAsync(true);
 
             _handler = new CompleteEventSessionCommandHandler(
                 _mockEventRepo.Object,
@@ -90,9 +92,9 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             _mockEventRepo.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
 
             Event? created = null;
-            _mockEventRepo.Setup(r => r.AddAsync(It.IsAny<Event>()))
+            _mockEventRepo.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>()))
                 .Callback<Event>(e => created = e)
-                .Returns(Task.CompletedTask);
+                .ReturnsAsync(true);
 
             var result = await _handler.Handle(new CompleteEventSessionCommand
             {
@@ -138,7 +140,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
 
             // Without this, an early `return false` would satisfy the Times.Never below as well.
             Assert.True(result);
-            _mockEventRepo.Verify(r => r.AddAsync(It.Is<Event>(e => e.ParentEventId == series.Id)), Times.Once);
+            _mockEventRepo.Verify(r => r.TryAddOccurrenceDayAsync(It.Is<Event>(e => e.ParentEventId == series.Id)), Times.Once);
 
             _mockOutboxRepo.Verify(r => r.EnqueueAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<string>(),

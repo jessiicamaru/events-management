@@ -3,7 +3,7 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-11 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-12 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
 **Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
 needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
@@ -40,11 +40,12 @@ table; do not write a cleverer in-memory loop. See
 The app can track a habit but never asks for attention. This section is the biggest gap and
 should come before charts.
 
-### 🟡 1.1 Event reminders (local notifications)
+### 🟢 1.1 Event reminders (local notifications)
 
-**In progress — branch `feat/event-reminders`.** See
-`docs/notifications-and-reminders.md` for the design, the Android permission matrix, and how
-to test it on an emulator.
+**Done — PR #24.** See `docs/notifications-and-reminders.md` for the design, the Android
+permission matrix, and how to test it on an emulator. PR #25 fixed two gaps found later:
+reminder edits were dropped by the update endpoint, and browsing the calendar to another
+month cancelled every pending reminder.
 
 Scheduled on-device notifications a configurable number of minutes before an event starts.
 No server, no FCM, works offline.
@@ -83,19 +84,25 @@ Read the hard constraint above before starting any of these.
 
 ### 🟢 2.0 Home-screen activity summary
 
-`GET /api/v1/analytics/summary?days=N` → per-day scheduled / completed / focus minutes,
-one `GROUP BY` in Postgres (plan: `HashAggregate`), same UTC+7 day boundary as streaks.
-Shown on the home screen as three tiles and a 14-day focus-time bar chart.
+`GET /api/v1/analytics/summary?days=N` → per-day one-off scheduled / completed and focus
+minutes, one `GROUP BY` in Postgres (plan: `HashAggregate`), same UTC+7 day boundary as
+streaks. Shown on the home screen as three tiles and a 14-day focus-time bar chart. Done in
+PR #25.
 
 Limits worth knowing before building on it:
 
 - **Completion has no timestamp.** `IsCompleted` is one flag per row, so "completed on
   day X" means "the event *started* on day X".
-- **A recurring series is one row.** A daily habit stored as an `RRULE` counts once, on
-  its series start date, however many days it was actually done. Measured on the local
-  dump: 7 of 95 events are recurring, 3 of them with no end date. Fixing this properly
-  needs a completion log (one row per occurrence done), not a smarter query.
-- Focus minutes do not have this problem — `ActualDuration` is written per focus session.
+- **Repeating days are counted by the client.** A series is one row, so the server counts
+  one-off events only, and `ActivitySummary.withRepeatingDays` adds every day of every
+  series by expanding it (a day completed = a split-off day with `IsCompleted`, see 5.6c).
+  Anything else that wants per-day numbers for repeating events has the same choice:
+  expand on the client, or add a completion log (one row per occurrence done).
+- **Server and client disagree on "which day" outside UTC+7.** One-off events are grouped
+  by the server's UTC+7 day, repeating days by the device's local day. Same seam as 5.1.
+- **Meetings synced from Google count too**, and are rarely "completed", so they pull the
+  rate down. Undecided whether the card should count only the user's own habits/events.
+- Focus minutes have none of these problems — `ActualDuration` is written per focus session.
 
 ### ⚪ 2.1 Plan vs actual time
 
@@ -192,7 +199,7 @@ interfaces.
 
 ### 🟢 5.3 De-duplicate recurrence expansion
 
-Done. All four copies now go through `EventOccurrenceExpander`: the two in
+Done. All three copies now go through `EventOccurrenceExpander`: the two in
 `home_widget_service.dart`, the reminder scheduler, and the one that lived in
 `command_center_panel.dart` — removed on `feat/home-page` when that panel became the home
 screen's `HomeAgenda`.
@@ -254,17 +261,24 @@ so nothing maintains them. Before starting §2, decide whether to recover that m
 
 ### 🟢 5.6c Repeating events shared one state across every day
 
-Fixed on `feat/home-page`. Tasks and completion were stored against the series id, which
-every day shares: ticking a task on Monday ticked it on every day, and finishing one
-session completed the whole series — hiding it from "up next" and stopping its
-reminders. A day is now split off into its own event (with a copy of the series' tasks)
-the first time it is changed. See `OccurrenceMaterializer` and the sync note in CLAUDE.md.
+Fixed in PR #25. Tasks and completion were stored against the series id, which every day
+shares: ticking a task on Monday ticked it on every day, and finishing one session
+completed the whole series — hiding it from "up next" and stopping its reminders. A day is
+now split off into its own event (with a copy of the series' tasks) the first time it is
+changed. See `OccurrenceMaterializer` and the sync note in CLAUDE.md.
 
-Still open: a split-off day keeps its own time, so if the whole series is later moved to
-a different time of day, days split off *ahead of time* (future days with ticked tasks)
-stay at the old time. Past days staying put is correct; future ones are the edge case.
-Also, the dashboard still counts an untouched series once, on its start date — only days
-that have been split off are counted on their own day.
+Days split off ahead of time follow later edits of their series (review round 2), and the
+dashboard counts every day of a series (2.0). Since `fix/split-off-day-safety` the database
+allows one event per day of a series, so two devices touching the same day at once no
+longer create two copies of it.
+
+Still open, in `docs/review-code-reports/review-home-page.md`: MEDIUM 5 is half-open —
+the repository SQL and the inbound Google sync path still have no integration test, and
+this area keeps gaining code that only a live run covers. LOW: after a task is ticked, the
+details dialog still acts on the series (8); the edit sheet ticks the series' task template
+(9); XP can be farmed through arbitrary occurrence dates (12); refusing to complete a
+series returns 404 rather than 422 (13); "update calendar" on a series day never reaches
+Google (14); changing the repeat rule leaves touched days on days the new rule skips (N1).
 
 ### ⚪ 5.6b The heatmap groups in memory
 
@@ -284,8 +298,8 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 
 One loop at a time beats five disconnected features:
 
-1. **1.1 reminders** — clearest gap, no backend work
-2. **1.2 streak-at-risk** — reuses 1.1's plumbing
+1. ~~**1.1 reminders**~~ — done (PR #24)
+2. **1.2 streak-at-risk** — reuses 1.1's plumbing; Home is the natural place to show it
 3. **2.1 plan vs actual** — best value-to-effort chart
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own

@@ -4,6 +4,13 @@ namespace HabitTracker.Domain.Entities
 {
     public class GoogleCalendarOutbox
     {
+        /// <summary>
+        /// Failed attempts after which the worker gives up on an entry. It stays unprocessed
+        /// (<see cref="ProcessedAt"/> is never set), so anything asking "is this still going
+        /// to happen?" has to check this too.
+        /// </summary>
+        public const int MaxRetries = 5;
+
         public Guid Id { get; set; } = Guid.NewGuid();
         public string UserId { get; set; } = string.Empty;
         public ApplicationUser? User { get; set; }

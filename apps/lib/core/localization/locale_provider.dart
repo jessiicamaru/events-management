@@ -99,16 +99,11 @@ class AppTranslations {
       AppLocale.en: 'Open calendar',
       AppLocale.vi: 'Mở lịch',
     },
-    'home_starts_at': {AppLocale.en: 'Starts {time}', AppLocale.vi: 'Bắt đầu {time}'},
 
     // Home Screen — activity summary
     'home_activity_title': {
       AppLocale.en: 'Last {n} days',
       AppLocale.vi: '{n} ngày qua',
-    },
-    'home_activity_chart_caption': {
-      AppLocale.en: 'Focus time per day',
-      AppLocale.vi: 'Thời gian tập trung mỗi ngày',
     },
     'home_activity_completed': {
       AppLocale.en: 'Completed',

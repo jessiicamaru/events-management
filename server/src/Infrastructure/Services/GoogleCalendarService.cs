@@ -258,7 +258,11 @@ namespace HabitTracker.Infrastructure.Services
                             localOnlyDay.ExceptionDate = originalDate;
                             await _eventRepository.UpdateAsync(localOnlyDay);
                         }
-                        else
+                        // Nothing is added when the day already has an event Google has no id for
+                        // — an edited day whose Insert is still queued. A second event for that
+                        // day is what the database refuses, and the queued Insert sends the
+                        // user's edit, which is the newer one, and links the two.
+                        else if (OccurrenceMaterializer.FindDay(localEvents, localMaster, originalDate) == null)
                         {
                             var newException = new Event
                             {

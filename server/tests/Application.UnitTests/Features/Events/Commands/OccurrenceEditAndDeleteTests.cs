@@ -37,6 +37,9 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
             _events.Setup(r => r.AddAsync(It.IsAny<Event>()))
                 .Callback<Event>(_added.Add)
                 .Returns(Task.CompletedTask);
+            _events.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>()))
+                .Callback<Event>(_added.Add)
+                .ReturnsAsync(true);
             _tasks.Setup(r => r.GetByEventIdAsync(It.IsAny<Guid>()))
                 .ReturnsAsync(new List<EventTask>());
             _outbox.Setup(r => r.EnqueueAsync(
@@ -436,6 +439,51 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
             _queued.Should().ContainSingle()
                 .Which.Should().Be((day.Id, "Delete", string.Empty));
         }
+
+        // ---- One event per day of a series (the database's unique index) ---------------
+
+        [Fact]
+        public async Task AllOccurrences_ATouchedDayDoesNotMoveOntoASlotAnotherDayHolds()
+        {
+            // Friday 11:00 was edited back when the series ran at 11:00. Moving the series
+            // from 10:00 to 11:00 would put the touched Friday on the same slot — a second
+            // event for that day, which the database now refuses mid-edit.
+            UserHasGoogle(false);
+            var series = Series();
+            var touchedFriday = Day(series, Friday);
+            var editedFriday = Day(series, Friday.AddHours(1), edited: true, title: "Moved by hand");
+            ChildrenOf(series, touchedFriday, editedFriday);
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Wednesday, Wednesday.AddHours(1), "AllOccurrences"), CancellationToken.None);
+
+            series.StartTime.Should().Be(Wednesday.AddHours(1));
+            touchedFriday.ExceptionDate.Should().Be(Friday, "the slot is taken, so it stays as history");
+            touchedFriday.StartTime.Should().Be(Friday);
+            editedFriday.ExceptionDate.Should().Be(Friday.AddHours(1));
+            _events.Verify(r => r.UpdateAsync(touchedFriday), Times.Never);
+        }
+
+        [Fact]
+        public async Task AllOccurrences_DraggingADayOntoOneAlreadySplitOff_DoesNotTakeItsSlot()
+        {
+            UserHasGoogle(false);
+            var series = Series();
+            var saturday = Friday.AddDays(1);
+            var touchedFriday = Day(series, Friday);
+            var touchedSaturday = Day(series, saturday);
+            ChildrenOf(series, touchedFriday, touchedSaturday);
+
+            var ok = await UpdateHandler().Handle(
+                Edit(touchedFriday.Id, Friday, saturday, "AllOccurrences"), CancellationToken.None);
+
+            ok.Should().BeTrue();
+            touchedFriday.StartTime.Should().Be(saturday, "the day still moves where it was dragged");
+            touchedFriday.ExceptionDate.Should().Be(Friday, "Saturday already has its own event");
+            touchedSaturday.ExceptionDate.Should().Be(saturday);
+            RecurrenceExceptions.Contains(series, saturday).Should().BeFalse(
+                "adding the slot would turn Saturday's touched day into an edited one");
+        }
     }
 
     public class MaterializeOccurrenceCommandHandlerTests
@@ -445,6 +493,11 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
 
         private readonly Mock<IEventRepository> _events = new();
         private readonly Mock<IEventTaskRepository> _tasks = new();
+
+        public MaterializeOccurrenceCommandHandlerTests()
+        {
+            _events.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>())).ReturnsAsync(true);
+        }
 
         private MaterializeOccurrenceCommandHandler Handler() => new(
             _events.Object,
@@ -474,7 +527,7 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
             var id = await Handler().Handle(new MaterializeOccurrenceCommand(series.Id, Friday, UserId), CancellationToken.None);
 
             id.Should().NotBeNull();
-            _events.Verify(r => r.AddAsync(It.Is<Event>(e => e.ParentEventId == series.Id && e.UserId == UserId)), Times.Once);
+            _events.Verify(r => r.TryAddOccurrenceDayAsync(It.Is<Event>(e => e.ParentEventId == series.Id && e.UserId == UserId)), Times.Once);
         }
 
         [Fact]
@@ -485,6 +538,7 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
             var id = await Handler().Handle(new MaterializeOccurrenceCommand(series.Id, Friday, UserId), CancellationToken.None);
 
             id.Should().BeNull();
+            _events.Verify(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>()), Times.Never);
             _events.Verify(r => r.AddAsync(It.IsAny<Event>()), Times.Never);
         }
 

@@ -126,13 +126,21 @@ namespace HabitTracker.Application.Features.Events.Commands
                     : await SplitSeriesAsync(parent!, request, oldSlotUtc, hasGoogle, cancellationToken, excludeDayId: day.Id);
 
                 // Keep the day on the slot it was moved to, so it still stands in for the
-                // series' occurrence there instead of showing next to it.
+                // series' occurrence there instead of showing next to it — unless another day
+                // of the series already holds that slot (dragged onto a day that was ticked,
+                // say). The database allows one event per day of a series, so that day keeps
+                // it, and this one moves without taking over the slot.
                 ApplyDayFields(day, request);
-                day.ParentEventId = seriesNowHoldingDay.Id;
-                day.ExceptionDate = day.StartTime;
+                var holder = await _eventRepository.GetOccurrenceChildAsync(seriesNowHoldingDay.Id, day.StartTime);
+                var slotIsFree = holder == null || holder.Id == day.Id;
+                if (slotIsFree)
+                {
+                    day.ParentEventId = seriesNowHoldingDay.Id;
+                    day.ExceptionDate = day.StartTime;
+                }
                 await _eventRepository.UpdateAsync(day);
 
-                if (dayWasEdited || googleHasDay)
+                if (slotIsFree && (dayWasEdited || googleHasDay))
                 {
                     // Still an edited day on its new slot: the next series edit must leave its
                     // content alone (it follows the exception list), and Google must drop the
@@ -350,8 +358,9 @@ namespace HabitTracker.Application.Features.Events.Commands
         /// <para>
         /// Edited days are skipped: the user changed them on purpose. They are the ones in the
         /// series' exception list (<see cref="OccurrenceMaterializer.IsLocalOnlyDay"/>).
-        /// A day the series no longer produces after the change (before its new start) is left
-        /// where it was, as history.
+        /// A day the series no longer produces after the change (before its new start), or
+        /// whose new slot another day of the series already holds, is left where it was, as
+        /// history.
         /// </para>
         /// </remarks>
         private async Task FollowSeriesAsync(
@@ -365,8 +374,9 @@ namespace HabitTracker.Application.Features.Events.Commands
             var shift = TimeOfDayShift(editedSlotUtc, newStart.ToUniversalTime());
             var length = to.EndTime - to.StartTime;
             var seriesStartUtc = to.StartTime.ToUniversalTime().AddMinutes(-1);
+            var days = (await _eventRepository.GetChildrenAsync(from.Id)).ToList();
 
-            foreach (var day in await _eventRepository.GetChildrenAsync(from.Id))
+            foreach (var day in days)
             {
                 if (day.Id == excludeDayId) continue;
                 if (!OccurrenceMaterializer.IsLocalOnlyDay(day, from)) continue;
@@ -376,6 +386,11 @@ namespace HabitTracker.Application.Features.Events.Commands
 
                 var newSlot = slot + shift;
                 if (newSlot < seriesStartUtc) continue;
+
+                // One event per day of a series (the database enforces it). A day already on the
+                // new slot — an edited one, or one this loop has moved there — keeps it, and
+                // this one stays where it was, as history.
+                if (OccurrenceMaterializer.FindDay(days.Where(other => other.Id != day.Id), to, newSlot) != null) continue;
 
                 day.ParentEventId = to.Id;
                 day.StartTime = newSlot;

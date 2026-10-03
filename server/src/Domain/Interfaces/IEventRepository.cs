@@ -45,6 +45,23 @@ namespace HabitTracker.Domain.Interfaces
         /// <summary>Every day that has been split off <paramref name="seriesId"/>, tracked for update.</summary>
         Task<IEnumerable<Event>> GetChildrenAsync(Guid seriesId);
 
+        /// <summary>
+        /// Adds a day split off a series (<see cref="Event.ParentEventId"/> +
+        /// <see cref="Event.ExceptionDate"/>), unless that day of the series already has an event.
+        /// </summary>
+        /// <returns>
+        /// False, having added nothing, when another event already stands for the same minute
+        /// of the same series — typically one added a moment earlier by a concurrent request.
+        /// Read it back with <see cref="GetOccurrenceChildAsync"/>.
+        /// </returns>
+        /// <remarks>
+        /// The database enforces one event per series and minute, so a check followed by a plain
+        /// <see cref="AddAsync"/> can still fail when two requests split off the same day at once
+        /// (two devices, or a ticked task racing a finished session). Safe inside a transaction:
+        /// the transaction stays usable after a refused add.
+        /// </remarks>
+        Task<bool> TryAddOccurrenceDayAsync(Event day);
+
         Task<Event?> GetByIdAsync(Guid id);
         Task AddAsync(Event ev);
         Task UpdateAsync(Event ev);
