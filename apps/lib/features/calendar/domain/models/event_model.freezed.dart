@@ -18,7 +18,13 @@ mixin _$EventModel {
  String get id; String get title; DateTime get startTime; DateTime get endTime; String get habitId; bool get isCompleted; String? get categoryId;@TimeSpanConverter() int? get targetDuration;// Target duration in minutes
 @TimeSpanConverter() int? get actualDuration;// Actual duration in minutes
  DateTime? get createdAt; String? get userId;// ID of the user who owns this event
-@JsonKey(includeIfNull: false) List<EventTaskModel>? get tasks; String? get recurrenceRule; String? get recurrenceExceptionDates; String? get parentEventId; DateTime? get exceptionDate;
+@JsonKey(includeIfNull: false) List<EventTaskModel>? get tasks; String? get recurrenceRule; String? get recurrenceExceptionDates; String? get parentEventId; DateTime? get exceptionDate;/// Minutes before [startTime] at which to remind, one entry per reminder.
+/// `0` means "when it starts"; empty means no reminders.
+///
+/// Held per event so each one carries its own set. A single day of a recurring
+/// series differs by editing that occurrence (`editScope: "ThisOccurrence"`),
+/// which creates a child event with its own reminders.
+ List<int> get reminderMinutesBefore;
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,16 +37,16 @@ $EventModelCopyWith<EventModel> get copyWith => _$EventModelCopyWithImpl<EventMo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.targetDuration, targetDuration) || other.targetDuration == targetDuration)&&(identical(other.actualDuration, actualDuration) || other.actualDuration == actualDuration)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.userId, userId) || other.userId == userId)&&const DeepCollectionEquality().equals(other.tasks, tasks)&&(identical(other.recurrenceRule, recurrenceRule) || other.recurrenceRule == recurrenceRule)&&(identical(other.recurrenceExceptionDates, recurrenceExceptionDates) || other.recurrenceExceptionDates == recurrenceExceptionDates)&&(identical(other.parentEventId, parentEventId) || other.parentEventId == parentEventId)&&(identical(other.exceptionDate, exceptionDate) || other.exceptionDate == exceptionDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.targetDuration, targetDuration) || other.targetDuration == targetDuration)&&(identical(other.actualDuration, actualDuration) || other.actualDuration == actualDuration)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.userId, userId) || other.userId == userId)&&const DeepCollectionEquality().equals(other.tasks, tasks)&&(identical(other.recurrenceRule, recurrenceRule) || other.recurrenceRule == recurrenceRule)&&(identical(other.recurrenceExceptionDates, recurrenceExceptionDates) || other.recurrenceExceptionDates == recurrenceExceptionDates)&&(identical(other.parentEventId, parentEventId) || other.parentEventId == parentEventId)&&(identical(other.exceptionDate, exceptionDate) || other.exceptionDate == exceptionDate)&&const DeepCollectionEquality().equals(other.reminderMinutesBefore, reminderMinutesBefore));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,categoryId,targetDuration,actualDuration,createdAt,userId,const DeepCollectionEquality().hash(tasks),recurrenceRule,recurrenceExceptionDates,parentEventId,exceptionDate);
+int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,categoryId,targetDuration,actualDuration,createdAt,userId,const DeepCollectionEquality().hash(tasks),recurrenceRule,recurrenceExceptionDates,parentEventId,exceptionDate,const DeepCollectionEquality().hash(reminderMinutesBefore));
 
 @override
 String toString() {
-  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, categoryId: $categoryId, targetDuration: $targetDuration, actualDuration: $actualDuration, createdAt: $createdAt, userId: $userId, tasks: $tasks, recurrenceRule: $recurrenceRule, recurrenceExceptionDates: $recurrenceExceptionDates, parentEventId: $parentEventId, exceptionDate: $exceptionDate)';
+  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, categoryId: $categoryId, targetDuration: $targetDuration, actualDuration: $actualDuration, createdAt: $createdAt, userId: $userId, tasks: $tasks, recurrenceRule: $recurrenceRule, recurrenceExceptionDates: $recurrenceExceptionDates, parentEventId: $parentEventId, exceptionDate: $exceptionDate, reminderMinutesBefore: $reminderMinutesBefore)';
 }
 
 
@@ -51,7 +57,7 @@ abstract mixin class $EventModelCopyWith<$Res>  {
   factory $EventModelCopyWith(EventModel value, $Res Function(EventModel) _then) = _$EventModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, String? categoryId,@TimeSpanConverter() int? targetDuration,@TimeSpanConverter() int? actualDuration, DateTime? createdAt, String? userId,@JsonKey(includeIfNull: false) List<EventTaskModel>? tasks, String? recurrenceRule, String? recurrenceExceptionDates, String? parentEventId, DateTime? exceptionDate
+ String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, String? categoryId,@TimeSpanConverter() int? targetDuration,@TimeSpanConverter() int? actualDuration, DateTime? createdAt, String? userId,@JsonKey(includeIfNull: false) List<EventTaskModel>? tasks, String? recurrenceRule, String? recurrenceExceptionDates, String? parentEventId, DateTime? exceptionDate, List<int> reminderMinutesBefore
 });
 
 
@@ -68,7 +74,7 @@ class _$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? categoryId = freezed,Object? targetDuration = freezed,Object? actualDuration = freezed,Object? createdAt = freezed,Object? userId = freezed,Object? tasks = freezed,Object? recurrenceRule = freezed,Object? recurrenceExceptionDates = freezed,Object? parentEventId = freezed,Object? exceptionDate = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? categoryId = freezed,Object? targetDuration = freezed,Object? actualDuration = freezed,Object? createdAt = freezed,Object? userId = freezed,Object? tasks = freezed,Object? recurrenceRule = freezed,Object? recurrenceExceptionDates = freezed,Object? parentEventId = freezed,Object? exceptionDate = freezed,Object? reminderMinutesBefore = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -86,7 +92,8 @@ as List<EventTaskModel>?,recurrenceRule: freezed == recurrenceRule ? _self.recur
 as String?,recurrenceExceptionDates: freezed == recurrenceExceptionDates ? _self.recurrenceExceptionDates : recurrenceExceptionDates // ignore: cast_nullable_to_non_nullable
 as String?,parentEventId: freezed == parentEventId ? _self.parentEventId : parentEventId // ignore: cast_nullable_to_non_nullable
 as String?,exceptionDate: freezed == exceptionDate ? _self.exceptionDate : exceptionDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,reminderMinutesBefore: null == reminderMinutesBefore ? _self.reminderMinutesBefore : reminderMinutesBefore // ignore: cast_nullable_to_non_nullable
+as List<int>,
   ));
 }
 
@@ -171,10 +178,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate,  List<int> reminderMinutesBefore)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate,_that.reminderMinutesBefore);case _:
   return orElse();
 
 }
@@ -192,10 +199,10 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate,  List<int> reminderMinutesBefore)  $default,) {final _that = this;
 switch (_that) {
 case _EventModel():
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate,_that.reminderMinutesBefore);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -212,10 +219,10 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String title,  DateTime startTime,  DateTime endTime,  String habitId,  bool isCompleted,  String? categoryId, @TimeSpanConverter()  int? targetDuration, @TimeSpanConverter()  int? actualDuration,  DateTime? createdAt,  String? userId, @JsonKey(includeIfNull: false)  List<EventTaskModel>? tasks,  String? recurrenceRule,  String? recurrenceExceptionDates,  String? parentEventId,  DateTime? exceptionDate,  List<int> reminderMinutesBefore)?  $default,) {final _that = this;
 switch (_that) {
 case _EventModel() when $default != null:
-return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate);case _:
+return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId,_that.isCompleted,_that.categoryId,_that.targetDuration,_that.actualDuration,_that.createdAt,_that.userId,_that.tasks,_that.recurrenceRule,_that.recurrenceExceptionDates,_that.parentEventId,_that.exceptionDate,_that.reminderMinutesBefore);case _:
   return null;
 
 }
@@ -227,7 +234,7 @@ return $default(_that.id,_that.title,_that.startTime,_that.endTime,_that.habitId
 @JsonSerializable()
 
 class _EventModel implements EventModel {
-  const _EventModel({required this.id, required this.title, required this.startTime, required this.endTime, required this.habitId, this.isCompleted = false, this.categoryId, @TimeSpanConverter() this.targetDuration, @TimeSpanConverter() this.actualDuration, this.createdAt, this.userId, @JsonKey(includeIfNull: false) final  List<EventTaskModel>? tasks, this.recurrenceRule, this.recurrenceExceptionDates, this.parentEventId, this.exceptionDate}): _tasks = tasks;
+  const _EventModel({required this.id, required this.title, required this.startTime, required this.endTime, required this.habitId, this.isCompleted = false, this.categoryId, @TimeSpanConverter() this.targetDuration, @TimeSpanConverter() this.actualDuration, this.createdAt, this.userId, @JsonKey(includeIfNull: false) final  List<EventTaskModel>? tasks, this.recurrenceRule, this.recurrenceExceptionDates, this.parentEventId, this.exceptionDate, final  List<int> reminderMinutesBefore = const <int>[]}): _tasks = tasks,_reminderMinutesBefore = reminderMinutesBefore;
   factory _EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);
 
 @override final  String id;
@@ -258,6 +265,25 @@ class _EventModel implements EventModel {
 @override final  String? recurrenceExceptionDates;
 @override final  String? parentEventId;
 @override final  DateTime? exceptionDate;
+/// Minutes before [startTime] at which to remind, one entry per reminder.
+/// `0` means "when it starts"; empty means no reminders.
+///
+/// Held per event so each one carries its own set. A single day of a recurring
+/// series differs by editing that occurrence (`editScope: "ThisOccurrence"`),
+/// which creates a child event with its own reminders.
+ final  List<int> _reminderMinutesBefore;
+/// Minutes before [startTime] at which to remind, one entry per reminder.
+/// `0` means "when it starts"; empty means no reminders.
+///
+/// Held per event so each one carries its own set. A single day of a recurring
+/// series differs by editing that occurrence (`editScope: "ThisOccurrence"`),
+/// which creates a child event with its own reminders.
+@override@JsonKey() List<int> get reminderMinutesBefore {
+  if (_reminderMinutesBefore is EqualUnmodifiableListView) return _reminderMinutesBefore;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_reminderMinutesBefore);
+}
+
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
@@ -272,16 +298,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.targetDuration, targetDuration) || other.targetDuration == targetDuration)&&(identical(other.actualDuration, actualDuration) || other.actualDuration == actualDuration)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.userId, userId) || other.userId == userId)&&const DeepCollectionEquality().equals(other._tasks, _tasks)&&(identical(other.recurrenceRule, recurrenceRule) || other.recurrenceRule == recurrenceRule)&&(identical(other.recurrenceExceptionDates, recurrenceExceptionDates) || other.recurrenceExceptionDates == recurrenceExceptionDates)&&(identical(other.parentEventId, parentEventId) || other.parentEventId == parentEventId)&&(identical(other.exceptionDate, exceptionDate) || other.exceptionDate == exceptionDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventModel&&(identical(other.id, id) || other.id == id)&&(identical(other.title, title) || other.title == title)&&(identical(other.startTime, startTime) || other.startTime == startTime)&&(identical(other.endTime, endTime) || other.endTime == endTime)&&(identical(other.habitId, habitId) || other.habitId == habitId)&&(identical(other.isCompleted, isCompleted) || other.isCompleted == isCompleted)&&(identical(other.categoryId, categoryId) || other.categoryId == categoryId)&&(identical(other.targetDuration, targetDuration) || other.targetDuration == targetDuration)&&(identical(other.actualDuration, actualDuration) || other.actualDuration == actualDuration)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.userId, userId) || other.userId == userId)&&const DeepCollectionEquality().equals(other._tasks, _tasks)&&(identical(other.recurrenceRule, recurrenceRule) || other.recurrenceRule == recurrenceRule)&&(identical(other.recurrenceExceptionDates, recurrenceExceptionDates) || other.recurrenceExceptionDates == recurrenceExceptionDates)&&(identical(other.parentEventId, parentEventId) || other.parentEventId == parentEventId)&&(identical(other.exceptionDate, exceptionDate) || other.exceptionDate == exceptionDate)&&const DeepCollectionEquality().equals(other._reminderMinutesBefore, _reminderMinutesBefore));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,categoryId,targetDuration,actualDuration,createdAt,userId,const DeepCollectionEquality().hash(_tasks),recurrenceRule,recurrenceExceptionDates,parentEventId,exceptionDate);
+int get hashCode => Object.hash(runtimeType,id,title,startTime,endTime,habitId,isCompleted,categoryId,targetDuration,actualDuration,createdAt,userId,const DeepCollectionEquality().hash(_tasks),recurrenceRule,recurrenceExceptionDates,parentEventId,exceptionDate,const DeepCollectionEquality().hash(_reminderMinutesBefore));
 
 @override
 String toString() {
-  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, categoryId: $categoryId, targetDuration: $targetDuration, actualDuration: $actualDuration, createdAt: $createdAt, userId: $userId, tasks: $tasks, recurrenceRule: $recurrenceRule, recurrenceExceptionDates: $recurrenceExceptionDates, parentEventId: $parentEventId, exceptionDate: $exceptionDate)';
+  return 'EventModel(id: $id, title: $title, startTime: $startTime, endTime: $endTime, habitId: $habitId, isCompleted: $isCompleted, categoryId: $categoryId, targetDuration: $targetDuration, actualDuration: $actualDuration, createdAt: $createdAt, userId: $userId, tasks: $tasks, recurrenceRule: $recurrenceRule, recurrenceExceptionDates: $recurrenceExceptionDates, parentEventId: $parentEventId, exceptionDate: $exceptionDate, reminderMinutesBefore: $reminderMinutesBefore)';
 }
 
 
@@ -292,7 +318,7 @@ abstract mixin class _$EventModelCopyWith<$Res> implements $EventModelCopyWith<$
   factory _$EventModelCopyWith(_EventModel value, $Res Function(_EventModel) _then) = __$EventModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, String? categoryId,@TimeSpanConverter() int? targetDuration,@TimeSpanConverter() int? actualDuration, DateTime? createdAt, String? userId,@JsonKey(includeIfNull: false) List<EventTaskModel>? tasks, String? recurrenceRule, String? recurrenceExceptionDates, String? parentEventId, DateTime? exceptionDate
+ String id, String title, DateTime startTime, DateTime endTime, String habitId, bool isCompleted, String? categoryId,@TimeSpanConverter() int? targetDuration,@TimeSpanConverter() int? actualDuration, DateTime? createdAt, String? userId,@JsonKey(includeIfNull: false) List<EventTaskModel>? tasks, String? recurrenceRule, String? recurrenceExceptionDates, String? parentEventId, DateTime? exceptionDate, List<int> reminderMinutesBefore
 });
 
 
@@ -309,7 +335,7 @@ class __$EventModelCopyWithImpl<$Res>
 
 /// Create a copy of EventModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? categoryId = freezed,Object? targetDuration = freezed,Object? actualDuration = freezed,Object? createdAt = freezed,Object? userId = freezed,Object? tasks = freezed,Object? recurrenceRule = freezed,Object? recurrenceExceptionDates = freezed,Object? parentEventId = freezed,Object? exceptionDate = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? title = null,Object? startTime = null,Object? endTime = null,Object? habitId = null,Object? isCompleted = null,Object? categoryId = freezed,Object? targetDuration = freezed,Object? actualDuration = freezed,Object? createdAt = freezed,Object? userId = freezed,Object? tasks = freezed,Object? recurrenceRule = freezed,Object? recurrenceExceptionDates = freezed,Object? parentEventId = freezed,Object? exceptionDate = freezed,Object? reminderMinutesBefore = null,}) {
   return _then(_EventModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -327,7 +353,8 @@ as List<EventTaskModel>?,recurrenceRule: freezed == recurrenceRule ? _self.recur
 as String?,recurrenceExceptionDates: freezed == recurrenceExceptionDates ? _self.recurrenceExceptionDates : recurrenceExceptionDates // ignore: cast_nullable_to_non_nullable
 as String?,parentEventId: freezed == parentEventId ? _self.parentEventId : parentEventId // ignore: cast_nullable_to_non_nullable
 as String?,exceptionDate: freezed == exceptionDate ? _self.exceptionDate : exceptionDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,reminderMinutesBefore: null == reminderMinutesBefore ? _self._reminderMinutesBefore : reminderMinutesBefore // ignore: cast_nullable_to_non_nullable
+as List<int>,
   ));
 }
 

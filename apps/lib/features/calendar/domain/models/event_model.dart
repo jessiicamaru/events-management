@@ -47,6 +47,14 @@ abstract class EventModel with _$EventModel {
     String? recurrenceExceptionDates,
     String? parentEventId,
     DateTime? exceptionDate,
+
+    /// Minutes before [startTime] at which to remind, one entry per reminder.
+    /// `0` means "when it starts"; empty means no reminders.
+    ///
+    /// Held per event so each one carries its own set. A single day of a recurring
+    /// series differs by editing that occurrence (`editScope: "ThisOccurrence"`),
+    /// which creates a child event with its own reminders.
+    @Default(<int>[]) List<int> reminderMinutesBefore,
   }) = _EventModel;
 
   factory EventModel.fromJson(Map<String, dynamic> json) => _$EventModelFromJson(json);

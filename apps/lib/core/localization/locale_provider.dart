@@ -420,25 +420,13 @@ class AppTranslations {
     },
 
     // Event reminders
-    'reminders_title': {
+    'reminders_label': {
       AppLocale.en: 'Reminders',
       AppLocale.vi: 'Nhắc nhở',
     },
-    'reminders_desc': {
-      AppLocale.en: 'Get notified before an event starts',
-      AppLocale.vi: 'Nhận thông báo trước khi sự kiện bắt đầu',
-    },
-    'reminders_enable': {
-      AppLocale.en: 'Enable reminders',
-      AppLocale.vi: 'Bật nhắc nhở',
-    },
-    'reminders_enable_desc': {
-      AppLocale.en: 'Schedules a notification before each upcoming event',
-      AppLocale.vi: 'Lên lịch thông báo trước mỗi sự kiện sắp tới',
-    },
-    'reminders_lead_time': {
-      AppLocale.en: 'Remind me',
-      AppLocale.vi: 'Nhắc tôi trước',
+    'reminders_none': {
+      AppLocale.en: 'No reminder',
+      AppLocale.vi: 'Không nhắc',
     },
     'reminders_lead_at_start': {
       AppLocale.en: 'When the event starts',
@@ -471,22 +459,6 @@ class AppTranslations {
           'This device has not granted exact alarms, so the system may delay a reminder by several minutes to save battery.',
       AppLocale.vi:
           'Thiết bị này chưa cấp quyền báo thức chính xác, nên hệ thống có thể trì hoãn nhắc nhở vài phút để tiết kiệm pin.',
-    },
-    'reminders_test': {
-      AppLocale.en: 'Send a test notification',
-      AppLocale.vi: 'Gửi thông báo thử',
-    },
-    'reminders_test_title': {
-      AppLocale.en: 'Reminders are working',
-      AppLocale.vi: 'Nhắc nhở đang hoạt động',
-    },
-    'reminders_test_body': {
-      AppLocale.en: 'This is what an event reminder looks like.',
-      AppLocale.vi: 'Đây là hình dạng của một nhắc nhở sự kiện.',
-    },
-    'reminders_scheduled_count': {
-      AppLocale.en: '{n} reminders scheduled',
-      AppLocale.vi: 'Đã lên lịch {n} nhắc nhở',
     },
     'reminder_starting_now': {
       AppLocale.en: 'Starting now',
