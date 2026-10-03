@@ -61,6 +61,35 @@ class AppConstants {
   /// Android notification channel for event reminders.
   static const String reminderChannelId = 'event_reminders';
 
+  // Routing
+  /// Where a signed-in user lands: after login, and when opening the app.
+  ///
+  /// One constant because it was written in two places — the router's redirect and
+  /// the login screen's own `context.go` — and when Home was added only the router
+  /// was changed, so logging in still went to the calendar.
+  static const String landingRoute = '/home';
+
+  // Events always loaded
+  /// The window around now that `eventsProvider` always includes, whatever range
+  /// the calendar is showing.
+  ///
+  /// The provider is shared: the calendar reads it for the range being browsed,
+  /// but the reminder scheduler, the Android widgets and the home screen read it for
+  /// *now*. It used to fetch only the browsed range, so browsing to December left
+  /// all three looking at December — which cancelled every pending reminder — and a
+  /// cold start, with no range yet, fetched every event the user had ever had.
+  ///
+  /// One day back, so an event that started before now and is still running is in
+  /// the window.
+  static const Duration upcomingWindowBehind = Duration(days: 1);
+
+  /// Must reach at least [reminderHorizon], or the reminder planner loses events at
+  /// the far edge of its own horizon. The extra day is margin for that edge.
+  static const Duration upcomingWindowAhead = Duration(days: 8);
+
+  /// Days of history in the home screen's activity summary.
+  static const int analyticsSummaryDays = 14;
+
   // Magic Numbers
   static const int defaultPomodoroDurationMinutes = 30;
   static const List<int> defaultTargetDays = [1, 2, 3, 4, 5];

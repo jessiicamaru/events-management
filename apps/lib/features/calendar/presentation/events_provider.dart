@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/features/calendar/domain/event_occurrence.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
@@ -26,6 +28,29 @@ class CalendarViewRange {
 
   @override
   int get hashCode => startTime.hashCode ^ endTime.hashCode;
+}
+
+/// The range to actually fetch: whatever the calendar is showing, widened to always
+/// include the window around [now].
+///
+/// `eventsProvider` is read for two different reasons. The calendar reads it for
+/// the range being browsed; the reminder scheduler, the Android widgets and the
+/// home screen read it for what is happening *now*. Fetching only the browsed range
+/// served the first and broke the others — see [AppConstants.upcomingWindowAhead].
+///
+/// Widening costs one larger request when the calendar is far from today, and
+/// nothing when it is not: the calendar's usual three-week window already covers
+/// the coming week.
+CalendarViewRange eventsFetchRange(CalendarViewRange? browsed, DateTime now) {
+  final upcomingStart = now.subtract(AppConstants.upcomingWindowBehind);
+  final upcomingEnd = now.add(AppConstants.upcomingWindowAhead);
+
+  if (browsed == null) return CalendarViewRange(upcomingStart, upcomingEnd);
+
+  return CalendarViewRange(
+    browsed.startTime.isBefore(upcomingStart) ? browsed.startTime : upcomingStart,
+    browsed.endTime.isAfter(upcomingEnd) ? browsed.endTime : upcomingEnd,
+  );
 }
 
 @riverpod
@@ -76,10 +101,9 @@ class EventsNotifier extends _$EventsNotifier {
     // Kích hoạt đồng bộ nền an toàn sau khi màn hình được render xong
     Future.microtask(() => _triggerBackgroundSync());
 
-    if (range != null) {
-      return await apiService.fetchEvents(startTime: range.startTime, endTime: range.endTime);
-    }
-    return await apiService.fetchEvents();
+    // Never unbounded, and never without the coming week: see eventsFetchRange.
+    final fetch = eventsFetchRange(range, DateTime.now());
+    return await apiService.fetchEvents(startTime: fetch.startTime, endTime: fetch.endTime);
   }
 
   Future<void> _triggerBackgroundSync() async {
@@ -102,6 +126,35 @@ class EventsNotifier extends _$EventsNotifier {
       ref.invalidateSelf();
     } catch (e) {
       // Bỏ qua lỗi đồng bộ nền để không crash giao diện chính
+    }
+  }
+
+  /// Requests in flight, keyed by series and day, so two quick taps on the same day
+  /// share one request instead of racing to create the day twice.
+  final Map<String, Future<String>> _splittingOff = {};
+
+  /// The id of the event that holds [day]'s own tasks and completion.
+  ///
+  /// For an ordinary event, or a day already split off, that is just its id. For a day
+  /// of a repeating series — which carries the *series'* id — the server first gives the
+  /// day its own event, with a fresh copy of the series' tasks, and this returns that
+  /// event's id. Then the events are reloaded, so every screen shows the new day in
+  /// place of the series' day.
+  Future<String> materializeOccurrence(EventModel day) {
+    if (!day.isSeriesOccurrence) return Future.value(day.id);
+
+    final key = '${day.id}@${day.startTime.toUtc().toIso8601String()}';
+    return _splittingOff[key] ??= _splitOff(day, key);
+  }
+
+  Future<String> _splitOff(EventModel day, String key) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final dayId = await apiService.materializeOccurrence(day.id, day.startTime);
+      ref.invalidateSelf();
+      return dayId;
+    } finally {
+      _splittingOff.remove(key);
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
+import 'package:habit_tracker/features/calendar/domain/event_occurrence.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
@@ -47,6 +48,9 @@ class _PostSessionDialogState extends ConsumerState<PostSessionDialog> {
         widget.event.id,
         actualDurationStr,
         _updateCalendar,
+        // For a day of a repeating series, which day. Without it the server would have
+        // to complete the series itself — every day at once — so it refuses instead.
+        occurrenceStart: widget.event.isSeriesOccurrence ? widget.event.startTime : null,
       );
 
       if (mounted) {

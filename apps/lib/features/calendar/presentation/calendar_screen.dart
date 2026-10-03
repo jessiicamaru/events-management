@@ -3,13 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 
-import 'package:habit_tracker/core/providers/shared_preferences_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_toolbar.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/create_event_sheet.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/habit_dock.dart';
-import 'package:habit_tracker/features/calendar/presentation/widgets/command_center_panel.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_source_filters.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_workspace.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
@@ -31,16 +29,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   AppCalendarView _currentView = AppCalendarView.threeDay;
   DateTime _displayDate = DateTime.now();
   CalendarSourceFilter _sourceFilter = CalendarSourceFilter.all;
-  bool _isCommandCenterVisible = true;
 
   @override
   void initState() {
     super.initState();
     // Default to 3-day view
     _calendarController.view = CalendarView.week;
-
-    final prefs = ref.read(sharedPreferencesProvider);
-    _isCommandCenterVisible = prefs.getBool('command_center_visible') ?? true;
   }
 
   @override
@@ -112,18 +106,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       _calendarController.displayDate = DateTime.now(),
                   onNextPressed: () => _calendarController.forward!(),
                   onPrevPressed: () => _calendarController.backward!(),
-                  onTogglePanel: () {
-                    setState(
-                      () => _isCommandCenterVisible = !_isCommandCenterVisible,
-                    );
-                    ref
-                        .read(sharedPreferencesProvider)
-                        .setBool(
-                          'command_center_visible',
-                          _isCommandCenterVisible,
-                        );
-                  },
-                  isPanelVisible: _isCommandCenterVisible,
                   totalEvents: eventsAsync.value?.length ?? 0,
                 ),
                 const Divider(height: 1),
@@ -162,39 +144,38 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 // Habit Dock at the bottom
                 if (habitsAsync.value != null)
                   HabitDock(habits: habitsAsync.value!),
-
-                // Command Center Panel
-                if (_isCommandCenterVisible) const CommandCenterPanel(),
               ],
             );
           },
         ),
       ),
-      floatingActionButton: _isCommandCenterVisible 
-          ? null 
-          : FloatingActionButton(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.primaryForeground,
-              shape: const CircleBorder(),
-              elevation: 4,
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  isScrollControlled: true,
-                  builder: (bottomSheetContext) => Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
-                    ),
-                    child: CreateEventSheet(
-                      habitsAsync: habitsAsync,
-                      initialDate: _displayDate,
-                    ),
-                  ),
-                );
-              },
-              child: const Icon(LucideIcons.plus, size: 24),
+      // Always shown. It used to disappear whenever the command centre panel was
+      // open — which was the default — so creating an event meant collapsing the
+      // panel first. With the panel moved to the home screen there is nothing left
+      // for it to overlap.
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: theme.colorScheme.primary,
+        foregroundColor: theme.colorScheme.primaryForeground,
+        shape: const CircleBorder(),
+        elevation: 4,
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isScrollControlled: true,
+            builder: (bottomSheetContext) => Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+              ),
+              child: CreateEventSheet(
+                habitsAsync: habitsAsync,
+                initialDate: _displayDate,
+              ),
             ),
+          );
+        },
+        child: const Icon(LucideIcons.plus, size: 24),
+      ),
     );
   }
 }

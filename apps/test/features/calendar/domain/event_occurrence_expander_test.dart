@@ -203,6 +203,53 @@ void main() {
       expect(result.map((e) => e.id), ['earlier', 'later']);
     });
 
+    test('every day of a series starts undone, even if the series row is marked done', () {
+      // Completing one session used to mark the series row done, which made every day
+      // done: gone from "up next", reminders silenced. Completion now lives on a day's
+      // own event, so the series' flag must not leak into its days.
+      final series = event(
+        id: 'jog',
+        localStart: monday,
+        recurrenceRule: 'FREQ=DAILY;COUNT=3',
+        isCompleted: true,
+      ).copyWith(actualDuration: 45);
+
+      final result = EventOccurrenceExpander.expand(
+        events: [series],
+        rangeStart: monday,
+        rangeEnd: weekEnd,
+      );
+
+      expect(result, hasLength(3));
+      expect(result.every((e) => !e.isCompleted), isTrue);
+      expect(result.every((e) => e.actualDuration == null), isTrue);
+    });
+
+    test('a split-off day keeps its own completion', () {
+      final wednesday = monday.add(const Duration(days: 2));
+      final series = event(id: 'jog', localStart: monday, recurrenceRule: 'FREQ=DAILY;COUNT=3');
+      final doneWednesday = event(
+        id: 'jog-wed',
+        localStart: wednesday,
+        parentEventId: 'jog',
+        exceptionDate: wednesday.toUtc(),
+        isCompleted: true,
+      );
+
+      final result = EventOccurrenceExpander.expand(
+        events: [series, doneWednesday],
+        rangeStart: monday,
+        rangeEnd: weekEnd,
+      );
+
+      // Monday, Tuesday, then Wednesday's own event in the series' place.
+      expect(result.map((e) => '${e.id}:${e.isCompleted}'), [
+        'jog:false',
+        'jog:false',
+        'jog-wed:true',
+      ]);
+    });
+
     test('returns nothing for no events', () {
       expect(
         EventOccurrenceExpander.expand(

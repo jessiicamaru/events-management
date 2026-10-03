@@ -22,6 +22,7 @@ public class Events : EndpointGroupBase
         groupBuilder.MapPost("", CreateEvent);
         groupBuilder.MapPut("{id}/toggle", ToggleEvent);
         groupBuilder.MapPut("{id}/complete-session", CompleteSession);
+        groupBuilder.MapPost("{id}/occurrences", MaterializeOccurrence);
         groupBuilder.MapDelete("{id}", DeleteEvent);
         groupBuilder.MapPut("{id}", UpdateEvent);
     }
@@ -73,10 +74,30 @@ public class Events : EndpointGroupBase
             EventId = id, 
             ActualDuration = request.ActualDuration, 
             UpdateCalendar = request.UpdateCalendar,
+            OccurrenceStart = request.OccurrenceStart,
             UserId = userId
         });
         if (!result) return TypedResults.NotFound();
         return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Gives one day of a repeating series its own event (with a copy of the series'
+    /// tasks) and returns its id. Idempotent: asking again for the same day returns the
+    /// same event. Never sent to Google.
+    /// </summary>
+    public async Task<Results<Ok<Guid>, NotFound, UnauthorizedHttpResult>> MaterializeOccurrence(
+        ISender sender,
+        Guid id,
+        [Microsoft.AspNetCore.Mvc.FromBody] MaterializeOccurrenceRequest request,
+        ClaimsPrincipal user)
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var childId = await sender.Send(new MaterializeOccurrenceCommand(id, request.OccurrenceStart, userId));
+        if (childId == null) return TypedResults.NotFound();
+        return TypedResults.Ok(childId.Value);
     }
 
     public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteEvent(
@@ -111,7 +132,8 @@ public class Events : EndpointGroupBase
             UserId = userId,
             EditScope = request.EditScope,
             OriginalOccurrenceDate = request.OriginalOccurrenceDate,
-            RecurrenceRule = request.RecurrenceRule
+            RecurrenceRule = request.RecurrenceRule,
+            ReminderMinutesBefore = request.ReminderMinutesBefore
         };
 
         var result = await sender.Send(command);
@@ -129,7 +151,11 @@ public record UpdateEventRequest(
     TimeSpan? TargetDuration,
     string? EditScope = null,
     DateTime? OriginalOccurrenceDate = null,
-    string? RecurrenceRule = null
+    string? RecurrenceRule = null,
+    // Null = not supplied, keep what is stored; an empty list = "no reminders".
+    // Missing from this record until now, so every reminder edit was dropped here even
+    // though the command and the client both handled it.
+    List<int>? ReminderMinutesBefore = null
 );
 
 public record ToggleEventRequest(bool IsCompleted);

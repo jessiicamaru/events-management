@@ -44,6 +44,11 @@ namespace HabitTracker.Application.Features.Events.Commands
             var evt = await _eventRepository.GetByIdAsync(request.Id);
             if (evt == null || evt.UserId != request.UserId) return false;
 
+            // Marking a series row done would mark every day of it done. A day is completed on
+            // its own event — see OccurrenceMaterializer. Un-completing stays allowed, so a
+            // series completed before this rule existed can still be repaired.
+            if (request.IsCompleted && OccurrenceMaterializer.IsSeries(evt)) return false;
+
             if (evt.IsCompleted == request.IsCompleted)
             {
                 return true;

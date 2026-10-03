@@ -22,6 +22,29 @@ namespace HabitTracker.Domain.Interfaces
         /// </summary>
         Task<IEnumerable<Event>> GetCompletedEventsForHabitAsync(Guid habitId);
 
+        /// <summary>
+        /// Per-day counts and focus minutes for one user, between <paramref name="fromUtc"/>
+        /// (inclusive) and <paramref name="toUtc"/> (exclusive).
+        /// </summary>
+        /// <remarks>
+        /// Aggregated by the database, not in memory: this powers a dashboard, and
+        /// loading every event a user has ever had in order to count them would get
+        /// slower for exactly the people who use the app most. Days with no events are
+        /// absent from the result rather than present as zeroes — the caller fills the
+        /// gaps, because only it knows the window it asked about.
+        /// </remarks>
+        Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc);
+
+        /// <summary>
+        /// The child event that stands in for one occurrence of a repeating series, if that
+        /// day has been split off — matched to the minute on <see cref="Event.ExceptionDate"/>,
+        /// the same precision the client uses to substitute it for the series' occurrence.
+        /// </summary>
+        Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc);
+
+        /// <summary>Every day that has been split off <paramref name="seriesId"/>, tracked for update.</summary>
+        Task<IEnumerable<Event>> GetChildrenAsync(Guid seriesId);
+
         Task<Event?> GetByIdAsync(Guid id);
         Task AddAsync(Event ev);
         Task UpdateAsync(Event ev);

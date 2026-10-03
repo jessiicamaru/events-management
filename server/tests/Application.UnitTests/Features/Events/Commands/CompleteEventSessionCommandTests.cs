@@ -16,6 +16,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
         private readonly Mock<IUserRepository> _mockUserRepo;
         private readonly Mock<ISquadRepository> _mockSquadRepo;
         private readonly Mock<IGoogleCalendarOutboxRepository> _mockOutboxRepo;
+        private readonly Mock<IEventTaskRepository> _mockTaskRepo;
         private readonly CompleteEventSessionCommandHandler _handler;
 
         public CompleteEventSessionCommandTests()
@@ -25,6 +26,9 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             _mockUserRepo = new Mock<IUserRepository>();
             _mockSquadRepo = new Mock<ISquadRepository>();
             _mockOutboxRepo = new Mock<IGoogleCalendarOutboxRepository>();
+            _mockTaskRepo = new Mock<IEventTaskRepository>();
+            _mockTaskRepo.Setup(r => r.GetByEventIdAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new System.Collections.Generic.List<EventTask>());
 
             // Sensible empty defaults so a test only sets up what it actually cares about.
             _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(It.IsAny<string>()))
@@ -40,7 +44,137 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
                 _mockUserRepo.Object,
                 _mockSquadRepo.Object,
                 _mockOutboxRepo.Object,
-                new HabitTracker.Application.Tests.TestDoubles.PassThroughUnitOfWork());
+                new HabitTracker.Application.Tests.TestDoubles.PassThroughUnitOfWork(),
+                new HabitTracker.Application.Common.OccurrenceMaterializer(
+                    _mockEventRepo.Object,
+                    _mockTaskRepo.Object,
+                    new HabitTracker.Application.Tests.TestDoubles.PassThroughUnitOfWork()));
+        }
+
+        private static Event DailySeries(string userId) => new()
+        {
+            Id = Guid.NewGuid(),
+            Title = "Jogging",
+            StartTime = new DateTime(2026, 5, 4, 10, 0, 0, DateTimeKind.Utc),
+            EndTime = new DateTime(2026, 5, 4, 11, 0, 0, DateTimeKind.Utc),
+            RecurrenceRule = "RRULE:FREQ=DAILY",
+            UserId = userId,
+            HabitId = string.Empty
+        };
+
+        [Fact]
+        public async Task Handle_RefusesToCompleteAWholeSeries_WhenNoDayIsGiven()
+        {
+            // Completing the series row completed every day of it at once.
+            var series = DailySeries("user1");
+            _mockEventRepo.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+
+            var result = await _handler.Handle(new CompleteEventSessionCommand
+            {
+                EventId = series.Id,
+                ActualDuration = TimeSpan.FromMinutes(30),
+                UserId = "user1"
+            }, CancellationToken.None);
+
+            Assert.False(result);
+            Assert.False(series.IsCompleted);
+            _mockEventRepo.Verify(r => r.UpdateAsync(It.IsAny<Event>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_CompletesOnlyTheGivenDay_OfASeries()
+        {
+            var series = DailySeries("user1");
+            var originalEnd = series.EndTime;
+            var day = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc);
+            _mockEventRepo.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+
+            Event? created = null;
+            _mockEventRepo.Setup(r => r.AddAsync(It.IsAny<Event>()))
+                .Callback<Event>(e => created = e)
+                .Returns(Task.CompletedTask);
+
+            var result = await _handler.Handle(new CompleteEventSessionCommand
+            {
+                EventId = series.Id,
+                ActualDuration = TimeSpan.FromMinutes(20),
+                UpdateCalendar = true,
+                OccurrenceStart = day,
+                UserId = "user1"
+            }, CancellationToken.None);
+
+            Assert.True(result);
+            Assert.NotNull(created);
+            Assert.Equal(series.Id, created!.ParentEventId);
+            Assert.Equal(day, created.ExceptionDate);
+            Assert.True(created.IsCompleted);
+            Assert.Equal(TimeSpan.FromMinutes(20), created.ActualDuration);
+
+            // The series itself is untouched: not completed, and "update calendar" resized the
+            // day, not every day of the series.
+            Assert.False(series.IsCompleted);
+            Assert.Equal(originalEnd, series.EndTime);
+            _mockEventRepo.Verify(r => r.UpdateAsync(series), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_DoesNotQueueAGoogleUpdate_ForADayGoogleNeverSaw()
+        {
+            // A day split off for this session was never sent to Google; an Update for it
+            // fails in the sync worker ("missing GoogleEventId") until it gives up.
+            var series = DailySeries("user1");
+            series.GoogleEventId = "google-series";
+            _mockEventRepo.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+            _mockUserRepo.Setup(r => r.GetByIdAsync("user1"))
+                .ReturnsAsync(new ApplicationUser { Id = "user1", GoogleRefreshToken = "token" });
+
+            var result = await _handler.Handle(new CompleteEventSessionCommand
+            {
+                EventId = series.Id,
+                ActualDuration = TimeSpan.FromMinutes(20),
+                OccurrenceStart = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc),
+                UserId = "user1"
+            }, CancellationToken.None);
+
+            // Without this, an early `return false` would satisfy the Times.Never below as well.
+            Assert.True(result);
+            _mockEventRepo.Verify(r => r.AddAsync(It.Is<Event>(e => e.ParentEventId == series.Id)), Times.Once);
+
+            _mockOutboxRepo.Verify(r => r.EnqueueAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_StillQueuesAGoogleUpdate_ForAnEventGoogleHas()
+        {
+            // The guard above must not silence ordinary events: "update calendar" on an event
+            // Google has has always been pushed.
+            var ev = new Event
+            {
+                Id = Guid.NewGuid(),
+                StartTime = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc),
+                EndTime = new DateTime(2026, 9, 11, 11, 0, 0, DateTimeKind.Utc),
+                UserId = "user1",
+                HabitId = string.Empty,
+                GoogleEventId = "g1"
+            };
+            _mockEventRepo.Setup(r => r.GetByIdAsync(ev.Id)).ReturnsAsync(ev);
+            _mockUserRepo.Setup(r => r.GetByIdAsync("user1"))
+                .ReturnsAsync(new ApplicationUser { Id = "user1", GoogleRefreshToken = "token" });
+
+            var result = await _handler.Handle(new CompleteEventSessionCommand
+            {
+                EventId = ev.Id,
+                ActualDuration = TimeSpan.FromMinutes(40),
+                UpdateCalendar = true,
+                UserId = "user1"
+            }, CancellationToken.None);
+
+            Assert.True(result);
+            _mockOutboxRepo.Verify(r => r.EnqueueAsync(
+                "user1", ev.Id, "g1", "Update",
+                It.Is<string>(p => p.Contains("EndTime")), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

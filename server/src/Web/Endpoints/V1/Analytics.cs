@@ -1,3 +1,4 @@
+using HabitTracker.Application.Features.Analytics.Queries.GetActivitySummary;
 using HabitTracker.Application.Features.Analytics.Queries.GetHeatmap;
 using HabitTracker.Web.Infrastructure;
 using MediatR;
@@ -19,6 +20,24 @@ public class Analytics : EndpointGroupBase
     {
         groupBuilder.RequireAuthorization();
         groupBuilder.MapGet("heatmap", GetHeatmap);
+        groupBuilder.MapGet("summary", GetActivitySummary);
+    }
+
+    /// <summary>
+    /// Per-day scheduled/completed counts and focus minutes for the signed-in user.
+    /// </summary>
+    public async Task<Results<Ok<ActivitySummaryDto>, UnauthorizedHttpResult>> GetActivitySummary(
+        ISender sender,
+        ClaimsPrincipal user,
+        int days = 14)
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        // userId comes from the token, never from the query string — the same rule the
+        // heatmap endpoint follows since it was found returning every user's data.
+        var summary = await sender.Send(new GetActivitySummaryQuery(userId, days));
+        return TypedResults.Ok(summary);
     }
 
     public async Task<Results<Ok<List<HeatmapItemDto>>, UnauthorizedHttpResult>> GetHeatmap(ISender sender, ClaimsPrincipal user)

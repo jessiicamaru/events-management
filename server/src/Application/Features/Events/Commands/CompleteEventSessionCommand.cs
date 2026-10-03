@@ -10,13 +10,21 @@ using System.Linq;
 
 namespace HabitTracker.Application.Features.Events.Commands
 {
-    public record CompleteEventSessionRequest(TimeSpan ActualDuration, bool UpdateCalendar = false);
+    /// <param name="OccurrenceStart">
+    /// Required when the event is a repeating series: which day the session was for. That
+    /// day is completed, not the series — see <see cref="OccurrenceMaterializer"/>.
+    /// </param>
+    public record CompleteEventSessionRequest(
+        TimeSpan ActualDuration,
+        bool UpdateCalendar = false,
+        DateTime? OccurrenceStart = null);
 
     public class CompleteEventSessionCommand : IRequest<bool>
     {
         public Guid EventId { get; set; }
         public TimeSpan ActualDuration { get; set; }
         public bool UpdateCalendar { get; set; }
+        public DateTime? OccurrenceStart { get; set; }
         public string UserId { get; set; } = string.Empty;
     }
 
@@ -31,6 +39,7 @@ namespace HabitTracker.Application.Features.Events.Commands
         private readonly ISquadRepository _squadRepository;
         private readonly IGoogleCalendarOutboxRepository _outboxRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly OccurrenceMaterializer _materializer;
 
         public CompleteEventSessionCommandHandler(
             IEventRepository eventRepository,
@@ -38,8 +47,10 @@ namespace HabitTracker.Application.Features.Events.Commands
             IUserRepository userRepository,
             ISquadRepository squadRepository,
             IGoogleCalendarOutboxRepository outboxRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            OccurrenceMaterializer materializer)
         {
+            _materializer = materializer;
             _eventRepository = eventRepository;
             _habitRepository = habitRepository;
             _userRepository = userRepository;
@@ -55,8 +66,16 @@ namespace HabitTracker.Application.Features.Events.Commands
                 throw new ArgumentException("UserId is required.", nameof(request));
             }
 
-            var ev = await _eventRepository.GetByIdAsync(request.EventId);
-            if (ev == null || ev.UserId != request.UserId)
+            var target = await _eventRepository.GetByIdAsync(request.EventId);
+            if (target == null || target.UserId != request.UserId)
+            {
+                return false;
+            }
+
+            // A series row is never completed: completing it completed every day at once,
+            // hid the series from "up next" and stopped its reminders. The session was for
+            // one day, so that day is split off and completed on its own.
+            if (OccurrenceMaterializer.IsSeries(target) && request.OccurrenceStart == null)
             {
                 return false;
             }
@@ -65,6 +84,11 @@ namespace HabitTracker.Application.Features.Events.Commands
             // logical operation — see IUnitOfWork.
             return await _unitOfWork.ExecuteInTransactionAsync(async () =>
             {
+                var ev = OccurrenceMaterializer.IsSeries(target)
+                    ? await _materializer.FindOrCreateAsync(target, request.OccurrenceStart!.Value, cancellationToken)
+                    : target;
+                if (ev == null) return false;
+
                 var wasCompleted = ev.IsCompleted;
 
                 ev.IsCompleted = true;
@@ -89,7 +113,10 @@ namespace HabitTracker.Application.Features.Events.Commands
 
                 await _eventRepository.UpdateAsync(ev);
 
-                if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken))
+                // Only when Google has the event. A day split off for this session was never
+                // sent to Google, and an Update for it would fail in the sync worker.
+                if (user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken)
+                    && await GoogleSyncGuard.GoogleKnowsAsync(ev, _outboxRepository, cancellationToken))
                 {
                     var payload = System.Text.Json.JsonSerializer.Serialize(new
                     {

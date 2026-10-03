@@ -38,8 +38,6 @@ void main() {
           onTodayPressed: () {},
           onNextPressed: () {},
           onPrevPressed: () {},
-          onTogglePanel: () {},
-          isPanelVisible: true,
           totalEvents: 5,
         ),
         prefs,
@@ -57,6 +55,10 @@ void main() {
 
       // Check category dropdown
       expect(find.text('All Categories'), findsWidgets);
+
+      // The panel toggle is gone: the up-next panel it collapsed now lives on the
+      // home screen, so there is nothing left on this screen to show or hide.
+      expect(find.byIcon(LucideIcons.panelBottom), findsNothing);
 
       // Tap Month icon
       await tester.tap(find.byIcon(LucideIcons.calendarDays));

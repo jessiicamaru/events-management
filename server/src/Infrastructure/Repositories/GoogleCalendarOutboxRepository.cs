@@ -47,6 +47,12 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public async Task<bool> HasPendingInsertAsync(Guid eventId, CancellationToken cancellationToken = default)
+        {
+            return await _context.GoogleCalendarOutboxes
+                .AnyAsync(x => x.EventId == eventId && x.Action == "Insert" && x.ProcessedAt == null, cancellationToken);
+        }
+
         public async Task UpdateAsync(GoogleCalendarOutbox entry, CancellationToken cancellationToken = default)
         {
             _context.GoogleCalendarOutboxes.Update(entry);

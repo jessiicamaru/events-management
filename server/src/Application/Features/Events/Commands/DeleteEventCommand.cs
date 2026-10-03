@@ -1,3 +1,4 @@
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 using System;
@@ -56,22 +57,72 @@ namespace HabitTracker.Application.Features.Events.Commands
             var user = await _userRepository.GetByIdAsync(request.UserId ?? string.Empty);
             bool hasGoogle = user != null && !string.IsNullOrEmpty(user.GoogleRefreshToken);
 
+            // A day with its own event — split off by an edit, a ticked task or a finished
+            // session. The calendar shows it in place of the series' day.
+            if (existingEvent.ParentEventId != null)
+            {
+                var parent = await _eventRepository.GetByIdAsync(existingEvent.ParentEventId.Value);
+                var parentIsSeries = parent != null
+                    && parent.UserId == request.UserId
+                    && OccurrenceMaterializer.IsSeries(parent);
+
+                if (parentIsSeries
+                    && (request.DeleteScope == "AllOccurrences" || request.DeleteScope == "ThisAndFuture"))
+                {
+                    // Means the series, as it would for an untouched day. Before, only this one
+                    // row was deleted and the rest of the series stayed.
+                    return await Handle(
+                        new DeleteEventCommand(
+                            parent!.Id,
+                            request.UserId,
+                            request.DeleteScope,
+                            existingEvent.ExceptionDate ?? existingEvent.StartTime),
+                        cancellationToken);
+                }
+
+                await _eventRepository.DeleteAsync(existingEvent.Id);
+
+                if (parentIsSeries)
+                {
+                    // Without this the series' own occurrence would reappear on that day:
+                    // a day split off locally never added itself to the exception list.
+                    RecurrenceExceptions.Add(parent!, (existingEvent.ExceptionDate ?? existingEvent.StartTime).ToUniversalTime());
+                    await _eventRepository.UpdateAsync(parent!);
+                }
+
+                if (hasGoogle)
+                {
+                    if (!string.IsNullOrEmpty(existingEvent.GoogleEventId))
+                    {
+                        // Google has this day as its own instance: deleting it cancels the day.
+                        await _outboxRepository.EnqueueAsync(request.UserId!, existingEvent.Id, existingEvent.GoogleEventId, "Delete", string.Empty, cancellationToken);
+                    }
+                    else if (parentIsSeries)
+                    {
+                        // Google only knows the series: cancel the day through its EXDATE list,
+                        // exactly as deleting an untouched day does.
+                        var masterPayload = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            Title = parent!.Title,
+                            StartTime = parent.StartTime,
+                            EndTime = parent.EndTime,
+                            RecurrenceRule = parent.RecurrenceRule,
+                            RecurrenceExceptionDates = parent.RecurrenceExceptionDates
+                        });
+                        await _outboxRepository.EnqueueAsync(request.UserId!, parent.Id, parent.GoogleEventId, "Update", masterPayload, cancellationToken);
+                    }
+                }
+
+                return true;
+            }
+
             var deleteScope = request.DeleteScope ?? "AllOccurrences";
 
             if (!string.IsNullOrEmpty(existingEvent.RecurrenceRule) && deleteScope == "ThisOccurrence")
             {
                 // 1. Add exception date to master event
                 var exceptionDateUtc = (request.OriginalOccurrenceDate ?? existingEvent.StartTime).ToUniversalTime();
-                var exceptionDateStr = exceptionDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                if (string.IsNullOrEmpty(existingEvent.RecurrenceExceptionDates))
-                {
-                    existingEvent.RecurrenceExceptionDates = exceptionDateStr;
-                }
-                else if (!existingEvent.RecurrenceExceptionDates.Contains(exceptionDateStr))
-                {
-                    existingEvent.RecurrenceExceptionDates += "," + exceptionDateStr;
-                }
+                RecurrenceExceptions.Add(existingEvent, exceptionDateUtc);
                 await _eventRepository.UpdateAsync(existingEvent);
 
                 if (hasGoogle)

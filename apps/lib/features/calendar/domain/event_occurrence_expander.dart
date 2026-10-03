@@ -7,8 +7,9 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 /// needs to know "what is actually happening between these two dates" has to expand
 /// that rule and then subtract the occurrences the user has skipped or edited.
 ///
-/// That expansion was copy-pasted in three places (twice in `HomeWidgetService`, once
-/// in `CommandCenterPanel`). This is the one definition.
+/// That expansion was copy-pasted in four places — twice in `HomeWidgetService`, once
+/// in the calendar's command centre panel, and once more in what is now `HomeAgenda`.
+/// This is the one definition.
 abstract final class EventOccurrenceExpander {
   /// Expands recurring events in [events] into their occurrences between
   /// [rangeStart] and [rangeEnd], and returns them alongside the non-recurring
@@ -72,6 +73,12 @@ abstract final class EventOccurrenceExpander {
             event.copyWith(
               startTime: date.toUtc(),
               endTime: date.add(duration).toUtc(),
+              // A day of a series starts undone. Completion and focus time belong to a
+              // single day, and live on that day's own event once it is split off. A
+              // series completed before that rule existed would otherwise show every
+              // day as done — hiding it from "up next" and silencing its reminders.
+              isCompleted: false,
+              actualDuration: null,
             ),
           );
         }

@@ -25,6 +25,68 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc)
+        {
+            var utc = occurrenceStartUtc.Kind == DateTimeKind.Utc
+                ? occurrenceStartUtc
+                : DateTime.SpecifyKind(occurrenceStartUtc, DateTimeKind.Utc);
+            var minuteStart = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, 0, DateTimeKind.Utc);
+            var minuteEnd = minuteStart.AddMinutes(1);
+
+            return await _context.Events
+                .Where(e => e.ParentEventId == seriesId
+                    && e.ExceptionDate >= minuteStart
+                    && e.ExceptionDate < minuteEnd)
+                .OrderBy(e => e.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<Event>> GetChildrenAsync(Guid seriesId)
+        {
+            return await _context.Events
+                .Where(e => e.ParentEventId == seriesId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc)
+        {
+            // Written as SQL rather than as a LINQ GroupBy on purpose. EF silently falls
+            // back to client evaluation for some grouped projections, which would mean
+            // loading every row to count it — the exact thing this method exists to avoid.
+            // Spelled out, the plan is a HashAggregate over the Events table.
+            //
+            // The interpolated values are parameterised by SqlQuery; this is not string
+            // concatenation.
+            //
+            // `+ interval '7 hours'` is the UTC+7 day boundary shared with
+            // StreakCalculator.DefaultDayBoundaryOffset. If that ever becomes a per-user
+            // setting, both have to move together.
+            //
+            // Scheduled/completed count one-off events only. A repeating event is one row
+            // dated on its first day, so counting rows counted each series once, there, and
+            // counted only the days somebody had touched (split off) — which pushed the
+            // completion rate towards 100%. Repeating days are counted by the client instead,
+            // which expands the series with the same code that draws Home and schedules
+            // reminders. Focus minutes still come from every row: only a finished session
+            // writes ActualDuration, whichever kind of event it was on.
+            return await _context.Database
+                .SqlQuery<DailyActivity>(
+                    $"""
+                    SELECT
+                        (("StartTime" AT TIME ZONE 'UTC') + interval '7 hours')::date AS "Date",
+                        COUNT(*) FILTER (WHERE "ParentEventId" IS NULL AND COALESCE("RecurrenceRule", '') = '')::int AS "OneOffScheduled",
+                        COUNT(*) FILTER (WHERE "ParentEventId" IS NULL AND COALESCE("RecurrenceRule", '') = '' AND "IsCompleted")::int AS "OneOffCompleted",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM "ActualDuration")) / 60.0), 0)::int AS "FocusMinutes"
+                    FROM "Events"
+                    WHERE "UserId" = {userId}
+                      AND "StartTime" >= {fromUtc}
+                      AND "StartTime" < {toUtc}
+                    GROUP BY 1
+                    ORDER BY 1
+                    """)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Event>> GetCompletedEventsForHabitAsync(Guid habitId)
         {
             var habitIdText = habitId.ToString();

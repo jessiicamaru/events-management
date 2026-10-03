@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/network/dio_client.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
+import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/calendar/models/event_category.dart';
@@ -84,6 +85,15 @@ class ApiService {
     }
   }
 
+  /// Per-day activity for the last [days] days, aggregated on the server.
+  Future<ActivitySummary> fetchActivitySummary({required int days}) async {
+    final response = await _dio.get(
+      '/analytics/summary',
+      queryParameters: {'days': days},
+    );
+    return ActivitySummary.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<EventModel>> fetchEvents({DateTime? startTime, DateTime? endTime}) async {
     final response = await _dio.get(
       '/events',
@@ -122,15 +132,35 @@ class ApiService {
     );
   }
 
-  Future<void> completeSession(String id, String actualDuration, bool updateCalendar) async {
+  /// [occurrenceStart] is required when [id] is a repeating series: it says which day
+  /// the session was for, and the server completes that day only.
+  Future<void> completeSession(
+    String id,
+    String actualDuration,
+    bool updateCalendar, {
+    DateTime? occurrenceStart,
+  }) async {
     await _dio.put(
       '/events/$id/complete-session',
       data: {
         'actualDuration': actualDuration,
         'updateCalendar': updateCalendar,
+        'occurrenceStart': ?occurrenceStart?.toUtc().toIso8601String(),
       },
       options: Options(contentType: 'application/json'),
     );
+  }
+
+  /// Gives one day of a repeating series its own event, with a fresh copy of the
+  /// series' tasks, and returns that event's id. Asking again for the same day returns
+  /// the same id.
+  Future<String> materializeOccurrence(String seriesId, DateTime occurrenceStart) async {
+    final response = await _dio.post(
+      '/events/$seriesId/occurrences',
+      data: {'occurrenceStart': occurrenceStart.toUtc().toIso8601String()},
+      options: Options(contentType: 'application/json'),
+    );
+    return response.data as String;
   }
   Future<List<MySquadSummaryModel>> fetchMySquads() async {
     final response = await _dio.get('/squads/list');

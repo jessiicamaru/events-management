@@ -52,6 +52,34 @@ namespace HabitTracker.Application.Tests
         }
 
         [Fact]
+        public async Task Handle_RefusesToMarkAWholeSeriesDone_ButAllowsUndoingIt()
+        {
+            // Marking the series row done marked every day of it done. A day is completed on
+            // its own event; un-completing stays allowed to repair series completed before.
+            var series = new Event
+            {
+                Id = Guid.NewGuid(),
+                RecurrenceRule = "RRULE:FREQ=DAILY",
+                StartTime = LocalDay(30),
+                UserId = "user123",
+                HabitId = string.Empty
+            };
+            _mockEventRepo.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+
+            var complete = await _handler.Handle(new ToggleEventCommand(series.Id, true, "user123"), CancellationToken.None);
+
+            complete.Should().BeFalse();
+            series.IsCompleted.Should().BeFalse();
+            _mockEventRepo.Verify(r => r.UpdateAsync(It.IsAny<Event>()), Times.Never);
+
+            series.IsCompleted = true;
+            var undo = await _handler.Handle(new ToggleEventCommand(series.Id, false, "user123"), CancellationToken.None);
+
+            undo.Should().BeTrue();
+            series.IsCompleted.Should().BeFalse();
+        }
+
+        [Fact]
         public async Task Handle_ShouldToggleEventAndRecalculateStreaksAndAwardXP()
         {
             // Arrange

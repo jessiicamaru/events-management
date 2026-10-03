@@ -3,7 +3,7 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-10 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-11 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
 **Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
 needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
@@ -80,6 +80,22 @@ already exists. Squads currently have infrastructure but little to actually do t
 ## 2. Analytics
 
 Read the hard constraint above before starting any of these.
+
+### 🟢 2.0 Home-screen activity summary
+
+`GET /api/v1/analytics/summary?days=N` → per-day scheduled / completed / focus minutes,
+one `GROUP BY` in Postgres (plan: `HashAggregate`), same UTC+7 day boundary as streaks.
+Shown on the home screen as three tiles and a 14-day focus-time bar chart.
+
+Limits worth knowing before building on it:
+
+- **Completion has no timestamp.** `IsCompleted` is one flag per row, so "completed on
+  day X" means "the event *started* on day X".
+- **A recurring series is one row.** A daily habit stored as an `RRULE` counts once, on
+  its series start date, however many days it was actually done. Measured on the local
+  dump: 7 of 95 events are recurring, 3 of them with no end date. Fixing this properly
+  needs a completion log (one row per occurrence done), not a smarter query.
+- Focus minutes do not have this problem — `ActualDuration` is written per focus session.
 
 ### ⚪ 2.1 Plan vs actual time
 
@@ -174,13 +190,12 @@ Either way it shifts every existing user's streak, so decide before the user bas
 cache (4.1) and widget tests must mock HTTP rather than an interface. Split per feature behind
 interfaces.
 
-### 🟡 5.3 De-duplicate recurrence expansion
+### 🟢 5.3 De-duplicate recurrence expansion
 
-`SfCalendar.getRecurrenceDateTimeCollection` expansion is copy-pasted **three times**: twice
-inside `home_widget_service.dart` and once in `command_center_panel.dart`. Being extracted to
-a shared expander on `feat/event-reminders` so the reminder scheduler is its third consumer
-rather than a fourth copy. `command_center_panel.dart` is **not** migrated on that branch —
-follow-up.
+Done. All four copies now go through `EventOccurrenceExpander`: the two in
+`home_widget_service.dart`, the reminder scheduler, and the one that lived in
+`command_center_panel.dart` — removed on `feat/home-page` when that panel became the home
+screen's `HomeAgenda`.
 
 ### ⚪ 5.3a A malformed RRULE silently hides an event
 
@@ -236,6 +251,26 @@ against the restored database — but the model snapshot knows nothing about tho
 so nothing maintains them. Before starting §2, decide whether to recover that migration
 (the schema is reconstructable from the dump) or design the rollup fresh. See
 `local-dev/README.md`.
+
+### 🟢 5.6c Repeating events shared one state across every day
+
+Fixed on `feat/home-page`. Tasks and completion were stored against the series id, which
+every day shares: ticking a task on Monday ticked it on every day, and finishing one
+session completed the whole series — hiding it from "up next" and stopping its
+reminders. A day is now split off into its own event (with a copy of the series' tasks)
+the first time it is changed. See `OccurrenceMaterializer` and the sync note in CLAUDE.md.
+
+Still open: a split-off day keeps its own time, so if the whole series is later moved to
+a different time of day, days split off *ahead of time* (future days with ticked tasks)
+stay at the old time. Past days staying put is correct; future ones are the edge case.
+Also, the dashboard still counts an untouched series once, on its start date — only days
+that have been split off are counted on their own day.
+
+### ⚪ 5.6b The heatmap groups in memory
+
+`GetHeatmapQuery` loads every completed event the user has and runs `GroupBy` in C#,
+against the hard constraint at the top of this file. `EventRepository.GetDailyActivityAsync`
+shows the SQL shape to move it to.
 
 ### ⚪ 5.7 Background sync has no logging
 

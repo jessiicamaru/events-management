@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -199,25 +200,33 @@ namespace HabitTracker.Infrastructure.Services
                     if (localMaster == null) continue;
 
                     var originalDate = GetGoogleDateTime(ge.OriginalStartTime ?? ge.Start);
-                    var originalDateStr = originalDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                    // Looked up before this sync writes the date into the series' exception list.
+                    // Afterwards every day on that date would look edited, and before it an edited
+                    // day whose Insert is still queued looks local-only — only the list, read now,
+                    // tells them apart (see FindLocalOnlyDay).
+                    var localOnlyDay = OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster, originalDate);
 
                     if (ge.Status == "cancelled")
                     {
                         // Add exception date to master EXDATE list
-                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
-                        {
-                            localMaster.RecurrenceExceptionDates = originalDateStr;
-                        }
-                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
-                        {
-                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
-                        }
+                        RecurrenceExceptions.Add(localMaster, originalDate);
                         await _eventRepository.UpdateAsync(localMaster);
 
                         var existingExceptionLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id);
                         if (existingExceptionLocal != null)
                         {
                             await _eventRepository.DeleteAsync(existingExceptionLocal.Id);
+                        }
+
+                        // The day may also exist locally only, split off by a ticked task or a
+                        // finished session. Google cancelled it, so it goes too, or a cancelled
+                        // meeting would stay on the calendar. Not an edited day, though: Google
+                        // reports that same cancellation back after every edit of one occurrence,
+                        // and deleting the edited day there lost it along with its tasks.
+                        if (localOnlyDay != null)
+                        {
+                            await _eventRepository.DeleteAsync(localOnlyDay.Id);
                         }
                     }
                     else
@@ -235,6 +244,19 @@ namespace HabitTracker.Infrastructure.Services
                             existingExceptionLocal.TargetDuration = targetDuration;
                             existingExceptionLocal.ExceptionDate = originalDate;
                             await _eventRepository.UpdateAsync(existingExceptionLocal);
+                        }
+                        else if (localOnlyDay != null)
+                        {
+                            // Google changed a day the user had already split off locally.
+                            // Adopt it instead of adding a second event for the same day, so its
+                            // tasks and completion are kept.
+                            localOnlyDay.GoogleEventId = ge.Id;
+                            localOnlyDay.Title = ge.Summary ?? "(No Title)";
+                            localOnlyDay.StartTime = startTime;
+                            localOnlyDay.EndTime = endTime;
+                            localOnlyDay.TargetDuration = targetDuration;
+                            localOnlyDay.ExceptionDate = originalDate;
+                            await _eventRepository.UpdateAsync(localOnlyDay);
                         }
                         else
                         {
@@ -255,14 +277,7 @@ namespace HabitTracker.Infrastructure.Services
                             await _eventRepository.AddAsync(newException);
                         }
 
-                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
-                        {
-                            localMaster.RecurrenceExceptionDates = originalDateStr;
-                        }
-                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
-                        {
-                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
-                        }
+                        RecurrenceExceptions.Add(localMaster, originalDate);
                         await _eventRepository.UpdateAsync(localMaster);
                     }
                 }
