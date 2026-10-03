@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace HabitTracker.Web.Endpoints.V1;
@@ -16,12 +17,16 @@ public class Analytics : EndpointGroupBase
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization();
         groupBuilder.MapGet("heatmap", GetHeatmap);
     }
 
-    public async Task<Ok<List<HeatmapItemDto>>> GetHeatmap(ISender sender)
+    public async Task<Results<Ok<List<HeatmapItemDto>>, UnauthorizedHttpResult>> GetHeatmap(ISender sender, ClaimsPrincipal user)
     {
-        var heatmap = await sender.Send(new GetHeatmapQuery());
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var heatmap = await sender.Send(new GetHeatmapQuery(userId));
         return TypedResults.Ok(heatmap);
     }
 }

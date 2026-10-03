@@ -10,6 +10,15 @@ namespace HabitTracker.Domain.Entities
         public DateTime EndTime { get; set; }
         public string HabitId { get; set; } = string.Empty;
         public bool IsCompleted { get; set; }
+
+        /// <summary>
+        /// XP actually granted to the user when this event was completed. Stored so that
+        /// un-completing the event refunds exactly what was awarded, instead of
+        /// recalculating from the streak as it stands at that later moment.
+        /// Zero whenever <see cref="IsCompleted"/> is false.
+        /// </summary>
+        public int AwardedXp { get; set; }
+
         public TimeSpan TargetDuration { get; set; }
         public TimeSpan? ActualDuration { get; set; }
         public string? UserId { get; set; }

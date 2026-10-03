@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using HabitTracker.Application.Features.Events.Commands;
+using HabitTracker.Application.Tests.TestDoubles;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using Moq;
@@ -26,11 +28,27 @@ namespace HabitTracker.Application.Tests
             _mockUserRepo = new Mock<IUserRepository>();
             _mockSquadRepo = new Mock<ISquadRepository>();
 
+            // Sensible empty defaults so a test only sets up what it actually cares about.
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(It.IsAny<string>()))
+                .ReturnsAsync(new List<Event>());
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForHabitAsync(It.IsAny<Guid>()))
+                .ReturnsAsync(new List<Event>());
+            _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(It.IsAny<string>()))
+                .ReturnsAsync(new List<Squad>());
+
             _handler = new ToggleEventCommandHandler(
                 _mockEventRepo.Object,
                 _mockHabitRepo.Object,
                 _mockUserRepo.Object,
-                _mockSquadRepo.Object);
+                _mockSquadRepo.Object,
+                new PassThroughUnitOfWork());
+        }
+
+        /// <summary>Builds a UTC instant whose UTC+7 local date is <paramref name="daysAgo"/> days back.</summary>
+        private static DateTime LocalDay(int daysAgo)
+        {
+            var localToday = DateTime.UtcNow.AddHours(7).Date;
+            return DateTime.SpecifyKind(localToday.AddDays(-daysAgo).AddHours(12).AddHours(-7), DateTimeKind.Utc);
         }
 
         [Fact]
@@ -41,26 +59,24 @@ namespace HabitTracker.Application.Tests
             var eventId = Guid.NewGuid();
             var userId = "user123";
 
-            var habit = new Habit
-            {
-                Id = habitId,
-                CurrentStreak = 0,
-                LongestStreak = 0
-            };
+            var habit = new Habit { Id = habitId, CurrentStreak = 0, LongestStreak = 0 };
 
             var evt = new Event
             {
                 Id = eventId,
                 HabitId = habitId.ToString(),
                 IsCompleted = false,
-                StartTime = DateTime.UtcNow.AddDays(-1),
+                StartTime = LocalDay(1),
                 UserId = userId
             };
 
-            var eventsList = new List<Event>
+            var alreadyDone = new Event
             {
-                new Event { Id = Guid.NewGuid(), HabitId = habitId.ToString(), IsCompleted = true, StartTime = DateTime.UtcNow.AddDays(-2), UserId = userId },
-                evt
+                Id = Guid.NewGuid(),
+                HabitId = habitId.ToString(),
+                IsCompleted = true,
+                StartTime = LocalDay(2),
+                UserId = userId
             };
 
             var user = new ApplicationUser { Id = userId, TotalXP = 50 };
@@ -69,8 +85,8 @@ namespace HabitTracker.Application.Tests
             var membership = new SquadMember { SquadId = squadId, UserId = userId, IsApproved = true, XpContributionEnabled = true };
 
             _mockEventRepo.Setup(r => r.GetByIdAsync(eventId)).ReturnsAsync(evt);
-            _mockEventRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(eventsList);
-            _mockEventRepo.Setup(r => r.GetEventsForUserAsync(userId)).ReturnsAsync(eventsList);
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(userId)).ReturnsAsync(new List<Event> { alreadyDone });
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForHabitAsync(habitId)).ReturnsAsync(new List<Event> { alreadyDone });
             _mockHabitRepo.Setup(r => r.GetByIdAsync(habitId)).ReturnsAsync(habit);
             _mockUserRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
             _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(userId)).ReturnsAsync(new List<Squad> { squad });
@@ -84,7 +100,7 @@ namespace HabitTracker.Application.Tests
             // Assert
             result.Should().BeTrue();
             evt.IsCompleted.Should().BeTrue();
-            
+
             // Streaks should be 2 because we have completions on day -2 and day -1
             habit.CurrentStreak.Should().Be(2);
             habit.LongestStreak.Should().Be(2);
@@ -93,6 +109,9 @@ namespace HabitTracker.Application.Tests
             user.TotalXP.Should().Be(62); // 50 + 12
             squad.TotalSquadXP.Should().Be(112); // 100 + 12
 
+            // ...and recorded on the event, so it can be refunded exactly later.
+            evt.AwardedXp.Should().Be(12);
+
             _mockEventRepo.Verify(r => r.UpdateAsync(evt), Times.Once);
             _mockHabitRepo.Verify(r => r.UpdateAsync(habit), Times.Once);
             _mockUserRepo.Verify(r => r.UpdateAsync(user), Times.Once);
@@ -100,33 +119,32 @@ namespace HabitTracker.Application.Tests
         }
 
         [Fact]
-        public async Task Handle_ShouldDeductXP_WhenToggleOff()
+        public async Task Handle_ShouldRefundExactlyWhatWasAwarded_WhenToggleOff()
         {
             // Arrange
             var habitId = Guid.NewGuid();
             var eventId = Guid.NewGuid();
             var userId = "user123";
 
-            var habit = new Habit
-            {
-                Id = habitId,
-                CurrentStreak = 2,
-                LongestStreak = 2
-            };
+            var habit = new Habit { Id = habitId, CurrentStreak = 2, LongestStreak = 2 };
 
             var evt = new Event
             {
                 Id = eventId,
                 HabitId = habitId.ToString(),
-                IsCompleted = true, // Currently completed
-                StartTime = DateTime.UtcNow.AddDays(-1),
+                IsCompleted = true,
+                AwardedXp = 12, // what the completion actually granted
+                StartTime = LocalDay(1),
                 UserId = userId
             };
 
-            var eventsList = new List<Event>
+            var otherDone = new Event
             {
-                new Event { Id = Guid.NewGuid(), HabitId = habitId.ToString(), IsCompleted = true, StartTime = DateTime.UtcNow.AddDays(-2), UserId = userId },
-                evt
+                Id = Guid.NewGuid(),
+                HabitId = habitId.ToString(),
+                IsCompleted = true,
+                StartTime = LocalDay(2),
+                UserId = userId
             };
 
             var user = new ApplicationUser { Id = userId, TotalXP = 62 };
@@ -135,14 +153,13 @@ namespace HabitTracker.Application.Tests
             var membership = new SquadMember { SquadId = squadId, UserId = userId, IsApproved = true, XpContributionEnabled = true };
 
             _mockEventRepo.Setup(r => r.GetByIdAsync(eventId)).ReturnsAsync(evt);
-            _mockEventRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(eventsList);
-            _mockEventRepo.Setup(r => r.GetEventsForUserAsync(userId)).ReturnsAsync(eventsList);
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForHabitAsync(habitId)).ReturnsAsync(new List<Event> { otherDone, evt });
             _mockHabitRepo.Setup(r => r.GetByIdAsync(habitId)).ReturnsAsync(habit);
             _mockUserRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
             _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(userId)).ReturnsAsync(new List<Squad> { squad });
             _mockSquadRepo.Setup(r => r.GetMembershipAsync(squadId, userId)).ReturnsAsync(membership);
 
-            var command = new ToggleEventCommand(eventId, false, userId); // Toggle OFF
+            var command = new ToggleEventCommand(eventId, false, userId);
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -150,19 +167,69 @@ namespace HabitTracker.Application.Tests
             // Assert
             result.Should().BeTrue();
             evt.IsCompleted.Should().BeFalse();
-            
-            // Streak should recalculate (without this event, only Day -2 remains completed). 
-            // So streak drops to 1, and since Day -2 is older than yesterday, it resets to 0.
+
+            // Only day -2 remains completed, which is older than yesterday, so the streak resets.
             habit.CurrentStreak.Should().Be(0);
 
-            // XP should be deducted based on the streak BEFORE recalculation (which was 2 -> 12 XP)
             user.TotalXP.Should().Be(50); // 62 - 12
             squad.TotalSquadXP.Should().Be(100); // 112 - 12
+            evt.AwardedXp.Should().Be(0);
 
             _mockEventRepo.Verify(r => r.UpdateAsync(evt), Times.Once);
             _mockHabitRepo.Verify(r => r.UpdateAsync(habit), Times.Once);
             _mockUserRepo.Verify(r => r.UpdateAsync(user), Times.Once);
             _mockSquadRepo.Verify(r => r.UpdateAsync(squad), Times.Once);
+        }
+
+        [Fact]
+        public async Task Handle_ShouldConserveXp_WhenTheStreakGrowsBetweenToggleOnAndToggleOff()
+        {
+            // Regression test for the XP asymmetry: XP used to be recalculated from the streak as
+            // it stood at the moment of un-ticking, so a user who stayed consistent in between
+            // lost more XP than the completion ever granted (measured: +10 then -18 = net -8).
+            var eventId = Guid.NewGuid();
+            var userId = "user123";
+
+            var evt = new Event
+            {
+                Id = eventId,
+                HabitId = string.Empty, // no habit: isolate the XP maths
+                IsCompleted = false,
+                StartTime = LocalDay(0),
+                UserId = userId
+            };
+
+            var user = new ApplicationUser { Id = userId, TotalXP = 100 };
+            var completedSoFar = new List<Event>();
+
+            _mockEventRepo.Setup(r => r.GetByIdAsync(eventId)).ReturnsAsync(evt);
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(userId)).ReturnsAsync(() => completedSoFar);
+            _mockUserRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
+
+            var xpAtStart = user.TotalXP;
+
+            // 1. Complete it. Nothing else is done yet, so the streak is 1 and the award is 10.
+            await _handler.Handle(new ToggleEventCommand(eventId, true, userId), CancellationToken.None);
+            var xpAfterOn = user.TotalXP;
+
+            xpAfterOn.Should().Be(110);
+            evt.AwardedXp.Should().Be(10);
+
+            // 2. The user keeps the habit for four more days — exactly what the app encourages.
+            completedSoFar.AddRange(Enumerable.Range(1, 4).Select(d => new Event
+            {
+                Id = Guid.NewGuid(),
+                IsCompleted = true,
+                StartTime = LocalDay(d),
+                UserId = userId
+            }));
+
+            // 3. They un-tick the original event. The refund must match the award, not the
+            //    now-larger streak.
+            await _handler.Handle(new ToggleEventCommand(eventId, false, userId), CancellationToken.None);
+
+            user.TotalXP.Should().Be(xpAtStart, "a complete/un-complete pair must be XP-neutral");
+            evt.AwardedXp.Should().Be(0);
         }
 
         [Fact]
@@ -206,6 +273,18 @@ namespace HabitTracker.Application.Tests
         }
 
         [Fact]
+        public async Task Handle_ShouldThrow_WhenUserIdIsMissing()
+        {
+            // The command used to default UserId to "", which paired badly with handlers that
+            // treated an empty UserId as "no filter".
+            var act = async () => await _handler.Handle(
+                new ToggleEventCommand(Guid.NewGuid(), true, string.Empty), CancellationToken.None);
+
+            await act.Should().ThrowAsync<ArgumentException>();
+            _mockEventRepo.Verify(r => r.GetByIdAsync(It.IsAny<Guid>()), Times.Never);
+        }
+
+        [Fact]
         public async Task Handle_ShouldCalculateStreakCorrectlyAcrossUtcDayBoundary_UsingUtcPlus7()
         {
             // Arrange
@@ -214,12 +293,7 @@ namespace HabitTracker.Application.Tests
             var eventId2 = Guid.NewGuid();
             var userId = "user123";
 
-            var habit = new Habit
-            {
-                Id = habitId,
-                CurrentStreak = 0,
-                LongestStreak = 0
-            };
+            var habit = new Habit { Id = habitId, CurrentStreak = 0, LongestStreak = 0 };
 
             // Calculate base date for the test relative to UtcNow
             var todayLocal = DateTime.UtcNow.AddHours(7).Date;
@@ -246,16 +320,13 @@ namespace HabitTracker.Application.Tests
                 UserId = userId
             };
 
-            var eventsList = new List<Event> { ev1, ev2 };
-
             var user = new ApplicationUser { Id = userId, TotalXP = 50 };
-            
+
             _mockEventRepo.Setup(r => r.GetByIdAsync(eventId2)).ReturnsAsync(ev2);
-            _mockEventRepo.Setup(r => r.GetAllAsync()).ReturnsAsync(eventsList);
-            _mockEventRepo.Setup(r => r.GetEventsForUserAsync(userId)).ReturnsAsync(eventsList);
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForUserAsync(userId)).ReturnsAsync(new List<Event> { ev1 });
+            _mockEventRepo.Setup(r => r.GetCompletedEventsForHabitAsync(habitId)).ReturnsAsync(new List<Event> { ev1 });
             _mockHabitRepo.Setup(r => r.GetByIdAsync(habitId)).ReturnsAsync(habit);
             _mockUserRepo.Setup(r => r.GetByIdAsync(userId)).ReturnsAsync(user);
-            _mockSquadRepo.Setup(r => r.GetSquadsByUserIdAsync(userId)).ReturnsAsync(new List<Squad>());
 
             var command = new ToggleEventCommand(eventId2, true, userId);
 
@@ -266,8 +337,8 @@ namespace HabitTracker.Application.Tests
             result.Should().BeTrue();
             ev2.IsCompleted.Should().BeTrue();
 
-            // Under UTC: Event 1 (July 24) and Event 2 (July 24) would have same date, streak remains 1.
-            // Under UTC+7: Event 1 (July 24) and Event 2 (July 25) have different consecutive dates, streak becomes 2.
+            // Under UTC: Event 1 and Event 2 would share a date, so the streak would stay 1.
+            // Under UTC+7 they are consecutive local days, so the streak becomes 2.
             habit.CurrentStreak.Should().Be(2);
             habit.LongestStreak.Should().Be(2);
         }

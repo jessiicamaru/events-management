@@ -33,7 +33,7 @@ final class SignalrConnectionProvider
   SignalrConnection create() => SignalrConnection();
 }
 
-String _$signalrConnectionHash() => r'0f02860ea6cdc7551c6b557dba2b33fcac9b3997';
+String _$signalrConnectionHash() => r'b9a79db2b8825a314eb948915338579ec23818ae';
 
 abstract class _$SignalrConnection extends $AsyncNotifier<HubConnection?> {
   FutureOr<HubConnection?> build();

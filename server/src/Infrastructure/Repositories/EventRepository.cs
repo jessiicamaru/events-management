@@ -17,9 +17,23 @@ namespace HabitTracker.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Event>> GetAllAsync()
+        public async Task<IEnumerable<Event>> GetCompletedEventsForUserAsync(string userId)
         {
-            return await _context.Events.ToListAsync();
+            return await _context.Events
+                .AsNoTracking()
+                .Where(e => e.UserId == userId && e.IsCompleted)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Event>> GetCompletedEventsForHabitAsync(Guid habitId)
+        {
+            var habitIdText = habitId.ToString();
+
+            return await _context.Events
+                .AsNoTracking()
+                .Where(e => e.IsCompleted && e.HabitId != null && e.HabitId.ToLower() == habitIdText.ToLower())
+                .OrderBy(e => e.StartTime)
+                .ToListAsync();
         }
 
         public async Task<IEnumerable<Event>> GetEventsForUserAsync(string userId, DateTime? startTime = null, DateTime? endTime = null)

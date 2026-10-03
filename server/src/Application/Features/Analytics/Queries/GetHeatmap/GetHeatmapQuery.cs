@@ -14,7 +14,7 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetHeatmap
         public int Count { get; set; }
     }
 
-    public record GetHeatmapQuery() : IRequest<List<HeatmapItemDto>>;
+    public record GetHeatmapQuery(string UserId) : IRequest<List<HeatmapItemDto>>;
 
     public class GetHeatmapQueryHandler : IRequestHandler<GetHeatmapQuery, List<HeatmapItemDto>>
     {
@@ -27,9 +27,12 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetHeatmap
 
         public async Task<List<HeatmapItemDto>> Handle(GetHeatmapQuery request, CancellationToken cancellationToken)
         {
-            var allEvents = await _eventRepository.GetAllAsync();
-            
-            var completedEvents = allEvents.Where(e => e.IsCompleted);
+            if (string.IsNullOrEmpty(request.UserId))
+            {
+                throw new ArgumentException("UserId is required.", nameof(request));
+            }
+
+            var completedEvents = await _eventRepository.GetCompletedEventsForUserAsync(request.UserId);
 
             var heatmap = completedEvents
                 .GroupBy(e => e.StartTime.Date)

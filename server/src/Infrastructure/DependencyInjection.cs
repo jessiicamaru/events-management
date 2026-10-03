@@ -19,6 +19,8 @@ public static class DependencyInjection
 
 
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+
         services.AddScoped<IHabitRepository, HabitRepository>();
         services.AddScoped<IEventRepository, EventRepository>();
         services.AddScoped<IEventCategoryRepository, EventCategoryRepository>();
