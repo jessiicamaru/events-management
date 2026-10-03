@@ -8,13 +8,22 @@ import 'package:habit_tracker/features/settings/presentation/category_management
 
 class AddCategoryDialog extends StatefulWidget {
   final bool isSquad;
+
+  /// The squad the new category belongs to. Required when [isSquad] is true —
+  /// a squad category with no squad cannot be saved anywhere sensible.
+  final String? squadId;
+
   final AppTranslations translations;
 
   const AddCategoryDialog({
     super.key,
     required this.isSquad,
     required this.translations,
-  });
+    this.squadId,
+  }) : assert(
+         !isSquad || squadId != null,
+         'A squad category needs the id of the squad it belongs to',
+       );
 
   @override
   State<AddCategoryDialog> createState() => _AddCategoryDialogState();
@@ -48,7 +57,7 @@ class _AddCategoryDialogState extends State<AddCategoryDialog> {
                   ref
                       .read(
                         eventCategoriesProvider(
-                          squadId: widget.isSquad ? 'TODO_SQUAD_ID' : null,
+                          squadId: widget.isSquad ? widget.squadId : null,
                         ).notifier,
                       )
                       .addCategory(name.trim(), selectedColor);

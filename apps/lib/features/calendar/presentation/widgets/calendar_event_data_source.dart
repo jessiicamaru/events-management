@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 
 class EventDataSource extends CalendarDataSource {
   final List<HabitModel> habits;
@@ -36,7 +37,7 @@ class EventDataSource extends CalendarDataSource {
     final isPersonal = event.userId == currentUserId;
     
     // Dim the color slightly for squad events to distinguish them
-    if (event.id == 'hover_preview') {
+    if (event.id == AppConstants.hoverPreviewEventId) {
       return theme.colorScheme.primary.withValues(alpha: 0.5);
     }
     

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:signalr_netcore/signalr_client.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
@@ -42,26 +43,26 @@ class SignalrConnection extends _$SignalrConnection {
         .build();
 
     _connection!.onclose(({error}) {
-      print("SignalR Connection closed: $error");
+      debugPrint("SignalR Connection closed: $error");
     });
 
     _connection!.onreconnecting(({error}) {
-      print("SignalR Reconnecting: $error");
+      debugPrint("SignalR Reconnecting: $error");
     });
 
     _connection!.onreconnected(({connectionId}) {
-      print("SignalR Reconnected successfully: $connectionId");
+      debugPrint("SignalR Reconnected successfully: $connectionId");
     });
 
     int retryCount = 0;
     while (true) {
       try {
         await _connection!.start();
-        print("SignalR Connected successfully to $hubUrl");
+        debugPrint("SignalR Connected successfully to $hubUrl");
         return _connection;
       } catch (e) {
         retryCount++;
-        print("SignalR Connection failed (attempt $retryCount/5): $e");
+        debugPrint("SignalR Connection failed (attempt $retryCount/5): $e");
         if (retryCount >= 5) {
           throw Exception("SignalR could not connect after 5 attempts: $e");
         }

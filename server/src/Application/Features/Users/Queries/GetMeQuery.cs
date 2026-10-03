@@ -1,3 +1,4 @@
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 using System.Threading;
@@ -40,68 +41,13 @@ namespace HabitTracker.Application.Features.Users.Queries
             _eventRepository = eventRepository;
         }
 
-        private static System.DateTime ToLocalTimeUtc7(System.DateTime dt)
-        {
-            if (dt.Kind == System.DateTimeKind.Utc) return dt.AddHours(7);
-            if (dt.Kind == System.DateTimeKind.Local) return dt.ToUniversalTime().AddHours(7);
-            return System.DateTime.SpecifyKind(dt, System.DateTimeKind.Utc).AddHours(7);
-        }
-
-        private int CalculateActivityStreak(IEnumerable<Domain.Entities.Event> completedEvents)
-        {
-            if (!completedEvents.Any()) return 0;
-
-            var completionDates = completedEvents
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
-
-            int currentStreak = 0;
-            int tempStreak = 0;
-            System.DateTime? previousDate = null;
-
-            foreach (var date in completionDates)
-            {
-                if (previousDate == null)
-                {
-                    tempStreak = 1;
-                }
-                else
-                {
-                    if (date == previousDate.Value.AddDays(1))
-                    {
-                        tempStreak++;
-                    }
-                    else
-                    {
-                        tempStreak = 1;
-                    }
-                }
-                previousDate = date;
-            }
-
-            var today = ToLocalTimeUtc7(System.DateTime.UtcNow).Date;
-            if (previousDate.HasValue && (previousDate.Value == today || previousDate.Value == today.AddDays(-1)))
-            {
-                currentStreak = tempStreak;
-            }
-            else
-            {
-                currentStreak = 0;
-            }
-
-            return currentStreak;
-        }
-
         public async Task<UserProfileDto?> Handle(GetMeQuery request, CancellationToken cancellationToken)
         {
             var appUser = await _repository.GetByIdAsync(request.UserId);
             if (appUser == null) return null;
 
-            var allEvents = await _eventRepository.GetEventsForUserAsync(request.UserId);
-            var completedEvents = allEvents.Where(e => e.IsCompleted);
-            int activityStreak = CalculateActivityStreak(completedEvents);
+            var completedEvents = await _eventRepository.GetCompletedEventsForUserAsync(request.UserId);
+            int activityStreak = StreakCalculator.FromEvents(completedEvents).Current;
 
             return new UserProfileDto
             {

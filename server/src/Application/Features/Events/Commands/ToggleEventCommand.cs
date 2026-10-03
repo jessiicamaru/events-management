@@ -99,7 +99,7 @@ namespace HabitTracker.Application.Features.Events.Commands
             // score the streak as it will stand once this toggle is applied.
             completedEvents.Add(new Event { StartTime = evt.StartTime, IsCompleted = true });
 
-            var awarded = XpRules.ForStreak(CalculateActivityStreak(completedEvents));
+            var awarded = XpRules.ForStreak(StreakCalculator.FromEvents(completedEvents).Current);
             evt.AwardedXp = awarded;
 
             return awarded;
@@ -134,88 +134,28 @@ namespace HabitTracker.Application.Features.Events.Commands
             }
         }
 
-        private int CalculateActivityStreak(IEnumerable<Event> completedEvents)
-        {
-            var completionDates = completedEvents
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
-
-            return StreakEndingToday(completionDates, out _);
-        }
-
-        private static DateTime ToLocalTimeUtc7(DateTime dt)
-        {
-            if (dt.Kind == DateTimeKind.Utc) return dt.AddHours(7);
-            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime().AddHours(7);
-            return DateTime.SpecifyKind(dt, DateTimeKind.Utc).AddHours(7);
-        }
-
-        /// <summary>
-        /// Walks an ordered, de-duplicated list of completion dates and returns the run length
-        /// that ends today or yesterday (0 otherwise). <paramref name="longestStreak"/> receives
-        /// the longest run seen anywhere in the list.
-        /// </summary>
-        private static int StreakEndingToday(IReadOnlyList<DateTime> completionDates, out int longestStreak)
-        {
-            longestStreak = 0;
-
-            if (completionDates.Count == 0)
-            {
-                return 0;
-            }
-
-            int tempStreak = 0;
-            DateTime? previousDate = null;
-
-            foreach (var date in completionDates)
-            {
-                if (previousDate == null || date != previousDate.Value.AddDays(1))
-                {
-                    tempStreak = 1;
-                }
-                else
-                {
-                    tempStreak++;
-                }
-
-                if (tempStreak > longestStreak) longestStreak = tempStreak;
-                previousDate = date;
-            }
-
-            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
-            var endsRecently = previousDate.HasValue
-                && (previousDate.Value == today || previousDate.Value == today.AddDays(-1));
-
-            return endsRecently ? tempStreak : 0;
-        }
-
         /// <summary>
         /// Recomputes the habit's streaks from its own completed events. The toggled event is
         /// folded in by hand because the repository read reflects the pre-toggle state.
         /// </summary>
         private async Task RecalculateStreaks(Habit habit, Event toggled, bool isNowCompleted)
         {
-            var completedEvents = (await _eventRepository.GetCompletedEventsForHabitAsync(habit.Id)).ToList();
+            var completedEvents = await _eventRepository.GetCompletedEventsForHabitAsync(habit.Id);
 
-            var completionDates = completedEvents
+            var startTimes = completedEvents
                 .Where(e => e.Id != toggled.Id)
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
+                .Select(e => e.StartTime)
                 .ToList();
 
             if (isNowCompleted)
             {
-                completionDates.Add(ToLocalTimeUtc7(toggled.StartTime).Date);
+                startTimes.Add(toggled.StartTime);
             }
 
-            var orderedDates = completionDates
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
+            var streaks = StreakCalculator.FromStartTimes(startTimes);
 
-            habit.CurrentStreak = StreakEndingToday(orderedDates, out var longestStreak);
-            habit.LongestStreak = Math.Max(habit.LongestStreak, longestStreak);
+            habit.CurrentStreak = streaks.Current;
+            habit.LongestStreak = Math.Max(habit.LongestStreak, streaks.Longest);
         }
     }
 }

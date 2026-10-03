@@ -1,3 +1,5 @@
+import 'dart:ui' show Offset;
+
 class AppConstants {
   // Network
   static const String webBaseUrl = 'http://localhost:5000/api/v1';
@@ -20,6 +22,18 @@ class AppConstants {
   static const String unknown = 'Unknown';
   static const String errorPrefix = 'Error: ';
   
+  // Calendar drag-and-drop
+  /// Id of the throw-away event used to preview where a dragged habit would land.
+  /// [CalendarEventDataSource] keys its preview styling off this exact value.
+  static const String hoverPreviewEventId = 'hover_preview';
+
+  /// Length of the event created by dropping a habit onto the calendar.
+  static const Duration defaultDroppedEventDuration = Duration(hours: 1);
+
+  /// A drag reports its top-left corner, but the drop should land on the middle of the
+  /// dragged card. Half the habit card's size, used to shift the hit test to its centre.
+  static const Offset draggedHabitCentreOffset = Offset(70, 35);
+
   // Magic Numbers
   static const int defaultPomodoroDurationMinutes = 30;
   static const List<int> defaultTargetDays = [1, 2, 3, 4, 5];

@@ -96,7 +96,7 @@ void main() {
     
     // Custom text printer
     final texts = find.byType(Text).evaluate().map((e) => (e.widget as Text).data).toList();
-    print('Found texts: $texts');
+    debugPrint('Found texts: $texts');
     
     expect(find.text('Completed'), findsOneWidget);
     expect(find.text('Mark as Pending'), findsOneWidget);

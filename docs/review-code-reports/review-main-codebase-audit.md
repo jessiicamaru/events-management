@@ -6,6 +6,7 @@ Base: `e306dcb` (HEAD of `main`, 2026-08-02) · Reviewed by: Claude Code
 | --- | --- | --- | --- |
 | 1 | `e306dcb` chore(agents): move AGENTS.md project rules to rules/project-rules.md | 2026-09-09 | 11 findings: 2 HIGH, 3 MEDIUM, 3 LOW, 3 INFO. Both HIGH reproduced against a running server / handler. Build + both test suites green. |
 | 2 | working tree on `fix/codebase-audit-round-1` (uncommitted) | 2026-09-09 | F1–F5 fixed at the author's request (F6–F11 deliberately out of scope, still open). All 5 re-verified against a running server. **0 HIGH, 0 MEDIUM open.** Backend tests 45 → 49, all green. |
+| 3 | working tree on `fix/codebase-audit-round-1` (round 2 landed as `6825065`) | 2026-09-09 | Remaining F6–F11 fixed. **All 11 findings closed**, with two carve-outs stated below (per-user timezone, credential rotation). `flutter analyze` 50 → **0**; backend tests 49 → 58. |
 
 > **Base note.** This is not a branch/PR review. There is no feature branch open — `main` is
 > the only branch and the working tree is clean except for two untracked paths (`CLAUDE.md`,
@@ -14,6 +15,193 @@ Base: `e306dcb` (HEAD of `main`, 2026-08-02) · Reviewed by: Claude Code
 > not introduced by any one change. Where a finding has a likely origin commit, it is named.
 > Because there is no "before" commit to compare against, the usual "is this the branch's fault
 > or pre-existing?" check does not apply — everything here is by definition pre-existing.
+
+---
+
+# Round 3 — review of the working tree on `fix/codebase-audit-round-1`
+
+Round 2's work landed as `6825065`. This round covers the findings it deliberately left open.
+
+## Status of round 2's open findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 6 | UTC+7 offset and streak loop copy-pasted into 4 files | ✅ **Closed** (with a stated carve-out) — one `StreakCalculator`; `grep -c ToLocalTimeUtc7 server/src` → **0** |
+| 7 | Debug toast, magic numbers/strings, `TODO_SQUAD_ID` | ✅ **Closed** — toast removed, constants moved to `AppConstants`, string translated, real squad id passed |
+| 8 | 50 analyzer issues | ✅ **Closed** — `flutter analyze` reports **No issues found** |
+| 9 | `walkthrough.md` 74 commits stale | ✅ **Closed differently** — the author said the folder is no longer used, so `docs/project-walkthrough/` was deleted rather than updated |
+| 10 | `project-plan.md` describes unbuilt features | ✅ **Closed** — both sections annotated as NOT IMPLEMENTED, with what exists instead |
+| 11 | Committed secrets, no CI | ✅ **Closed** (with a stated carve-out) — secrets moved to gitignored files, CI workflow added |
+
+### Finding 6 — closed, minus the product decision
+
+`Application/Common/StreakCalculator.cs` is now the only definition of a streak. The four
+private `ToLocalTimeUtc7` copies and the two variants of the streak loop are gone:
+
+```
+$ grep -rn "ToLocalTimeUtc7" server/src --include=*.cs | wc -l
+0
+$ grep -rln "StreakCalculator" server/src --include=*.cs
+server/src/Application/Common/StreakCalculator.cs
+server/src/Application/Features/Events/Commands/CompleteEventSessionCommand.cs
+server/src/Application/Features/Events/Commands/ToggleEventCommand.cs
+server/src/Application/Features/Squads/Queries/GetMySquadQuery.cs
+server/src/Application/Features/Users/Queries/GetMeQuery.cs
+```
+
+Nine unit tests (`Common/StreakCalculatorTests.cs`) pin the behaviour that was previously
+implicit: same-day duplicates collapse, a streak stays alive if it reaches yesterday, the
+longest run is reported even when it is not the current one, and — the case the old code was
+written for — 23:00 and 06:00 either side of midnight UTC+7 count as two days.
+
+**Carve-out, unchanged from round 2.** `DefaultDayBoundaryOffset` is still a single app-wide
+UTC+7. Streaks and heatmaps are still off by a day for users outside that zone. What changed is
+that it is now *one* constant with a documented seam (every method takes an optional offset)
+instead of four hardcoded copies. Choosing device-timezone versus a profile setting is a product
+decision that would change every existing user's streak, so it stays open. It is recorded in the
+review's action list rather than decided here.
+
+While replacing the copies, `GetMeQuery` and `GetMySquadQuery` also moved from
+`GetEventsForUserAsync(userId)` + in-memory `.Where(e => e.IsCompleted)` to the SQL-filtered
+`GetCompletedEventsForUserAsync` — the same class of fix as F4, in two places round 2 did not
+touch. Note `GetMySquadQuery` still issues one such query **per squad member**; that N+1 is
+pre-existing and not addressed here.
+
+### Finding 7 — closed
+
+- The `Debug` / `Offset: … -> NULL` toast is gone. An unresolvable drop now falls back silently
+  to the day already on screen, which the handler already defaulted to.
+- `Offset(70, 35)`, `Duration(hours: 1)` and the `'hover_preview'` id moved into `AppConstants`
+  (`draggedHabitCentreOffset`, `defaultDroppedEventDuration`, `hoverPreviewEventId`) — the last
+  of which `calendar_event_data_source.dart` also keyed off as a bare literal, so the two are
+  now tied to one constant.
+- `'Drop to schedule'` became the `drop_to_schedule` translation key (en + vi).
+- `TODO_SQUAD_ID` is gone. `AddCategoryDialog` takes a `squadId`, asserts it is present when
+  `isSquad` is true, and `CategoryManagementScreen` passes the real `activeSquadIdProvider`
+  value — disabling the button when the user has no squad, rather than writing a broken record.
+
+### Finding 8 — closed
+
+```
+$ flutter analyze
+No issues found! (ran in 59.4s)      # was: 50 issues found
+```
+
+Two of these deserve naming rather than counting:
+
+- The 19 `use_build_context_synchronously` were real. Most took a `context.mounted` guard, but
+  in `google_calendar_sync_screen.dart` and `edit_habit_dialog.dart` a guard would have been
+  wrong: the code shows a toast *after* popping its own dialog, so the context is legitimately
+  dead and the toast would simply never appear. Those use the capture-before-await pattern
+  (`final toaster = ShadToaster.of(context);` before the first `await`), which fixes the bug
+  rather than silencing it — the toaster lives above the dialog and outlives it.
+- `intl`, `collection` and `syncfusion_flutter_core` were imported but not declared, resolving
+  only through other packages' transitive deps. Now direct dependencies, so a version change
+  elsewhere cannot break the build.
+
+The two `avoid_renaming_method_parameters` are **suppressed, not fixed**, with the reason in the
+code: the lint wants the parameter renamed to `state`, which inside a Riverpod notifier would
+shadow the notifier's own `state` property and silently change what the method body reads.
+
+### Finding 9 — closed differently
+
+Round 1 recommended regenerating the walkthrough. The author's answer during round 3 was that the
+folder is no longer used for tracking project state, so `docs/project-walkthrough/` was removed
+outright — including the 105 KB `compact_context.json` that round 1 flagged separately. Deleting
+a stale map is a better outcome than refreshing one nobody reads.
+
+Two action items lived only in that file. The still-relevant one (the Pomodoro TODO at
+`timer_notifier.dart`) remains as a `// TODO` in the code; the "local database" half of it is
+obsolete and is now explained in `project-plan.md` (F10). The Android application-id and signing
+items were template placeholders, unrelated to this review.
+
+### Finding 10 — closed
+
+`docs/project-plan.md` now marks both claims, with the verification date and what exists instead:
+the `isar`/`hive` offline-first line is struck through and annotated, and the `data/` layer in the
+directory tree carries a note that no feature has one and that providers call `ApiService`
+directly.
+
+### Finding 11 — closed, minus the rotation
+
+| | Before | After |
+| --- | --- | --- |
+| `appsettings.json` | live Google `ClientSecret`, DB password | empty placeholders + a pointer to the example file |
+| `appsettings.Development.json` | tracked, DB password | untracked (`git rm --cached`), gitignored |
+| `docker-compose.yml` | literal `NGROK_AUTHTOKEN` and domain | `${NGROK_AUTHTOKEN}` / `${NGROK_DOMAIN}` from a gitignored `.env` |
+| new, committed | — | `appsettings.Development.example.json`, `.env.example` |
+| CI | none | `.github/workflows/ci.yml` |
+
+Verified that no secret remains in a tracked file:
+
+```
+# each <...> below stands for the real value, kept out of this file on purpose
+$ for p in "<google-client-secret>" "<ngrok-token>" "<db-password>" "<ngrok-domain>"; do
+    echo "$p -> $(git grep -l "$p" -- . | wc -l)"; done
+<google-client-secret> -> 0
+<ngrok-token>          -> 0
+<db-password>          -> 0
+<ngrok-domain>         -> 0
+
+$ git check-ignore -v server/src/Web/appsettings.Development.json .env
+.gitignore:236: server/src/Web/appsettings.Development.json
+.gitignore:239: .env
+```
+
+Local development still works: the real values were written into the now-gitignored
+`appsettings.Development.json` and `.env`, and the server was restarted to confirm it boots,
+connects to Postgres and still answers `401` on both `/analytics/heatmap` and `/habits`.
+
+`Infrastructure/DependencyInjection.cs` no longer falls back to a guessed
+`Password=postgres` when the connection string is missing — that turned a missing setting into a
+confusing Postgres auth error. It now throws with instructions, verified by forcing the case:
+
+```
+$ ConnectionStrings__DefaultConnection= dotnet run --project src/Web/ --no-launch-profile
+Unhandled exception. System.InvalidOperationException: ConnectionStrings:DefaultConnection is not
+configured. Copy src/Web/appsettings.Development.example.json to appsettings.Development.json and
+fill it in, or set the connection string via user-secrets or the
+ConnectionStrings__DefaultConnection environment variable.
+```
+
+The CI workflow runs `dotnet build`/`dotnet test` and `flutter pub get`/`analyze`/`test` on push
+and pull request, plus a check that committed `*.g.dart` / `*.freezed.dart` are up to date — the
+generated files are in git, so a stale one otherwise only fails on someone else's machine. **The
+workflow has not been executed**: it cannot run until this branch is pushed, so it is reviewed
+code, not verified behaviour.
+
+**Carve-out.** The exposed Google `ClientSecret` and ngrok token are still valid and still in git
+history. Removing them from the working tree does not revoke them. They must be rotated in the
+Google Cloud console and the ngrok dashboard by hand; nothing in this change can do that.
+
+Documentation added alongside: the README gained a *Configuration & secrets* section and a
+*Google Calendar sync* setup section (previously undocumented — round 1 called this the hardest
+part of setup with no instructions at all), including the failure mode where a wrong
+`WebhookBaseUrl` or a stopped tunnel makes sync fail silently while SWR still refreshes on open.
+`CLAUDE.md` and `docs/google-calendar-sync-architecture.md` were updated to point at the new
+config layout.
+
+## Round 3 verification
+
+| Item | Round 2 | Round 3 |
+| --- | --- | --- |
+| `dotnet build` | 0 errors | 0 errors (same 6 pre-existing `NU1603`) |
+| `dotnet test` | 49 passed | **58 passed** (+9 `StreakCalculator` tests) |
+| `flutter analyze` | 50 issues | **No issues found** |
+| `flutter test` | 58 passed | 58 passed |
+| `ToLocalTimeUtc7` copies | 4 | **0** |
+| Secrets in tracked files | 3 live values | **0** |
+| Server boots from split config | n/a | yes — Postgres connected, `401` still enforced on both endpoints |
+| Missing-config failure mode | silent wrong password | explicit `InvalidOperationException` with instructions |
+| CI | none | workflow committed (**not yet executed**) |
+
+## Still open after round 3
+
+Neither is a defect this change could close:
+
+1. **Streak day boundary** — a product decision (device timezone vs profile setting). The seam
+   exists; the choice does not.
+2. **Credential rotation** — manual, in the Google Cloud console and ngrok dashboard.
 
 ---
 
@@ -731,10 +919,16 @@ several read paths reach for the whole table, and the XP rules are computed twic
 instead of being recorded once. Findings 2, 3 and 4 all come from the same root cause — business
 state is derived on every request rather than stored — so fixing that idea fixes three findings.
 
-After 2 rounds: 11 findings, **5 closed, 6 open** (F6–F11, all scoped out of round 2 on purpose —
-see "Deliberately not fixed"). **0 HIGH, 0 MEDIUM open. No longer blocks merge.** The remaining six
-are LOW and INFO: one product decision (timezone), frontend polish and analyzer hygiene, and the
-docs/secrets/CI work. The committed credentials still need rotating by hand.
+After 3 rounds: 11 findings, **11 closed, 0 open. No longer blocks merge.** Two carve-outs are
+stated rather than fixed, because neither is a code change: the streak day boundary is a product
+decision (device timezone vs profile setting), and the exposed credentials must be rotated by
+hand in the Google Cloud console and ngrok dashboard — removing them from the working tree does
+not revoke them, and they remain in git history.
+
+One finding closed differently from the recommendation. Round 1 proposed regenerating the stale
+walkthrough; the author's answer in round 3 was that the folder is not used at all any more, so it
+was deleted instead. Deleting a map nobody reads beats refreshing it, and it is worth recording as
+a case where the review's proposed fix was not the right one.
 
 Round 2 confirmed the root-cause reading from round 1: findings 2, 3 and 4 really were one idea —
 business state derived on every request instead of recorded once. Storing `AwardedXp` fixed the XP

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
@@ -63,7 +64,7 @@ class EventsNotifier extends _$EventsNotifier {
     if (connection != null) {
       connection.off("CalendarUpdated");
       connection.on("CalendarUpdated", (arguments) {
-        print("SignalR: Received CalendarUpdated event, invalidating EventsNotifier...");
+        debugPrint("SignalR: Received CalendarUpdated event, invalidating EventsNotifier...");
         ref.invalidateSelf();
       });
       
@@ -182,9 +183,9 @@ class EventsNotifier extends _$EventsNotifier {
         'habitId': event.habitId,
         'categoryId': event.categoryId,
         'targetDuration': const TimeSpanConverter().toJson(event.targetDuration),
-        if (editScope != null) 'editScope': editScope,
-        if (originalOccurrenceDate != null) 'originalOccurrenceDate': originalOccurrenceDate.toUtc().toIso8601String(),
-        if (event.recurrenceRule != null) 'recurrenceRule': event.recurrenceRule,
+        'editScope': ?editScope,
+        'originalOccurrenceDate': ?originalOccurrenceDate?.toUtc().toIso8601String(),
+        'recurrenceRule': ?event.recurrenceRule,
       });
       ref.invalidateSelf();
       ref.invalidate(habitsProvider);

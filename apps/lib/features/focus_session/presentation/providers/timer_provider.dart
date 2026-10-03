@@ -121,6 +121,9 @@ class TimerNotifier extends Notifier<TimerState> with WidgetsBindingObserver {
   }
 
   @override
+  // The overridden parameter is named `state`, which would shadow this notifier's own
+  // `state` property and silently change what the body refers to.
+  // ignore: avoid_renaming_method_parameters
   void didChangeAppLifecycleState(AppLifecycleState appState) {
     if (appState == AppLifecycleState.paused) {
       _lastBackgroundTime = DateTime.now();

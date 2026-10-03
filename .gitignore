@@ -231,3 +231,9 @@ ServiceFabricBackup/
 *- [Bb]ackup ([0-9][0-9]).rdl
 
 calendar-template/
+# --- Local secrets (never commit) ---
+# Real values live here; appsettings.Development.example.json shows the shape.
+server/src/Web/appsettings.Development.json
+server/src/Web/appsettings.Local.json
+# ngrok token / tunnel domain for docker-compose
+.env

@@ -158,6 +158,7 @@ class SquadsListScreen extends ConsumerWidget {
 
                     final activeSquadState = ref.read(activeSquadProvider);
                     if (activeSquadState.hasError) {
+                      if (!context.mounted) return;
                       ShadToaster.of(context).show(
                         ShadToast.destructive(
                           title: const Text('Lỗi tạo nhóm'),
@@ -175,6 +176,7 @@ class SquadsListScreen extends ConsumerWidget {
                       }
                     }
                   } catch (e) {
+                    if (!context.mounted) return;
                     ShadToaster.of(context).show(
                       ShadToast.destructive(
                         title: const Text('Lỗi tạo nhóm'),
@@ -262,6 +264,7 @@ class SquadsListScreen extends ConsumerWidget {
 
                   final activeSquadState = ref.read(activeSquadProvider);
                   if (activeSquadState.hasError) {
+                    if (!context.mounted) return;
                     ShadToaster.of(context).show(
                       ShadToast.destructive(
                         title: const Text('Lỗi tham gia nhóm'),
@@ -269,6 +272,7 @@ class SquadsListScreen extends ConsumerWidget {
                       ),
                     );
                   } else if (!isApproved) {
+                    if (!context.mounted) return;
                     ShadToaster.of(context).show(
                       ShadToast(
                         title: Text(translations.translate('status_pending')),
@@ -286,6 +290,7 @@ class SquadsListScreen extends ConsumerWidget {
                     }
                   }
                 } catch (e) {
+                  if (!context.mounted) return;
                   ShadToaster.of(context).show(
                     ShadToast.destructive(
                       title: const Text('Lỗi tham gia nhóm'),

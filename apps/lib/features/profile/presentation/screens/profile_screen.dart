@@ -255,10 +255,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         });
                       },
                       selectedOptionBuilder: (context, value) {
-                        if (value == 'Male')
+                        if (value == 'Male') {
                           return Text(translations.translate('gender_male'));
-                        if (value == 'Female')
+                        }
+                        if (value == 'Female') {
                           return Text(translations.translate('gender_female'));
+                        }
                         return Text(translations.translate('gender_other'));
                       },
                     ),
@@ -317,6 +319,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         final profileState = ref.read(userProfileProvider);
                         if (mounted) {
                           if (profileState.hasError) {
+                            if (!context.mounted) return;
                             ShadToaster.of(context).show(
                               ShadToast.destructive(
                                 title: Text(
@@ -328,6 +331,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               ),
                             );
                           } else {
+                            if (!context.mounted) return;
                             ShadToaster.of(context).show(
                               ShadToast(
                                 title: Text(

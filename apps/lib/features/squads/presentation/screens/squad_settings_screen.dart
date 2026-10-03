@@ -138,6 +138,7 @@ class _SquadSettingsScreenState extends ConsumerState<SquadSettingsScreen> {
                               );
                           final activeSquadState = ref.read(activeSquadProvider);
                           if (activeSquadState.hasError) {
+                            if (!context.mounted) return;
                             ShadToaster.of(context).show(
                               ShadToast.destructive(
                                 title: const Text('Lỗi cập nhật cài đặt'),
@@ -145,6 +146,7 @@ class _SquadSettingsScreenState extends ConsumerState<SquadSettingsScreen> {
                               ),
                             );
                           } else {
+                            if (!context.mounted) return;
                             ShadToaster.of(context).show(
                               const ShadToast(
                                 title: Text('Đã cập nhật'),
@@ -153,6 +155,7 @@ class _SquadSettingsScreenState extends ConsumerState<SquadSettingsScreen> {
                             );
                           }
                         } catch (e) {
+                          if (!context.mounted) return;
                           ShadToaster.of(context).show(
                             ShadToast.destructive(
                               title: const Text('Lỗi cập nhật cài đặt'),

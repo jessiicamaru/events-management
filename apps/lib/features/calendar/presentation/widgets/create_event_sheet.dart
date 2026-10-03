@@ -456,7 +456,7 @@ class _CreateEventSheetState extends ConsumerState<CreateEventSheet> {
                       ),
                     ),
                     loading: () => const CircularProgressIndicator(),
-                    error: (_, ___) => const Text('Error loading categories'),
+                    error: (_, _) => const Text('Error loading categories'),
                   ),
                   const SizedBox(height: 16),
 

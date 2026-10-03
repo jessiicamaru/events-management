@@ -135,17 +135,14 @@ namespace HabitTracker.Application.Features.Events.Commands
                 return 0;
             }
 
-            var completedEvents = (await _eventRepository.GetCompletedEventsForUserAsync(ev.UserId)).ToList();
+            var completedEvents = await _eventRepository.GetCompletedEventsForUserAsync(ev.UserId);
 
-            var completionDates = completedEvents
+            var startTimes = completedEvents
                 .Where(e => e.Id != ev.Id)
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Append(ToLocalTimeUtc7(ev.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
+                .Select(e => e.StartTime)
+                .Append(ev.StartTime);
 
-            return StreakEndingToday(completionDates, out _);
+            return StreakCalculator.FromStartTimes(startTimes).Current;
         }
 
         private async Task ApplyXpAsync(ApplicationUser user, int xpDelta)
@@ -165,66 +162,19 @@ namespace HabitTracker.Application.Features.Events.Commands
             }
         }
 
-        private static DateTime ToLocalTimeUtc7(DateTime dt)
-        {
-            if (dt.Kind == DateTimeKind.Utc) return dt.AddHours(7);
-            if (dt.Kind == DateTimeKind.Local) return dt.ToUniversalTime().AddHours(7);
-            return DateTime.SpecifyKind(dt, DateTimeKind.Utc).AddHours(7);
-        }
-
-        /// <summary>
-        /// Walks an ordered, de-duplicated list of completion dates and returns the run length
-        /// that ends today or yesterday (0 otherwise). <paramref name="longestStreak"/> receives
-        /// the longest run seen anywhere in the list.
-        /// </summary>
-        private static int StreakEndingToday(IReadOnlyList<DateTime> completionDates, out int longestStreak)
-        {
-            longestStreak = 0;
-
-            if (completionDates.Count == 0)
-            {
-                return 0;
-            }
-
-            int tempStreak = 0;
-            DateTime? previousDate = null;
-
-            foreach (var date in completionDates)
-            {
-                if (previousDate == null || date != previousDate.Value.AddDays(1))
-                {
-                    tempStreak = 1;
-                }
-                else
-                {
-                    tempStreak++;
-                }
-
-                if (tempStreak > longestStreak) longestStreak = tempStreak;
-                previousDate = date;
-            }
-
-            var today = ToLocalTimeUtc7(DateTime.UtcNow).Date;
-            var endsRecently = previousDate.HasValue
-                && (previousDate.Value == today || previousDate.Value == today.AddDays(-1));
-
-            return endsRecently ? tempStreak : 0;
-        }
-
         private async Task RecalculateStreaks(Habit habit, Event completed)
         {
-            var completedEvents = (await _eventRepository.GetCompletedEventsForHabitAsync(habit.Id)).ToList();
+            var completedEvents = await _eventRepository.GetCompletedEventsForHabitAsync(habit.Id);
 
-            var completionDates = completedEvents
+            var startTimes = completedEvents
                 .Where(e => e.Id != completed.Id)
-                .Select(e => ToLocalTimeUtc7(e.StartTime).Date)
-                .Append(ToLocalTimeUtc7(completed.StartTime).Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
+                .Select(e => e.StartTime)
+                .Append(completed.StartTime);
 
-            habit.CurrentStreak = StreakEndingToday(completionDates, out var longestStreak);
-            habit.LongestStreak = Math.Max(habit.LongestStreak, longestStreak);
+            var streaks = StreakCalculator.FromStartTimes(startTimes);
+
+            habit.CurrentStreak = streaks.Current;
+            habit.LongestStreak = Math.Max(habit.LongestStreak, streaks.Longest);
         }
     }
 }

@@ -414,6 +414,10 @@ class AppTranslations {
       AppLocale.en: 'Drag habits to calendar',
       AppLocale.vi: 'Kéo thói quen vào lịch',
     },
+    'drop_to_schedule': {
+      AppLocale.en: 'Drop to schedule',
+      AppLocale.vi: 'Thả để lên lịch',
+    },
     'no_habits_to_schedule': {
       AppLocale.en: 'No habits to schedule',
       AppLocale.vi: 'Không có thói quen nào cần lên lịch',
