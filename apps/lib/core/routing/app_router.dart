@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/features/calendar/presentation/calendar_screen.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_screen.dart';
+import 'package:habit_tracker/features/home/presentation/home_screen.dart';
 import 'package:habit_tracker/features/settings/presentation/settings_screen.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -33,7 +34,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = state.uri.path == '/splash';
 
       if (!isAuthenticated && !isLoggingIn) return '/login';
-      if (isAuthenticated && (isLoggingIn || isSplash)) return '/calendar';
+      if (isAuthenticated && (isLoggingIn || isSplash)) return '/home';
       return null;
     },
     routes: [
@@ -59,6 +60,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           return ScaffoldWithNavBar(child: child);
         },
         routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => const HomeScreen(),
+          ),
           GoRoute(
             path: '/calendar',
             builder: (context, state) => const CalendarScreen(),
@@ -111,62 +116,45 @@ class ScaffoldWithNavBar extends ConsumerWidget {
           showUnselectedLabels: true,
           type: BottomNavigationBarType.fixed,
           elevation: 0,
-        items: <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: const Icon(LucideIcons.calendarDays),
-            label: translations.translate('nav_calendar'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(LucideIcons.listTodo),
-            label: translations.translate('nav_habits'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(LucideIcons.users),
-            label: translations.translate('nav_squad'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(LucideIcons.settings),
-            label: translations.translate('nav_settings'),
-          ),
-        ],
-          currentIndex: _calculateSelectedIndex(context),
-          onTap: (int idx) => _onItemTapped(idx, context),
+          items: [
+            for (final tab in _tabs)
+              BottomNavigationBarItem(
+                icon: Icon(tab.icon),
+                label: translations.translate(tab.labelKey),
+              ),
+          ],
+          currentIndex: _selectedIndex(context),
+          onTap: (index) => GoRouter.of(context).go(_tabs[index].path),
         ),
       ),
     );
   }
 
-  static int _calculateSelectedIndex(BuildContext context) {
-    final String location = GoRouterState.of(context).uri.path;
-    if (location.startsWith('/calendar')) {
-      return 0;
-    }
-    if (location.startsWith('/habits')) {
-      return 1;
-    }
-    if (location.startsWith('/squad')) {
-      return 2;
-    }
-    if (location.startsWith('/settings')) {
-      return 3;
-    }
-    return 0;
-  }
+  /// The one place a tab is defined. The index into this list *is* the bar's
+  /// index, so the icons, the labels and the destinations cannot drift apart —
+  /// which they previously could, being three separate hardcoded lists.
+  static const List<_NavTab> _tabs = [
+    _NavTab('/home', LucideIcons.house, 'nav_home'),
+    _NavTab('/calendar', LucideIcons.calendarDays, 'nav_calendar'),
+    _NavTab('/habits', LucideIcons.listTodo, 'nav_habits'),
+    _NavTab('/squad', LucideIcons.users, 'nav_squad'),
+    _NavTab('/settings', LucideIcons.settings, 'nav_settings'),
+  ];
 
-  void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        GoRouter.of(context).go('/calendar');
-        break;
-      case 1:
-        GoRouter.of(context).go('/habits');
-        break;
-      case 2:
-        GoRouter.of(context).go('/squad');
-        break;
-      case 3:
-        GoRouter.of(context).go('/settings');
-        break;
-    }
+  static int _selectedIndex(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    final index = _tabs.indexWhere((tab) => location.startsWith(tab.path));
+
+    // A shell route the bar has no tab for — fall back to the first tab rather
+    // than passing -1 to BottomNavigationBar, which throws.
+    return index == -1 ? 0 : index;
   }
+}
+
+class _NavTab {
+  const _NavTab(this.path, this.icon, this.labelKey);
+
+  final String path;
+  final IconData icon;
+  final String labelKey;
 }

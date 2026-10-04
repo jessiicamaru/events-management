@@ -30,10 +30,66 @@ final localeProvider = NotifierProvider<LocaleNotifier, AppLocale>(() {
 class AppTranslations {
   static const Map<String, Map<AppLocale, String>> _keys = {
     // Navigation / Shell Route
+    'nav_home': {AppLocale.en: 'Home', AppLocale.vi: 'Trang chủ'},
     'nav_calendar': {AppLocale.en: 'Calendar', AppLocale.vi: 'Lịch'},
     'nav_habits': {AppLocale.en: 'Habits', AppLocale.vi: 'Thói quen'},
     'nav_squad': {AppLocale.en: 'Squad', AppLocale.vi: 'Nhóm'},
     'nav_settings': {AppLocale.en: 'Settings', AppLocale.vi: 'Cài đặt'},
+
+    // Home Screen
+    'home_greeting_morning': {
+      AppLocale.en: 'Good morning',
+      AppLocale.vi: 'Chào buổi sáng',
+    },
+    'home_greeting_afternoon': {
+      AppLocale.en: 'Good afternoon',
+      AppLocale.vi: 'Chào buổi chiều',
+    },
+    'home_greeting_evening': {
+      AppLocale.en: 'Good evening',
+      AppLocale.vi: 'Chào buổi tối',
+    },
+    'home_happening_now': {
+      AppLocale.en: 'Happening now',
+      AppLocale.vi: 'Đang diễn ra',
+    },
+    'home_nothing_ahead': {
+      AppLocale.en: 'Nothing coming up',
+      AppLocale.vi: 'Không có gì sắp tới',
+    },
+    'home_nothing_ahead_hint': {
+      AppLocale.en: 'Your next seven days are clear.',
+      AppLocale.vi: 'Bảy ngày tới của bạn đang trống.',
+    },
+    'home_rest_of_today': {
+      AppLocale.en: 'Later today',
+      AppLocale.vi: 'Muộn hơn hôm nay',
+    },
+    'home_nothing_left_today': {
+      AppLocale.en: 'Nothing else today.',
+      AppLocale.vi: 'Hôm nay không còn gì nữa.',
+    },
+    'home_habits_without_a_slot': {
+      AppLocale.en: 'Not on today\'s calendar',
+      AppLocale.vi: 'Chưa có trên lịch hôm nay',
+    },
+    'home_every_habit_has_a_slot': {
+      AppLocale.en: 'Every habit has a slot today.',
+      AppLocale.vi: 'Mọi thói quen đều đã có chỗ hôm nay.',
+    },
+    'home_today_progress': {
+      AppLocale.en: '{done} of {total} done today',
+      AppLocale.vi: 'Xong {done}/{total} hôm nay',
+    },
+    'home_streak_days': {
+      AppLocale.en: '{n}-day streak',
+      AppLocale.vi: 'Chuỗi {n} ngày',
+    },
+    'home_open_calendar': {
+      AppLocale.en: 'Open calendar',
+      AppLocale.vi: 'Mở lịch',
+    },
+    'home_starts_at': {AppLocale.en: 'Starts {time}', AppLocale.vi: 'Bắt đầu {time}'},
 
     // Login Screen
     'login_title': {AppLocale.en: 'Login', AppLocale.vi: 'Đăng nhập'},

@@ -6,10 +6,19 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/main.dart' as app;
 import 'package:habit_tracker/features/calendar/presentation/widgets/unscheduled_habits_selector.dart';
+/// One tab of the bottom bar, by its icon.
+///
+/// Scoped to the [BottomNavigationBar] because some of these icons appear in the
+/// screens too — `calendarDays` is also the calendar toolbar's month-view button.
+Finder navTab(IconData icon) => find.descendant(
+      of: find.byType(BottomNavigationBar),
+      matching: find.byIcon(icon),
+    );
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('E2E: Habit Tasks and CommandCenter drag-drop flow', (tester) async {
+  testWidgets('E2E: habit tasks reach the home screen up-next card', (tester) async {
     const storage = FlutterSecureStorage();
     await storage.deleteAll();
     final prefs = await SharedPreferences.getInstance();
@@ -41,12 +50,12 @@ void main() {
     await tester.tap(find.text('Login'));
     await tester.pumpAndSettle(const Duration(seconds: 3));
 
-    // We are on Calendar. Let's go to Habits to create a habit
-    final habitsTab = find.descendant(
-      of: find.byType(BottomNavigationBar),
-      matching: find.byType(Icon),
-    ).at(1);
-    await tester.tap(habitsTab);
+    // We land on Home. Go to Habits to create a habit.
+    //
+    // Found by icon rather than by position: tab order has changed once already
+    // (Home was added in front of Calendar), and a positional finder fails
+    // silently by tapping the wrong tab instead of reporting a missing one.
+    await tester.tap(navTab(LucideIcons.listTodo));
     await tester.pumpAndSettle();
 
     // Open create habit dialog
@@ -98,11 +107,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // We are on Habits screen after saving the habit. Go to Calendar.
-    final calendarIcon = find.descendant(
-      of: find.byType(BottomNavigationBar),
-      matching: find.byType(Icon),
-    ).at(0);
-    await tester.tap(calendarIcon);
+    await tester.tap(navTab(LucideIcons.calendarDays));
     await tester.pumpAndSettle(const Duration(seconds: 1));
 
     // Since the Calendar view is complex for drag and drop in testing, 
@@ -118,8 +123,18 @@ void main() {
     await tester.tap(find.widgetWithText(ShadButton, 'Create Event'));
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    // Verify CommandCenterPanel is displayed
-    expect(find.text('Up Next'), findsOneWidget);
+    // The up-next card now lives on Home, not under the calendar grid.
+    await tester.tap(navTab(LucideIcons.house));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+
+    // Either label is correct depending on whether the event has already started:
+    // it is created for the current time, so the card may well say "happening now".
+    expect(
+      find.text('Up Next').evaluate().isNotEmpty ||
+          find.text('Happening now').evaluate().isNotEmpty,
+      isTrue,
+      reason: 'the home screen should surface the event that was just created',
+    );
     expect(find.text('Workout'), findsWidgets);
 
     // Verify the tasks were copied over in the checklist
