@@ -73,6 +73,16 @@ class AppTranslations {
       AppLocale.en: 'Not on today\'s calendar',
       AppLocale.vi: 'Chưa có trên lịch hôm nay',
     },
+    'home_no_habits_yet': {
+      AppLocale.en: 'You have no habits yet. Add one and it will show up here '
+          'on days it has nothing booked.',
+      AppLocale.vi: 'Bạn chưa có thói quen nào. Thêm một thói quen để thấy nó ở '
+          'đây vào những ngày chưa có lịch.',
+    },
+    'home_create_habit': {
+      AppLocale.en: 'Create a habit',
+      AppLocale.vi: 'Tạo thói quen',
+    },
     'home_every_habit_has_a_slot': {
       AppLocale.en: 'Every habit has a slot today.',
       AppLocale.vi: 'Mọi thói quen đều đã có chỗ hôm nay.',
@@ -90,6 +100,57 @@ class AppTranslations {
       AppLocale.vi: 'Mở lịch',
     },
     'home_starts_at': {AppLocale.en: 'Starts {time}', AppLocale.vi: 'Bắt đầu {time}'},
+
+    // Home Screen — activity summary
+    'home_activity_title': {
+      AppLocale.en: 'Last {n} days',
+      AppLocale.vi: '{n} ngày qua',
+    },
+    'home_activity_chart_caption': {
+      AppLocale.en: 'Focus time per day',
+      AppLocale.vi: 'Thời gian tập trung mỗi ngày',
+    },
+    'home_activity_completed': {
+      AppLocale.en: 'Completed',
+      AppLocale.vi: 'Hoàn thành',
+    },
+    'home_activity_focus': {
+      AppLocale.en: 'Focus time',
+      AppLocale.vi: 'Tập trung',
+    },
+    'home_activity_best_day': {
+      AppLocale.en: 'Best day',
+      AppLocale.vi: 'Ngày tốt nhất',
+    },
+    'home_activity_of_total': {
+      AppLocale.en: '{done} of {total}',
+      AppLocale.vi: '{done}/{total}',
+    },
+    'home_activity_nothing_scheduled': {
+      AppLocale.en: 'None booked',
+      AppLocale.vi: 'Chưa có lịch',
+    },
+    'home_activity_day_detail': {
+      AppLocale.en: '{focus} focus · {done} of {total} done',
+      AppLocale.vi: 'Tập trung {focus} · xong {done}/{total}',
+    },
+    'home_activity_empty': {
+      AppLocale.en:
+          'Nothing here yet. Finish a focus session and your time shows up here.',
+      AppLocale.vi:
+          'Chưa có gì. Hoàn thành một phiên tập trung để thấy thời gian ở đây.',
+    },
+    'home_activity_error': {
+      AppLocale.en: 'Could not load your activity.',
+      AppLocale.vi: 'Không tải được hoạt động của bạn.',
+    },
+    'home_activity_retry': {AppLocale.en: 'Try again', AppLocale.vi: 'Thử lại'},
+    'duration_minutes': {AppLocale.en: '{m} min', AppLocale.vi: '{m} phút'},
+    'duration_hours_minutes': {
+      AppLocale.en: '{h}h {m}m',
+      AppLocale.vi: '{h} giờ {m} phút',
+    },
+    'duration_hours': {AppLocale.en: '{h}h', AppLocale.vi: '{h} giờ'},
 
     // Login Screen
     'login_title': {AppLocale.en: 'Login', AppLocale.vi: 'Đăng nhập'},

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         final token = response.data['accessToken'];
         await ref.read(authProvider.notifier).login(token);
         if (mounted) {
-          context.go('/calendar');
+          context.go(AppConstants.landingRoute);
         }
       }
     } catch (e) {

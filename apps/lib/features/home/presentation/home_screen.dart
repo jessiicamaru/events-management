@@ -6,6 +6,8 @@ import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/home/domain/home_agenda.dart';
+import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
+import 'package:habit_tracker/features/home/presentation/widgets/activity_summary_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/habits_without_slot_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/home_header.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/today_schedule_card.dart';
@@ -18,6 +20,10 @@ import 'package:habit_tracker/features/profile/presentation/providers/user_profi
 /// It scrolls. That is the point of moving this off the calendar — the old
 /// `CommandCenterPanel` had to fit in whatever height the calendar grid left over,
 /// so it could only ever show one event and a short checklist.
+///
+/// It reads the same `eventsProvider` as the calendar and never changes its range:
+/// that provider always includes the coming week (see `eventsFetchRange`), so
+/// switching between the two tabs costs no extra request.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -51,6 +57,7 @@ class HomeScreen extends ConsumerWidget {
           onRefresh: () async {
             ref.invalidate(eventsProvider);
             ref.invalidate(habitsProvider);
+            ref.invalidate(activitySummaryProvider);
             await ref.read(eventsProvider.future);
           },
           child: ListView(
@@ -73,13 +80,22 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: 12),
               TodayScheduleCard(events: agenda.restOfToday),
               const SizedBox(height: 12),
-              HabitsWithoutSlotCard(
-                habits: agenda.habitsWithoutASlotToday,
-                // The calendar is where a habit becomes a scheduled event — it is
-                // the screen with the habit dock and the drop targets. Sending the
-                // user there beats rebuilding that interaction here.
-                onTapHabit: (_) => context.go('/calendar'),
-              ),
+              // Only once habits have loaded. Before that — or if the request
+              // failed — the list is empty for reasons that say nothing about the
+              // user's habits, and the card would claim every habit has a slot.
+              if (habitsAsync.hasValue) ...[
+                HabitsWithoutSlotCard(
+                  habits: agenda.habitsWithoutASlotToday,
+                  hasAnyHabits: habitsAsync.value!.isNotEmpty,
+                  // The calendar is where a habit becomes a scheduled event — it
+                  // is the screen with the habit dock and the drop targets.
+                  // Sending the user there beats rebuilding that interaction here.
+                  onTapHabit: (_) => context.go('/calendar'),
+                  onCreateHabit: () => context.go('/habits'),
+                ),
+                const SizedBox(height: 12),
+              ],
+              const ActivitySummaryCard(),
               const SizedBox(height: 12),
               ShadButton.ghost(
                 onPressed: () => context.go('/calendar'),

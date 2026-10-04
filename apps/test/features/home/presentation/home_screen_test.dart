@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,10 +8,13 @@ import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
 import 'package:habit_tracker/features/home/presentation/home_screen.dart';
+import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
 import 'package:habit_tracker/features/profile/domain/models/user_profile_model.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import '../../../test_utils.dart';
+import '../activity_summary_fixture.dart';
 
 class MockApiService implements ApiService {
   @override
@@ -58,6 +62,11 @@ void main() {
       overrides: [
         ...commonTestOverrides,
         apiServiceProvider.overrideWithValue(MockApiService()),
+        // Stubbed explicitly: the catch-all mock above answers every call with a
+        // List, which would leave the activity card silently in its error state.
+        activitySummaryProvider.overrideWith(
+          (ref) async => ActivitySummary.fromJson(serverResponse()),
+        ),
         eventsProvider.overrideWith(() => _FakeEventsNotifier(events)),
         habitsProvider.overrideWith(() => _FakeHabitsNotifier(habits)),
         if (profile != null)
@@ -100,6 +109,18 @@ void main() {
     expect(find.text('Up Next'), findsNothing);
   });
 
+  testWidgets('shows the activity summary further down the page', (tester) async {
+    await tester.pumpWidget(buildScreen());
+    await tester.pumpAndSettle();
+
+    // Below the fold, and ListView builds lazily — scroll to it rather than
+    // assuming it is already on screen.
+    await tester.scrollUntilVisible(find.text('Last 14 days'), 200);
+
+    expect(find.text('Last 14 days'), findsOneWidget);
+    expect(find.text('3 of 4'), findsOneWidget);
+  });
+
   testWidgets('shows the empty state when nothing is coming up', (tester) async {
     await tester.pumpWidget(buildScreen());
     await tester.pumpAndSettle();
@@ -116,7 +137,8 @@ void main() {
           event(
             id: '1',
             title: 'Jog',
-            fromNow: const Duration(hours: 1),
+            // At "now", not later: +1h would land tomorrow when run after 23:00.
+            fromNow: Duration.zero,
             habitId: 'h1',
           ),
         ],
@@ -135,6 +157,67 @@ void main() {
       findsNothing,
       reason: 'Jogging already has an event today',
     );
+  });
+
+  testWidgets('asks a user with no habits to create one', (tester) async {
+    // Regression: with zero habits the card said "Every habit has a slot today" —
+    // true of an empty set, and wrong to say. Seen on a real account.
+    await tester.pumpWidget(buildScreen());
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('You have no habits yet'), findsOneWidget);
+    expect(find.text('Create a habit'), findsOneWidget);
+    expect(find.text('Every habit has a slot today.'), findsNothing);
+  });
+
+  testWidgets('says every habit has a slot only when there are habits, all booked', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildScreen(
+        events: [
+          event(
+            id: '1',
+            title: 'Jog',
+            // At "now", not later: +1h would land tomorrow when run after 23:00.
+            fromNow: Duration.zero,
+            habitId: 'h1',
+          ),
+        ],
+        habits: [HabitModel(id: 'h1', name: 'Jogging', targetDays: const [])],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Every habit has a slot today.'), findsOneWidget);
+    expect(find.textContaining('You have no habits yet'), findsNothing);
+  });
+
+  testWidgets('hides the habits card until habits have loaded', (tester) async {
+    // An unloaded list is empty too, and would otherwise produce the same false
+    // "every habit has a slot" message.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          ...commonTestOverrides,
+          apiServiceProvider.overrideWithValue(MockApiService()),
+          activitySummaryProvider.overrideWith(
+            (ref) async => ActivitySummary.fromJson(serverResponse()),
+          ),
+          eventsProvider.overrideWith(() => _FakeEventsNotifier(const [])),
+          habitsProvider.overrideWith(_NeverLoadingHabitsNotifier.new),
+        ],
+        child: const ShadApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    // Proves the page is past its loading spinner, so the card's absence is the
+    // behaviour under test and not just an unrendered page.
+    expect(find.text('Nothing coming up'), findsOneWidget);
+    expect(find.text("Not on today's calendar"), findsNothing);
+    expect(find.text('Every habit has a slot today.'), findsNothing);
   });
 
   testWidgets('shows the streak and XP badges from the profile', (tester) async {
@@ -213,4 +296,9 @@ class _FakeHabitsNotifier extends HabitsNotifier {
 
   @override
   Future<List<HabitModel>> build() async => habits;
+}
+
+class _NeverLoadingHabitsNotifier extends HabitsNotifier {
+  @override
+  Future<List<HabitModel>> build() => Completer<List<HabitModel>>().future;
 }

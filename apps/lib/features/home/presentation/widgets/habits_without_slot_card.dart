@@ -14,13 +14,25 @@ class HabitsWithoutSlotCard extends ConsumerWidget {
   const HabitsWithoutSlotCard({
     super.key,
     required this.habits,
+    required this.hasAnyHabits,
     required this.onTapHabit,
+    required this.onCreateHabit,
   });
 
   final List<HabitModel> habits;
 
+  /// Whether the user has any habits at all.
+  ///
+  /// Needed because an empty [habits] list means two different things. With no
+  /// habits, "every habit has a slot today" is technically true and completely
+  /// wrong to say — that is what the card showed for an account with none.
+  final bool hasAnyHabits;
+
   /// Opens the calendar so the habit can be dropped onto a time.
   final ValueChanged<HabitModel> onTapHabit;
+
+  /// Opens the habits screen, for a user who has not made one yet.
+  final VoidCallback onCreateHabit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +49,28 @@ class HabitsWithoutSlotCard extends ConsumerWidget {
             style: theme.textTheme.small.copyWith(fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
-          if (habits.isEmpty)
+          if (!hasAnyHabits) ...[
+            Text(
+              translations.translate('home_no_habits_yet'),
+              style: theme.textTheme.muted,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ShadButton.outline(
+                size: ShadButtonSize.sm,
+                onPressed: onCreateHabit,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(LucideIcons.plus, size: 14),
+                    const SizedBox(width: 6),
+                    Text(translations.translate('home_create_habit')),
+                  ],
+                ),
+              ),
+            ),
+          ] else if (habits.isEmpty)
             Text(
               translations.translate('home_every_habit_has_a_slot'),
               style: theme.textTheme.muted,

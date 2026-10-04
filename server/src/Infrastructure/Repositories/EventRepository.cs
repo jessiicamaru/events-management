@@ -25,6 +25,37 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc)
+        {
+            // Written as SQL rather than as a LINQ GroupBy on purpose. EF silently falls
+            // back to client evaluation for some grouped projections, which would mean
+            // loading every row to count it — the exact thing this method exists to avoid.
+            // Spelled out, the plan is a HashAggregate over the Events table.
+            //
+            // The interpolated values are parameterised by SqlQuery; this is not string
+            // concatenation.
+            //
+            // `+ interval '7 hours'` is the UTC+7 day boundary shared with
+            // StreakCalculator.DefaultDayBoundaryOffset. If that ever becomes a per-user
+            // setting, both have to move together.
+            return await _context.Database
+                .SqlQuery<DailyActivity>(
+                    $"""
+                    SELECT
+                        (("StartTime" AT TIME ZONE 'UTC') + interval '7 hours')::date AS "Date",
+                        COUNT(*)::int AS "Scheduled",
+                        COUNT(*) FILTER (WHERE "IsCompleted")::int AS "Completed",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM "ActualDuration")) / 60.0), 0)::int AS "FocusMinutes"
+                    FROM "Events"
+                    WHERE "UserId" = {userId}
+                      AND "StartTime" >= {fromUtc}
+                      AND "StartTime" < {toUtc}
+                    GROUP BY 1
+                    ORDER BY 1
+                    """)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<Event>> GetCompletedEventsForHabitAsync(Guid habitId)
         {
             var habitIdText = habitId.ToString();

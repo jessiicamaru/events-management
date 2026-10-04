@@ -13,6 +13,7 @@ import 'package:habit_tracker/features/auth/presentation/providers/auth_provider
 
 import 'package:habit_tracker/features/squads/presentation/screens/squads_list_screen.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -34,7 +35,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isSplash = state.uri.path == '/splash';
 
       if (!isAuthenticated && !isLoggingIn) return '/login';
-      if (isAuthenticated && (isLoggingIn || isSplash)) return '/home';
+      if (isAuthenticated && (isLoggingIn || isSplash)) return AppConstants.landingRoute;
       return null;
     },
     routes: [

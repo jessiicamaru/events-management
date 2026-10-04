@@ -272,6 +272,100 @@ void main() {
     });
   });
 
+  group('against a real account (dung@gmail.com, Fri 11 Sep 2026)', () {
+    // Copied from the database as it was, repeat rules verbatim — including the
+    // inconsistent "RRULE:" prefix, which only some rows carry.
+    EventModel series(
+      String id,
+      String title,
+      DateTime start,
+      Duration length,
+      String rule,
+    ) =>
+        EventModel(
+          id: id,
+          title: title,
+          startTime: start.toUtc(),
+          endTime: start.add(length).toUtc(),
+          habitId: '',
+          recurrenceRule: rule,
+        );
+
+    final realEvents = [
+      series('jog', 'Jogging pls', DateTime(2026, 5, 4, 17),
+          const Duration(hours: 1), 'RRULE:FREQ=DAILY'),
+      series('mki', 'MKI - Daily Sync', DateTime(2026, 6, 15, 8, 30),
+          const Duration(minutes: 30), 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'),
+      series('scrum', '[WEP] Daily Scrum', DateTime(2026, 7, 6, 9),
+          const Duration(minutes: 30), 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'),
+      series('thu', 'test', DateTime(2026, 9, 10, 15, 25),
+              const Duration(hours: 1), 'RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=TH')
+          .copyWith(
+        recurrenceExceptionDates: DateTime(2026, 9, 10, 15, 25).toUtc().toIso8601String(),
+      ),
+      EventModel(
+        id: 'thu-edited',
+        title: 'test',
+        startTime: DateTime(2026, 9, 10, 15, 25).toUtc(),
+        endTime: DateTime(2026, 9, 10, 16, 25).toUtc(),
+        habitId: '',
+        parentEventId: 'thu',
+        exceptionDate: DateTime(2026, 9, 10, 15, 25).toUtc(),
+      ),
+      // The demo "Morning Jog", completed.
+      EventModel(
+        id: 'demo-jog',
+        title: 'Morning Jog',
+        startTime: DateTime(2026, 9, 11, 6, 30).toUtc(),
+        endTime: DateTime(2026, 9, 11, 7, 15).toUtc(),
+        habitId: '',
+        isCompleted: true,
+      ),
+    ];
+
+    test('at 10:28, as in the screenshot: 1 of 4, jogging next, nothing later', () {
+      final agenda = HomeAgenda.build(
+        events: realEvents,
+        habits: const [],
+        now: DateTime(2026, 9, 11, 10, 28),
+      );
+
+      expect(agenda.totalToday, 4, reason: 'jog, sync, scrum, demo morning jog');
+      expect(agenda.completedToday, 1);
+      expect(agenda.focusEvent?.title, 'Jogging pls');
+      expect(agenda.focusEvent?.startTime.toLocal(), DateTime(2026, 9, 11, 17));
+      expect(agenda.isHappeningNow, isFalse);
+      expect(
+        agenda.restOfToday,
+        isEmpty,
+        reason: 'both meetings ended by 09:30 and jogging is the card above',
+      );
+    });
+
+    test('at 09:10, the scrum is happening now and jogging moves to later today', () {
+      final agenda = HomeAgenda.build(
+        events: realEvents,
+        habits: const [],
+        now: DateTime(2026, 9, 11, 9, 10),
+      );
+
+      expect(agenda.focusEvent?.title, '[WEP] Daily Scrum');
+      expect(agenda.isHappeningNow, isTrue);
+      expect(agenda.restOfToday.map((e) => e.title), ['Jogging pls']);
+    });
+
+    test('the weekday-only meetings are absent on a Saturday', () {
+      final agenda = HomeAgenda.build(
+        events: realEvents,
+        habits: const [],
+        now: DateTime(2026, 9, 12, 7),
+      );
+
+      expect(agenda.totalToday, 1, reason: 'only the daily jog');
+      expect(agenda.focusEvent?.title, 'Jogging pls');
+    });
+  });
+
   group('habits without a slot today', () {
     test('lists habits that have no event on the calendar today', () {
       final agenda = HomeAgenda.build(
