@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
 import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/activity_summary_card.dart';
@@ -9,11 +11,15 @@ import '../../../test_utils.dart';
 import '../activity_summary_fixture.dart';
 
 void main() {
-  Widget buildCard(Future<ActivitySummary> Function() load) {
+  Widget buildCard(
+    Future<ActivitySummary> Function() load, {
+    List<EventModel> events = const [],
+  }) {
     return ProviderScope(
       overrides: [
         ...commonTestOverrides,
         activitySummaryProvider.overrideWith((ref) => load()),
+        eventsProvider.overrideWith(() => _FakeEvents(events)),
       ],
       child: const ShadApp(
         home: Scaffold(
@@ -88,13 +94,13 @@ void main() {
           'days': [
             {
               'date': '2026-09-10T00:00:00Z',
-              'scheduled': 0,
-              'completed': 0,
+              'oneOffScheduled': 0,
+              'oneOffCompleted': 0,
               'focusMinutes': 25,
             },
           ],
-          'totalScheduled': 0,
-          'totalCompleted': 0,
+          'totalOneOffScheduled': 0,
+          'totalOneOffCompleted': 0,
           'totalFocusMinutes': 25,
           'bestFocusMinutes': 25,
         }),
@@ -111,8 +117,8 @@ void main() {
       buildCard(
         () async => ActivitySummary.fromJson({
           'days': <dynamic>[],
-          'totalScheduled': 0,
-          'totalCompleted': 0,
+          'totalOneOffScheduled': 0,
+          'totalOneOffCompleted': 0,
           'totalFocusMinutes': 0,
           'bestFocusMinutes': 0,
         }),
@@ -122,6 +128,50 @@ void main() {
 
     expect(find.textContaining('Nothing here yet'), findsOneWidget);
     expect(bars(), findsNothing);
+  });
+
+  testWidgets('counts the days of a repeating event, not just one-off events', (
+    tester,
+  ) async {
+    // Review round 1, finding 4: the server counts stored rows, so a daily event counted
+    // once on its first day and otherwise only on days somebody had split off.
+    final serverSaysNothingBooked = ActivitySummary.fromJson({
+      'days': [
+        for (final d in ['2026-09-08', '2026-09-09', '2026-09-10'])
+          {'date': '${d}T00:00:00Z', 'oneOffScheduled': 0, 'oneOffCompleted': 0, 'focusMinutes': 0},
+      ],
+      'totalFocusMinutes': 0,
+      'bestFocusMinutes': 0,
+    });
+    final dailySeries = EventModel(
+      id: 'jog',
+      title: 'Jogging',
+      startTime: DateTime(2026, 9, 1, 7).toUtc(),
+      endTime: DateTime(2026, 9, 1, 8).toUtc(),
+      habitId: '',
+      recurrenceRule: 'RRULE:FREQ=DAILY',
+    );
+    final doneOnThe9th = EventModel(
+      id: 'jog-9',
+      title: 'Jogging',
+      startTime: DateTime(2026, 9, 9, 7).toUtc(),
+      endTime: DateTime(2026, 9, 9, 8).toUtc(),
+      habitId: '',
+      parentEventId: 'jog',
+      exceptionDate: DateTime(2026, 9, 9, 7).toUtc(),
+      isCompleted: true,
+    );
+
+    await tester.pumpWidget(
+      buildCard(
+        () async => serverSaysNothingBooked,
+        events: [dailySeries, doneOnThe9th],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 of 3'), findsOneWidget, reason: 'three days booked, one done');
+    expect(find.text('33%'), findsOneWidget);
   });
 
   testWidgets('offers a retry when loading fails, and retrying refetches', (
@@ -147,4 +197,13 @@ void main() {
 
     expect(calls, 2);
   });
+}
+
+class _FakeEvents extends EventsNotifier {
+  _FakeEvents(this.events);
+
+  final List<EventModel> events;
+
+  @override
+  Future<List<EventModel>> build() async => events;
 }

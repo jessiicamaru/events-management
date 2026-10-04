@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
 import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
 
@@ -40,6 +41,9 @@ class ActivitySummaryCard extends ConsumerWidget {
     final theme = ShadTheme.of(context);
     final translations = ref.watch(translationsProvider);
     final summaryAsync = ref.watch(activitySummaryProvider);
+    // The series and split-off days needed to count repeating events. Already loaded
+    // app-wide, so this costs no request — only a recount when events change.
+    final events = ref.watch(eventsProvider).value;
 
     return ShadCard(
       padding: const EdgeInsets.all(16),
@@ -57,24 +61,38 @@ class ActivitySummaryCard extends ConsumerWidget {
           // `when` keeps showing the previous data while a pull-to-refresh is in
           // flight, instead of flashing a spinner over a chart that is still valid.
           summaryAsync.when(
-            loading: () => const SizedBox(
-              height: _ActivityChart.totalHeight,
-              child: Center(child: CircularProgressIndicator()),
-            ),
+            loading: () => const _LoadingPlaceholder(),
             error: (_, _) => _ErrorState(
               onRetry: () => ref.invalidate(activitySummaryProvider),
             ),
-            data: (summary) => summary.isEmpty
-                ? Text(
-                    translations.translate('home_activity_empty'),
-                    style: theme.textTheme.muted,
-                  )
-                : _SummaryBody(summary: summary),
+            data: (fromServer) {
+              // Without the events the repeating days would be missing, and the numbers
+              // would jump once they arrived — wait instead.
+              if (events == null) return const _LoadingPlaceholder();
+
+              final summary = fromServer.withRepeatingDays(events);
+              return summary.isEmpty
+                  ? Text(
+                      translations.translate('home_activity_empty'),
+                      style: theme.textTheme.muted,
+                    )
+                  : _SummaryBody(summary: summary);
+            },
           ),
         ],
       ),
     );
   }
+}
+
+class _LoadingPlaceholder extends StatelessWidget {
+  const _LoadingPlaceholder();
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        height: _ActivityChart.totalHeight,
+        child: Center(child: CircularProgressIndicator()),
+      );
 }
 
 class _SummaryBody extends ConsumerWidget {

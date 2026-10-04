@@ -131,23 +131,46 @@ namespace HabitTracker.Application.Common
         }
 
         /// <summary>
-        /// A day of <paramref name="seriesId"/> that was split off locally and that Google has
-        /// never been told about, standing for <paramref name="occurrenceUtc"/>.
+        /// Whether <paramref name="day"/> is a day of <paramref name="series"/> that was split off
+        /// only locally — by a ticked task or a finished session — rather than edited.
         /// </summary>
         /// <remarks>
-        /// Used by the Google sync when Google reports its own version of that day, so the
-        /// sync can adopt the local day rather than add a second one beside it — or remove
-        /// it, if Google cancelled the day.
+        /// Told apart by the series' exception list (<see cref="RecurrenceExceptions"/>): splitting
+        /// a day off never adds it there, while editing, promoting or deleting a day always does.
+        /// A local-only day is the series' day with some state attached, so it should keep
+        /// following the series; an edited day keeps its own content.
         /// </remarks>
-        public static Event? FindLocalOnlyDay(IEnumerable<Event> events, Guid seriesId, DateTime occurrenceUtc)
+        public static bool IsLocalOnlyDay(Event day, Event series) =>
+            day.ParentEventId == series.Id
+            && !RecurrenceExceptions.Contains(series, day.ExceptionDate ?? day.StartTime);
+
+        /// <summary>
+        /// The local-only day of <paramref name="series"/> standing for
+        /// <paramref name="occurrenceUtc"/>, if there is one.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// Used by the Google sync when Google reports its own version of that day, so the sync
+        /// can adopt the local day rather than add a second one beside it — or remove it, if
+        /// Google cancelled the day.
+        /// </para>
+        /// <para>
+        /// A day with no <see cref="Event.GoogleEventId"/> is not necessarily local-only: an
+        /// edited day waiting for its Insert looks the same. Only the exception list tells them
+        /// apart, so it must be checked <b>before</b> the sync appends the date to it — otherwise
+        /// a cancellation that Google sends back for an edit would delete the edited day.
+        /// </para>
+        /// </remarks>
+        public static Event? FindLocalOnlyDay(IEnumerable<Event> events, Event series, DateTime occurrenceUtc)
         {
-            var minute = TruncateToMinute(ToUtc(occurrenceUtc));
+            var minute = RecurrenceExceptions.TruncateToMinute(RecurrenceExceptions.ToUtc(occurrenceUtc));
 
             return events.FirstOrDefault(e =>
-                e.ParentEventId == seriesId
+                e.ParentEventId == series.Id
                 && string.IsNullOrEmpty(e.GoogleEventId)
                 && e.ExceptionDate != null
-                && TruncateToMinute(ToUtc(e.ExceptionDate.Value)) == minute);
+                && RecurrenceExceptions.TruncateToMinute(RecurrenceExceptions.ToUtc(e.ExceptionDate.Value)) == minute
+                && IsLocalOnlyDay(e, series));
         }
 
         private static bool CouldBeOccurrence(Event series, DateTime startUtc)
@@ -157,22 +180,8 @@ namespace HabitTracker.Application.Common
             var until = ParseUntil(series.RecurrenceRule!);
             if (until != null && startUtc > until) return false;
 
-            return !IsDeletedDay(series, startUtc);
-        }
-
-        private static bool IsDeletedDay(Event series, DateTime startUtc)
-        {
-            if (string.IsNullOrEmpty(series.RecurrenceExceptionDates)) return false;
-
-            var minute = TruncateToMinute(startUtc);
-
-            return series.RecurrenceExceptionDates
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(raw => DateTime.TryParse(raw, CultureInfo.InvariantCulture,
-                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed)
-                    ? (DateTime?)parsed
-                    : null)
-                .Any(parsed => parsed != null && TruncateToMinute(parsed.Value) == minute);
+            // A date in the exception list was deleted, or has its own event already (found above).
+            return !RecurrenceExceptions.Contains(series, startUtc);
         }
 
         private static DateTime? ParseUntil(string rule)
@@ -192,14 +201,8 @@ namespace HabitTracker.Application.Common
                 : null;
         }
 
-        private static DateTime ToUtc(DateTime value) => value.Kind switch
-        {
-            DateTimeKind.Utc => value,
-            DateTimeKind.Local => value.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
-        };
+        private static DateTime ToUtc(DateTime value) => RecurrenceExceptions.ToUtc(value);
 
-        private static DateTime TruncateToMinute(DateTime value) =>
-            new(value.Year, value.Month, value.Day, value.Hour, value.Minute, 0, value.Kind);
+        private static DateTime TruncateToMinute(DateTime value) => RecurrenceExceptions.TruncateToMinute(value);
     }
 }

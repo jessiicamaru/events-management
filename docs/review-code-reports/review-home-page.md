@@ -5,11 +5,180 @@ Base: `0347d45` (local `main`, merge of PR #24) · Reviewed by: Claude Code (5 p
 | Round | Commit | Date | Outcome |
 | --- | --- | --- | --- |
 | 1 | `28b3568` fix(events): per-day tasks and completion (5 commits) | 2026-09-11 | 1 HIGH, 4 MEDIUM, 12 LOW, 9 INFO — **blocks merge** |
+| 2 | `867cc20` fix(events): address review round 1 | 2026-09-11 | HIGH and 3 MEDIUM closed, 1 MEDIUM half-closed (integration tests); LOWs open; new: 1 LOW, 2 INFO — **no HIGH; one MEDIUM half-open** |
 
 > Base is local `main`, not `origin/main`: the remote was unreachable from this network
 > (`git fetch` timed out on port 443). Local `main` is the PR #24 merge pulled on 2026-09-10,
 > and `git log main..HEAD` shows exactly the 5 commits of this branch, so the diff is the
 > branch's real scope.
+
+---
+
+# Round 2 — review `867cc20`
+
+Fixes for round 1's HIGH and four MEDIUMs, in one commit on top of `94ed6d4`. The LOW findings
+were not in scope for this round; the few that changed are noted in the table.
+
+## Status of round 1 findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 1 | [HIGH] A split-off day shows twice after the series is edited | ✅ **Closed** — unit tests, negative control, live on :5099 |
+| 2 | [MEDIUM] Inbound sync deletes an edited day whose Insert is queued | ✅ **Closed** — the decision is unit-tested with a negative control; the sync call site was not run against Google |
+| 3 | [MEDIUM] "All" / "this and future" on a Google-known day never pushes it | ✅ **Closed** — unit tests, negative control |
+| 4 | [MEDIUM] Activity card counts rows, not scheduled days | ✅ **Closed** — unit and widget tests, negative control, live |
+| 5 | [MEDIUM] Google-connected and failure paths untested | ⚠️ **Half-closed** — the listed tests exist and the key survivors are now caught; repository SQL and the inbound sync path still have no integration test |
+| 6 | [LOW] Every Home fetch starts a Google sync | ⚠️ Still open |
+| 7 | [LOW] Dead-lettered Insert counts as pending | ⚠️ Still open |
+| 8 | [LOW] Details dialog acts on the series after a tick | ⚠️ Still open |
+| 9 | [LOW] Edit sheet ticks the series template | ⚠️ Still open |
+| 10 | [LOW] No unique index on split-off days | ⚠️ Still open (needs a migration) |
+| 11 | [LOW] Toast titled with the raw key `error` | ⚠️ **Half-closed** — fixed at the site this branch added; the 4 pre-existing sites remain |
+| 12 | [LOW] XP farming through arbitrary dates | ⚠️ Still open |
+| 13 | [LOW] Rule violations return 404 | ⚠️ Still open |
+| 14 | [LOW] "Update calendar" on a series day never reaches Google | ⚠️ Still open |
+| 15 | [LOW] The same rules written in several places | ⚠️ **Half-closed** — the exception list has one reader/writer (`RecurrenceExceptions`) and `Delete` uses `IsSeries`; scope/outbox literals and the SQL `interval '7 hours'` remain |
+| 16 | [LOW] Docs out of date | ⚠️ **Half-closed** — `CLAUDE.md` fixed; `notifications-and-reminders.md`, the expander comment and the two unused keys remain |
+| 17 | [LOW] Weak and clock-dependent assertions | ⚠️ Still open (the one vacuous `Times.Never` test in finding 5 is fixed) |
+
+### Finding 1 — closed: touched days follow the series
+
+The fix uses a rule the design already guaranteed and nothing used: a day split off locally is
+never in the series' `RecurrenceExceptionDates`, and an edited, promoted or deleted day always is.
+`OccurrenceMaterializer.IsLocalOnlyDay` reads it.
+
+`UpdateEventCommandHandler.FollowSeriesAsync` (called from `UpdateWholeEventAsync` for a series,
+and from `SplitSeriesAsync`) applies a series edit to every local-only child: the same shift in
+time of day (`TimeOfDayShift`, which ignores the date and takes the short way across midnight),
+title, category, habit, reminders and length, and `ExceptionDate` moves with it. For "this and
+future", children from the split date on are re-parented to the new series. Edited days are
+skipped. A day the series no longer produces after the edit (before its new start) is left as
+history.
+
+| Before | After |
+| --- | --- |
+| Wednesday 07:00 "Jog" **and** 08:00 "Jog (renamed)" — two reminders | Wednesday 08:00 "Jog (renamed)" only |
+
+Measured:
+- `AllOccurrences_TouchedDaysFollowTheSeries_EditedDaysKeepTheirOwn`: the touched Friday moves
+  10:00 → 11:00 with the new title and a 90-minute length; the edited Thursday keeps 15:00 and
+  "Moved by hand"; Monday, now before the series' start, stays as history.
+- `ThisAndFuture_TouchedDaysAfterTheSplitMoveToTheNewSeries`: Friday joins the new series, Monday
+  stays with the old one.
+- Negative control: skipping `FollowSeriesAsync` fails the first test.
+- Live on :5099 against the real database (throwaway account, deleted afterwards): tomorrow split
+  off, series moved 10:00 → 11:00 with "all occurrences" from today →
+  `tomorrow moved to 11:00 (2026-09-12T11:00:00Z)`, `exceptionDate` follows, new title, and it is
+  still not in the series' exception list.
+
+### Finding 2 — closed: sync can't delete an edited day any more
+
+`FindLocalOnlyDay` now takes the series and also requires `IsLocalOnlyDay`. In
+`GoogleCalendarService`, it is called once per exception, **before** the cancelled branch appends
+the date — afterwards every day on that date would look edited. The non-cancelled (adopt) branch
+uses the same lookup, so an edited day waiting for its Insert is not adopted either.
+
+- `FindLocalOnlyDay_IgnoresAnEditedDayWaitingForItsInsert`: a child without `GoogleEventId` whose
+  date is in the exception list → not found.
+- Negative control: dropping the `IsLocalOnlyDay` condition fails that test.
+- Not run: the sync call site itself, which needs Google. The ordering is by reading the code;
+  finding 5's integration-test gap still applies here.
+
+### Finding 3 — closed: the day is pushed too
+
+In `UpdateSplitOffDayAsync`'s "all / this and future" branch, when Google has the day (or the day
+was edited), its new slot is added to the holding series' exception list, and both the series
+(with exceptions) and the day are queued as Updates. A local-only day still sends nothing.
+
+- `AllOccurrences_FromAGoogleKnownDay_PushesThatDayToo` and
+  `AllOccurrences_FromALocalOnlyDay_SendsNothingForTheDay`.
+- Negative control: removing the push fails the first.
+
+### Finding 4 — closed: the card counts days
+
+The SQL now counts scheduled/completed for one-off events only
+(`"ParentEventId" IS NULL AND COALESCE("RecurrenceRule", '') = ''`); focus minutes still come
+from every row. The fields are renamed `oneOffScheduled` / `oneOffCompleted`, so the contract says
+what it counts. The client adds repeating days in `ActivitySummary.withRepeatingDays`, expanding
+every series over the 14-day window with `EventOccurrenceExpander` — split-off days stand in for
+the days they replace, deleted days drop out. It needs no extra request: `GetEventsForUserAsync`
+returns every series and every child whatever the date range (`EventRepository.cs:94-97`).
+
+| Before | After |
+| --- | --- |
+| 7 days of a daily habit, 3 done → "3 of 3 · 100%" | "3 of 7 · 43%" |
+
+- 6 unit tests on `withRepeatingDays` (every day counted; 3 of 7; a moved split-off day counted
+  once on its own day; merged with one-off counts, focus untouched; deleted and non-rule days
+  skipped; one-off events not counted twice) and a card test (`1 of 3 · 33%`).
+- Negative control: returning the server numbers unchanged fails 6 tests.
+- Live: the wire now carries `oneOffScheduled`/`oneOffCompleted`, and with a series, a split-off
+  day and one one-off event, `totalOneOffScheduled` is 1.
+
+### Finding 5 — half-closed: the gaps the mutation run found
+
+Added: Google-connected "edit this occurrence" (untouched day → `[series/Update, day/Insert]` in
+that order; Google-known day → Update, no Insert; queued Insert → Update); per-day reminders with
+and without a value sent; deleting a Google-known day sends exactly one Delete;
+`MaterializeOccurrenceCommandHandler` (own series, another user's series writes nothing, missing,
+no user); a normal Google-known event still gets its Update on completion, and the existing
+`Times.Never` test now asserts the handler got that far; endpoint mapping tests
+(`EventsEndpointMappingTests`) including a reflection check that fails when a command gains a
+field its request record lacks; client wire tests for `completeSession` and
+`materializeOccurrence`; the checklist when the split is refused.
+
+Round 1 survivors, re-run as mutations in this round:
+
+| Mutation | Round 1 | Round 2 |
+| --- | --- | --- |
+| Insert and Update swapped (`UpdateEventCommand`) | survived | **caught** (3 tests) |
+| JSON key `occurrenceStart` renamed (`api_service.dart`) | survived | **caught** |
+| Endpoint drops `ReminderMinutesBefore` (the original bug) | not tested | **caught** |
+| Checklist toast key | — | **caught** |
+
+The other survivors (M1, M4, M5, M7, M13, F8) each have a test aimed at them now; those mutations
+were not re-run. The reflection check's "field missing from the record" case holds by
+construction and was not run as a mutation. Still missing: an integration test project for the
+repository SQL (`GetDailyActivityAsync`, `GetOccurrenceChildAsync`, `GetChildrenAsync`,
+`HasPendingInsertAsync`) and for the inbound sync path.
+
+## New findings
+
+### N1 [LOW] Changing the repeat rule leaves touched days on days the new rule skips
+
+*Introduced in round 2.* `FollowSeriesAsync` shifts local-only days but does not check them
+against the new rule. Changing a daily series to weekdays only leaves a touched Saturday in
+place, now a standalone event on a day the series no longer has. The server has no recurrence
+engine to check with. Rare (it needs a rule change after days were touched ahead). **Fix
+options:** on a rule change, leave future local-only days to the client to hide, or delete those
+that no longer fall on a produced weekday for `WEEKLY;BYDAY` rules.
+
+### N2 [INFO] Dashboard days: server by UTC+7, client by device-local day
+
+*Introduced in round 2.* One-off counts are grouped by the server's UTC+7 day, repeating days by
+the device's local day. Identical for users in UTC+7; elsewhere a late-evening day can land one
+day apart in the two halves. This is the same seam as roadmap 5.1 (a fixed day boundary for
+streaks).
+
+### N3 [INFO] `dotnet test` now builds `Web`
+
+*Introduced in round 2.* The test project references `Web` for the mapping tests, so a plain
+`dotnet test` fails with MSB3027 while a backend started from `src/Web` holds its files. Documented
+in `CLAUDE.md`: use `dotnet test -o <dir>` or stop the backend. CI is unaffected.
+
+## Round 2 verification
+
+| Item | Round 1 | Round 2 |
+| --- | --- | --- |
+| `dotnet test` (Application.UnitTests) | 99 pass / 0 fail | **132 pass / 0 fail** (built with `-o`; a backend held `src/Web/bin` earlier in the session) |
+| `flutter test` | 172 pass / 0 fail | **183 pass / 0 fail** |
+| `flutter analyze` | No issues | No issues |
+| `dotnet build` (Web, separate output) | 0 errors | 0 errors |
+| Codegen | current | no annotated provider touched; no `*.g.dart` change |
+| Negative controls, server | 6 caught | + 5: follow-series, `FindLocalOnlyDay` rule, day push, Insert/Update swap, endpoint mapping — all caught |
+| Negative controls, client | 3 caught | + 3: repeating-day counting, toast key, JSON key — all caught |
+| Live on :5099 | 17 / 17 | **8 / 8 new + 17 / 17 round 1 re-run**; probe accounts deleted |
+| E2E, iOS | not run | not run |
 
 ---
 
@@ -467,6 +636,23 @@ dates" — which the design already guarantees and nothing yet uses.
 After 1 round: 17 findings (1 HIGH, 4 MEDIUM, 12 LOW) plus INFO notes, none closed yet.
 **1 HIGH and 4 MEDIUM open. Blocks merge.**
 
+**Round 2.** The HIGH and three MEDIUMs are closed, each checked by a test that fails when the
+fix is removed and, where it touches data, by a live run against the real database. Findings 1
+and 2 were closed by the same rule, as round 1 predicted: "local-only means not in the series'
+exception list" — now read and written through one helper instead of five string copies.
+Finding 4 went further than round 1's cheap option: the card now shows correct counts, not a
+softened label, because the client already held everything needed to count repeating days.
+
+Finding 5 is half-closed. The tests it asked for exist, and the round 1 mutations that mattered
+most (the Insert/Update swap, the renamed JSON key) are now caught, but there is still no
+integration test for the repository SQL or for the inbound Google sync path. That path carries
+finding 2's fix, and its call-site ordering is verified by reading, not by running.
+
+After 2 rounds: 17 + 3 findings. Closed: 4 (findings 1–4). Half-closed: 4 (5, 11, 15, 16). Open:
+10 LOW and N1 (LOW), plus INFO notes. **No HIGH remains. One MEDIUM is half-open** — the missing
+integration tests, which is a test gap, not a known bug. Whether that blocks merge is a call for
+the author: the behaviour it would cover is unit-tested at the decision point.
+
 ## Commands run to verify
 
 ### Round 1
@@ -492,3 +678,20 @@ flutter test test/_probe/stale_day_probe_test.dart            # finding 1 reprod
 Reviewer commands (not re-run here unless listed above): targeted `dotnet test --filter` runs
 (42 pass), targeted `flutter test` runs (28–40 pass), a mutation run over a `git archive` copy in
 the scratchpad (22 mutations), read-only SQL, and EF/`fsi` probes of the JSON and date shapes.
+
+### Round 2
+
+```
+dotnet test tests/Application.UnitTests -o /tmp/servertest    # 132 pass (was 99)
+cd apps && flutter test                                       # 183 pass (was 172)
+cd apps && flutter analyze                                    # no issues
+dotnet build src/Web/Web.csproj -o /tmp/webcheck2             # 0 errors
+python scratchpad/negative_controls.py                        # 4 server mutations: 1, 1, 1, 3 tests fail; restored
+python scratchpad/negative_controls_app.py                    # 3 client mutations: 6, 1, 1 tests fail; restored
+dotnet test ... --filter EventsEndpointMappingTests           # with the ReminderMinutesBefore mapping line removed: fails; restored
+dotnet /tmp/webcheck2/Web.dll  (ASPNETCORE_URLS=:5099)        # new server beside the author's
+python scratchpad/live_round2_check.py                        # 8/8
+python scratchpad/live_occurrence_check.py                    # round 1's 17/17 still pass
+psql ... DELETE ... probe_r2_% / probe_occ_%                  # probe accounts removed; 0 left
+grep -rn 'yyyy-MM-ddTHH:mm:ssZ' server/src                    # only RecurrenceExceptions.cs
+```

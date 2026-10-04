@@ -42,6 +42,9 @@ namespace HabitTracker.Domain.Interfaces
         /// </summary>
         Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc);
 
+        /// <summary>Every day that has been split off <paramref name="seriesId"/>, tracked for update.</summary>
+        Task<IEnumerable<Event>> GetChildrenAsync(Guid seriesId);
+
         Task<Event?> GetByIdAsync(Guid id);
         Task AddAsync(Event ev);
         Task UpdateAsync(Event ev);

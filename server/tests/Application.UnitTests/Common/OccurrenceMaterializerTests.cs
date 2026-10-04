@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using HabitTracker.Application.Common;
+using HabitTracker.Application.Features.Events.Commands;
 using HabitTracker.Application.Tests.TestDoubles;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
@@ -159,16 +160,98 @@ namespace HabitTracker.Application.Tests.Common
         [Fact]
         public void FindLocalOnlyDay_MatchesToTheMinute_AndIgnoresDaysGoogleKnows()
         {
-            var seriesId = Guid.NewGuid();
-            var localOnly = new Event { Id = Guid.NewGuid(), ParentEventId = seriesId, ExceptionDate = Friday.AddSeconds(30) };
-            var googleKnown = new Event { Id = Guid.NewGuid(), ParentEventId = seriesId, ExceptionDate = Friday, GoogleEventId = "g1" };
+            var series = Series();
+            var localOnly = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday.AddSeconds(30) };
+            var googleKnown = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday, GoogleEventId = "g1" };
             var otherSeries = new Event { Id = Guid.NewGuid(), ParentEventId = Guid.NewGuid(), ExceptionDate = Friday };
-            var otherDay = new Event { Id = Guid.NewGuid(), ParentEventId = seriesId, ExceptionDate = Friday.AddDays(1) };
+            var otherDay = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday.AddDays(1) };
 
             var events = new[] { googleKnown, otherSeries, otherDay, localOnly };
 
-            OccurrenceMaterializer.FindLocalOnlyDay(events, seriesId, Friday).Should().BeSameAs(localOnly);
-            OccurrenceMaterializer.FindLocalOnlyDay(events, seriesId, Friday.AddDays(2)).Should().BeNull();
+            OccurrenceMaterializer.FindLocalOnlyDay(events, series, Friday).Should().BeSameAs(localOnly);
+            OccurrenceMaterializer.FindLocalOnlyDay(events, series, Friday.AddDays(2)).Should().BeNull();
+        }
+
+        [Fact]
+        public void FindLocalOnlyDay_IgnoresAnEditedDayWaitingForItsInsert()
+        {
+            // An edited day has no GoogleEventId until its Insert is processed, so it looks
+            // local-only by that field alone. Editing it put its date in the series' exception
+            // list; that is what keeps a sync from deleting it when Google reports back the
+            // cancellation the edit itself caused.
+            var series = Series(exceptionDates: "2026-09-11T10:00:00Z");
+            var editedAwaitingInsert = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday };
+
+            OccurrenceMaterializer.FindLocalOnlyDay(new[] { editedAwaitingInsert }, series, Friday)
+                .Should().BeNull();
+        }
+
+        [Fact]
+        public void IsLocalOnlyDay_TellsATouchedDayFromAnEditedOne()
+        {
+            var series = Series(exceptionDates: "2026-09-10T10:00:00Z");
+            var touchedFriday = new Event { ParentEventId = series.Id, ExceptionDate = Friday };
+            var editedThursday = new Event { ParentEventId = series.Id, ExceptionDate = Friday.AddDays(-1) };
+            var someoneElses = new Event { ParentEventId = Guid.NewGuid(), ExceptionDate = Friday };
+
+            OccurrenceMaterializer.IsLocalOnlyDay(touchedFriday, series).Should().BeTrue();
+            OccurrenceMaterializer.IsLocalOnlyDay(editedThursday, series).Should().BeFalse();
+            OccurrenceMaterializer.IsLocalOnlyDay(someoneElses, series).Should().BeFalse();
+        }
+    }
+
+    public class RecurrenceExceptionsTests
+    {
+        private static readonly DateTime Friday = new(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc);
+
+        [Fact]
+        public void Add_WritesTheFormatExistingRowsAndTheClientUse()
+        {
+            var series = new Event();
+
+            RecurrenceExceptions.Add(series, Friday);
+
+            series.RecurrenceExceptionDates.Should().Be("2026-09-11T10:00:00Z");
+        }
+
+        [Fact]
+        public void Add_DoesNotRepeatADateAlreadyThere_ToTheMinute()
+        {
+            // The old writers deduped with a string Contains, so the same slot written with
+            // different seconds would have been added twice.
+            var series = new Event { RecurrenceExceptionDates = "2026-09-11T10:00:00Z" };
+
+            RecurrenceExceptions.Add(series, Friday.AddSeconds(42));
+            RecurrenceExceptions.Add(series, Friday.AddDays(1));
+
+            series.RecurrenceExceptionDates.Should().Be("2026-09-11T10:00:00Z,2026-09-12T10:00:00Z");
+        }
+
+        [Theory]
+        [InlineData("2026-09-11T10:00:00Z", true)]
+        [InlineData("2026-09-10T10:00:00Z, 2026-09-11T10:00:00Z", true)]
+        [InlineData("2026-09-11T10:01:00Z", false)]
+        [InlineData("", false)]
+        [InlineData("garbage,2026-09-11T10:00:00Z", true)]
+        public void Contains_MatchesToTheMinute(string stored, bool expected)
+        {
+            var series = new Event { RecurrenceExceptionDates = stored };
+
+            RecurrenceExceptions.Contains(series, Friday).Should().Be(expected);
+        }
+
+        [Theory]
+        [InlineData(10, 11, 1)]      // 07:00 -> 08:00 style move
+        [InlineData(10, 9, -1)]
+        [InlineData(23, 1, 2)]       // across midnight, the short way
+        [InlineData(1, 23, -2)]
+        [InlineData(10, 10 + 24, 0)] // a change of date alone moves nothing
+        public void TimeOfDayShift_IgnoresTheDateAndTakesTheShortWay(int fromHour, int toHour, int expectedHours)
+        {
+            var from = new DateTime(2026, 9, 9, 0, 0, 0, DateTimeKind.Utc).AddHours(fromHour);
+            var to = new DateTime(2026, 9, 9, 0, 0, 0, DateTimeKind.Utc).AddHours(toHour);
+
+            UpdateEventCommandHandler.TimeOfDayShift(from, to).Should().Be(TimeSpan.FromHours(expectedHours));
         }
     }
 }

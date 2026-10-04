@@ -41,8 +41,8 @@ namespace HabitTracker.Application.Tests.Features
             RepositoryReturns(new DailyActivity
             {
                 Date = Today,
-                Scheduled = 2,
-                Completed = 1,
+                OneOffScheduled = 2,
+                OneOffCompleted = 1,
                 FocusMinutes = 50
             });
 
@@ -50,7 +50,7 @@ namespace HabitTracker.Application.Tests.Features
                 .Handle(new GetActivitySummaryQuery(UserId, 7), CancellationToken.None);
 
             result.Days.Should().HaveCount(7);
-            result.Days.Count(d => d.Scheduled == 0).Should().Be(6);
+            result.Days.Count(d => d.OneOffScheduled == 0).Should().Be(6);
         }
 
         [Fact]
@@ -70,20 +70,20 @@ namespace HabitTracker.Application.Tests.Features
         public async Task TotalsAddUpAcrossTheWindow()
         {
             RepositoryReturns(
-                new DailyActivity { Date = Today, Scheduled = 3, Completed = 2, FocusMinutes = 40 },
+                new DailyActivity { Date = Today, OneOffScheduled = 3, OneOffCompleted = 2, FocusMinutes = 40 },
                 new DailyActivity
                 {
                     Date = Today.AddDays(-1),
-                    Scheduled = 1,
-                    Completed = 1,
+                    OneOffScheduled = 1,
+                    OneOffCompleted = 1,
                     FocusMinutes = 25
                 });
 
             var result = await CreateHandler()
                 .Handle(new GetActivitySummaryQuery(UserId, 7), CancellationToken.None);
 
-            result.TotalScheduled.Should().Be(4);
-            result.TotalCompleted.Should().Be(3);
+            result.TotalOneOffScheduled.Should().Be(4);
+            result.TotalOneOffCompleted.Should().Be(3);
             result.TotalFocusMinutes.Should().Be(65);
             result.BestFocusMinutes.Should().Be(40);
         }
@@ -94,19 +94,19 @@ namespace HabitTracker.Application.Tests.Features
             // The repository filters by date, but a row landing outside the requested
             // window must not silently inflate the totals if it ever does come back.
             RepositoryReturns(
-                new DailyActivity { Date = Today, Scheduled = 1, Completed = 1, FocusMinutes = 10 },
+                new DailyActivity { Date = Today, OneOffScheduled = 1, OneOffCompleted = 1, FocusMinutes = 10 },
                 new DailyActivity
                 {
                     Date = Today.AddDays(-30),
-                    Scheduled = 99,
-                    Completed = 99,
+                    OneOffScheduled = 99,
+                    OneOffCompleted = 99,
                     FocusMinutes = 999
                 });
 
             var result = await CreateHandler()
                 .Handle(new GetActivitySummaryQuery(UserId, 3), CancellationToken.None);
 
-            result.TotalScheduled.Should().Be(1);
+            result.TotalOneOffScheduled.Should().Be(1);
             result.TotalFocusMinutes.Should().Be(10);
         }
 

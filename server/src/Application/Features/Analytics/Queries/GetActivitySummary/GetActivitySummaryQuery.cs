@@ -12,8 +12,9 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetActivitySummary
     public class DailyActivityDto
     {
         public DateTime Date { get; set; }
-        public int Scheduled { get; set; }
-        public int Completed { get; set; }
+        /// <summary>One-off events only; the client adds the days of repeating events.</summary>
+        public int OneOffScheduled { get; set; }
+        public int OneOffCompleted { get; set; }
         public int FocusMinutes { get; set; }
     }
 
@@ -27,8 +28,8 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetActivitySummary
         /// </summary>
         public List<DailyActivityDto> Days { get; set; } = new();
 
-        public int TotalScheduled { get; set; }
-        public int TotalCompleted { get; set; }
+        public int TotalOneOffScheduled { get; set; }
+        public int TotalOneOffCompleted { get; set; }
         public int TotalFocusMinutes { get; set; }
 
         /// <summary>The best single day of focus time in the window, in minutes.</summary>
@@ -92,14 +93,14 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetActivitySummary
                 result.Days.Add(new DailyActivityDto
                 {
                     Date = day,
-                    Scheduled = row?.Scheduled ?? 0,
-                    Completed = row?.Completed ?? 0,
+                    OneOffScheduled = row?.OneOffScheduled ?? 0,
+                    OneOffCompleted = row?.OneOffCompleted ?? 0,
                     FocusMinutes = row?.FocusMinutes ?? 0
                 });
             }
 
-            result.TotalScheduled = result.Days.Sum(d => d.Scheduled);
-            result.TotalCompleted = result.Days.Sum(d => d.Completed);
+            result.TotalOneOffScheduled = result.Days.Sum(d => d.OneOffScheduled);
+            result.TotalOneOffCompleted = result.Days.Sum(d => d.OneOffCompleted);
             result.TotalFocusMinutes = result.Days.Sum(d => d.FocusMinutes);
             result.BestFocusMinutes = result.Days.Count == 0
                 ? 0

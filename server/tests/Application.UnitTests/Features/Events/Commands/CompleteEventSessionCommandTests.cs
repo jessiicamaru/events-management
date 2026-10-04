@@ -128,7 +128,7 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
             _mockUserRepo.Setup(r => r.GetByIdAsync("user1"))
                 .ReturnsAsync(new ApplicationUser { Id = "user1", GoogleRefreshToken = "token" });
 
-            await _handler.Handle(new CompleteEventSessionCommand
+            var result = await _handler.Handle(new CompleteEventSessionCommand
             {
                 EventId = series.Id,
                 ActualDuration = TimeSpan.FromMinutes(20),
@@ -136,9 +136,45 @@ namespace HabitTracker.Application.UnitTests.Features.Events.Commands
                 UserId = "user1"
             }, CancellationToken.None);
 
+            // Without this, an early `return false` would satisfy the Times.Never below as well.
+            Assert.True(result);
+            _mockEventRepo.Verify(r => r.AddAsync(It.Is<Event>(e => e.ParentEventId == series.Id)), Times.Once);
+
             _mockOutboxRepo.Verify(r => r.EnqueueAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task Handle_StillQueuesAGoogleUpdate_ForAnEventGoogleHas()
+        {
+            // The guard above must not silence ordinary events: "update calendar" on an event
+            // Google has has always been pushed.
+            var ev = new Event
+            {
+                Id = Guid.NewGuid(),
+                StartTime = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc),
+                EndTime = new DateTime(2026, 9, 11, 11, 0, 0, DateTimeKind.Utc),
+                UserId = "user1",
+                HabitId = string.Empty,
+                GoogleEventId = "g1"
+            };
+            _mockEventRepo.Setup(r => r.GetByIdAsync(ev.Id)).ReturnsAsync(ev);
+            _mockUserRepo.Setup(r => r.GetByIdAsync("user1"))
+                .ReturnsAsync(new ApplicationUser { Id = "user1", GoogleRefreshToken = "token" });
+
+            var result = await _handler.Handle(new CompleteEventSessionCommand
+            {
+                EventId = ev.Id,
+                ActualDuration = TimeSpan.FromMinutes(40),
+                UpdateCalendar = true,
+                UserId = "user1"
+            }, CancellationToken.None);
+
+            Assert.True(result);
+            _mockOutboxRepo.Verify(r => r.EnqueueAsync(
+                "user1", ev.Id, "g1", "Update",
+                It.Is<string>(p => p.Contains("EndTime")), It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]

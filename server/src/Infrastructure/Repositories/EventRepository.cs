@@ -41,6 +41,13 @@ namespace HabitTracker.Infrastructure.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<IEnumerable<Event>> GetChildrenAsync(Guid seriesId)
+        {
+            return await _context.Events
+                .Where(e => e.ParentEventId == seriesId)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc)
         {
             // Written as SQL rather than as a LINQ GroupBy on purpose. EF silently falls
@@ -54,13 +61,21 @@ namespace HabitTracker.Infrastructure.Repositories
             // `+ interval '7 hours'` is the UTC+7 day boundary shared with
             // StreakCalculator.DefaultDayBoundaryOffset. If that ever becomes a per-user
             // setting, both have to move together.
+            //
+            // Scheduled/completed count one-off events only. A repeating event is one row
+            // dated on its first day, so counting rows counted each series once, there, and
+            // counted only the days somebody had touched (split off) — which pushed the
+            // completion rate towards 100%. Repeating days are counted by the client instead,
+            // which expands the series with the same code that draws Home and schedules
+            // reminders. Focus minutes still come from every row: only a finished session
+            // writes ActualDuration, whichever kind of event it was on.
             return await _context.Database
                 .SqlQuery<DailyActivity>(
                     $"""
                     SELECT
                         (("StartTime" AT TIME ZONE 'UTC') + interval '7 hours')::date AS "Date",
-                        COUNT(*)::int AS "Scheduled",
-                        COUNT(*) FILTER (WHERE "IsCompleted")::int AS "Completed",
+                        COUNT(*) FILTER (WHERE "ParentEventId" IS NULL AND COALESCE("RecurrenceRule", '') = '')::int AS "OneOffScheduled",
+                        COUNT(*) FILTER (WHERE "ParentEventId" IS NULL AND COALESCE("RecurrenceRule", '') = '' AND "IsCompleted")::int AS "OneOffCompleted",
                         COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM "ActualDuration")) / 60.0), 0)::int AS "FocusMinutes"
                     FROM "Events"
                     WHERE "UserId" = {userId}

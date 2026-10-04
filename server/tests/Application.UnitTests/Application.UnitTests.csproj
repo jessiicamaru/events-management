@@ -23,6 +23,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Application\Application.csproj" />
     <ProjectReference Include="..\..\src\Infrastructure\Infrastructure.csproj" />
+    <!-- For the endpoint mapping tests: request records -> commands. That mapping once
+         dropped ReminderMinutesBefore while both sides of it were correct and tested. -->
+    <ProjectReference Include="..\..\src\Web\Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

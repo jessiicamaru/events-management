@@ -4,25 +4,25 @@ Map<String, dynamic> serverResponse() => {
       'days': [
         {
           'date': '2026-09-08T00:00:00Z',
-          'scheduled': 0,
-          'completed': 0,
+          'oneOffScheduled': 0,
+          'oneOffCompleted': 0,
           'focusMinutes': 0,
         },
         {
           'date': '2026-09-09T00:00:00Z',
-          'scheduled': 3,
-          'completed': 2,
+          'oneOffScheduled': 3,
+          'oneOffCompleted': 2,
           'focusMinutes': 75,
         },
         {
           'date': '2026-09-10T00:00:00Z',
-          'scheduled': 1,
-          'completed': 1,
+          'oneOffScheduled': 1,
+          'oneOffCompleted': 1,
           'focusMinutes': 20,
         },
       ],
-      'totalScheduled': 4,
-      'totalCompleted': 3,
+      'totalOneOffScheduled': 4,
+      'totalOneOffCompleted': 3,
       'totalFocusMinutes': 95,
       'bestFocusMinutes': 75,
     };

@@ -73,7 +73,7 @@ class _EventTasksChecklistState extends ConsumerState<EventTasksChecklist> {
     } catch (e) {
       toaster?.show(
         ShadToast.destructive(
-          title: Text(translations.translate('error')),
+          title: Text(translations.translate('error_title')),
           description: Text(e.toString()),
         ),
       );

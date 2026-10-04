@@ -200,19 +200,17 @@ namespace HabitTracker.Infrastructure.Services
                     if (localMaster == null) continue;
 
                     var originalDate = GetGoogleDateTime(ge.OriginalStartTime ?? ge.Start);
-                    var originalDateStr = originalDate.ToString("yyyy-MM-ddTHH:mm:ssZ");
+
+                    // Looked up before this sync writes the date into the series' exception list.
+                    // Afterwards every day on that date would look edited, and before it an edited
+                    // day whose Insert is still queued looks local-only — only the list, read now,
+                    // tells them apart (see FindLocalOnlyDay).
+                    var localOnlyDay = OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster, originalDate);
 
                     if (ge.Status == "cancelled")
                     {
                         // Add exception date to master EXDATE list
-                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
-                        {
-                            localMaster.RecurrenceExceptionDates = originalDateStr;
-                        }
-                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
-                        {
-                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
-                        }
+                        RecurrenceExceptions.Add(localMaster, originalDate);
                         await _eventRepository.UpdateAsync(localMaster);
 
                         var existingExceptionLocal = localGoogleEvents.FirstOrDefault(le => le.GoogleEventId == ge.Id);
@@ -222,9 +220,10 @@ namespace HabitTracker.Infrastructure.Services
                         }
 
                         // The day may also exist locally only, split off by a ticked task or a
-                        // finished session. Google cancelled it, so it goes too — otherwise a
-                        // cancelled meeting would stay on the calendar.
-                        var localOnlyDay = OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster.Id, originalDate);
+                        // finished session. Google cancelled it, so it goes too, or a cancelled
+                        // meeting would stay on the calendar. Not an edited day, though: Google
+                        // reports that same cancellation back after every edit of one occurrence,
+                        // and deleting the edited day there lost it along with its tasks.
                         if (localOnlyDay != null)
                         {
                             await _eventRepository.DeleteAsync(localOnlyDay.Id);
@@ -246,7 +245,7 @@ namespace HabitTracker.Infrastructure.Services
                             existingExceptionLocal.ExceptionDate = originalDate;
                             await _eventRepository.UpdateAsync(existingExceptionLocal);
                         }
-                        else if (OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster.Id, originalDate) is { } localOnlyDay)
+                        else if (localOnlyDay != null)
                         {
                             // Google changed a day the user had already split off locally.
                             // Adopt it instead of adding a second event for the same day, so its
@@ -278,14 +277,7 @@ namespace HabitTracker.Infrastructure.Services
                             await _eventRepository.AddAsync(newException);
                         }
 
-                        if (string.IsNullOrEmpty(localMaster.RecurrenceExceptionDates))
-                        {
-                            localMaster.RecurrenceExceptionDates = originalDateStr;
-                        }
-                        else if (!localMaster.RecurrenceExceptionDates.Contains(originalDateStr))
-                        {
-                            localMaster.RecurrenceExceptionDates += "," + originalDateStr;
-                        }
+                        RecurrenceExceptions.Add(localMaster, originalDate);
                         await _eventRepository.UpdateAsync(localMaster);
                     }
                 }

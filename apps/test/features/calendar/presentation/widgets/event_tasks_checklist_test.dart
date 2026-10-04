@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,12 +26,22 @@ class _FakeServer implements ApiService {
   };
 
   final List<String> materializeCalls = [];
+
+  /// Makes the server refuse the split, as it does for a day that cannot exist.
+  bool refuseSplit = false;
   final List<String> toggleCalls = [];
   final List<Map<String, Object?>> completeCalls = [];
 
   @override
   Future<String> materializeOccurrence(String seriesId, DateTime occurrenceStart) async {
     materializeCalls.add('$seriesId@${occurrenceStart.toUtc().toIso8601String()}');
+    if (refuseSplit) {
+      final request = RequestOptions(path: '/events/$seriesId/occurrences');
+      throw DioException(
+        requestOptions: request,
+        response: Response(requestOptions: request, statusCode: 404),
+      );
+    }
     tasks.putIfAbsent(
       'jog-fri',
       () => [
@@ -145,6 +156,29 @@ void main() {
     expect(server.materializeCalls, hasLength(1));
     expect(server.toggleCalls, ['jog-fri/c-t-warm=true', 'jog-fri/c-t-run=true']);
     expect(find.text('2/2'), findsOneWidget);
+  });
+
+  testWidgets('a refused split shows an error, ticks nothing, and can be tried again', (
+    tester,
+  ) async {
+    server.refuseSplit = true;
+    await tester.pumpWidget(build(EventTasksChecklist(event: fridayOfSeries)));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(ShadCheckbox).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Error'), findsOneWidget, reason: 'a translated title, not the raw key');
+    expect(server.toggleCalls, isEmpty);
+    expect(find.text('0/2'), findsOneWidget, reason: 'nothing pretends to be ticked');
+
+    // The checkbox is usable again once the failed attempt is over.
+    server.refuseSplit = false;
+    await tester.tap(find.byType(ShadCheckbox).first);
+    await tester.pumpAndSettle();
+
+    expect(server.materializeCalls, hasLength(2));
+    expect(server.toggleCalls, ['jog-fri/c-t-warm=true']);
   });
 
   testWidgets('an ordinary event is ticked in place, with nothing split off', (tester) async {

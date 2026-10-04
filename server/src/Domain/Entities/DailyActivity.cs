@@ -20,11 +20,14 @@ namespace HabitTracker.Domain.Entities
         /// </summary>
         public DateTime Date { get; set; }
 
-        /// <summary>Events starting on this day, completed or not.</summary>
-        public int Scheduled { get; set; }
+        /// <summary>
+        /// One-off events starting on this day, completed or not. Days of repeating events are
+        /// not in here — the server has no recurrence engine, so the client counts them.
+        /// </summary>
+        public int OneOffScheduled { get; set; }
 
         /// <summary>Of those, the ones marked complete.</summary>
-        public int Completed { get; set; }
+        public int OneOffCompleted { get; set; }
 
         /// <summary>
         /// Total recorded focus time on this day, in whole minutes, from

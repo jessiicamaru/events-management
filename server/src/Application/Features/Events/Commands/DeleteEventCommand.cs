@@ -1,3 +1,4 @@
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 using System;
@@ -63,8 +64,7 @@ namespace HabitTracker.Application.Features.Events.Commands
                 var parent = await _eventRepository.GetByIdAsync(existingEvent.ParentEventId.Value);
                 var parentIsSeries = parent != null
                     && parent.UserId == request.UserId
-                    && !string.IsNullOrEmpty(parent.RecurrenceRule)
-                    && parent.ParentEventId == null;
+                    && OccurrenceMaterializer.IsSeries(parent);
 
                 if (parentIsSeries
                     && (request.DeleteScope == "AllOccurrences" || request.DeleteScope == "ThisAndFuture"))
@@ -86,17 +86,8 @@ namespace HabitTracker.Application.Features.Events.Commands
                 {
                     // Without this the series' own occurrence would reappear on that day:
                     // a day split off locally never added itself to the exception list.
-                    var dayUtc = (existingEvent.ExceptionDate ?? existingEvent.StartTime).ToUniversalTime();
-                    var dayStr = dayUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    if (string.IsNullOrEmpty(parent!.RecurrenceExceptionDates))
-                    {
-                        parent.RecurrenceExceptionDates = dayStr;
-                    }
-                    else if (!parent.RecurrenceExceptionDates.Contains(dayStr))
-                    {
-                        parent.RecurrenceExceptionDates += "," + dayStr;
-                    }
-                    await _eventRepository.UpdateAsync(parent);
+                    RecurrenceExceptions.Add(parent!, (existingEvent.ExceptionDate ?? existingEvent.StartTime).ToUniversalTime());
+                    await _eventRepository.UpdateAsync(parent!);
                 }
 
                 if (hasGoogle)
@@ -131,16 +122,7 @@ namespace HabitTracker.Application.Features.Events.Commands
             {
                 // 1. Add exception date to master event
                 var exceptionDateUtc = (request.OriginalOccurrenceDate ?? existingEvent.StartTime).ToUniversalTime();
-                var exceptionDateStr = exceptionDateUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-
-                if (string.IsNullOrEmpty(existingEvent.RecurrenceExceptionDates))
-                {
-                    existingEvent.RecurrenceExceptionDates = exceptionDateStr;
-                }
-                else if (!existingEvent.RecurrenceExceptionDates.Contains(exceptionDateStr))
-                {
-                    existingEvent.RecurrenceExceptionDates += "," + exceptionDateStr;
-                }
+                RecurrenceExceptions.Add(existingEvent, exceptionDateUtc);
                 await _eventRepository.UpdateAsync(existingEvent);
 
                 if (hasGoogle)

@@ -225,5 +225,283 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
             _events.Verify(r => r.DeleteAsync(series.Id), Times.Once);
             _events.Verify(r => r.DeleteAsync(day.Id), Times.Once);
         }
+
+        // ---- Round 2 of the review ------------------------------------------------------
+
+        private static readonly DateTime Monday = new(2026, 9, 7, 10, 0, 0, DateTimeKind.Utc);
+        private static readonly DateTime Wednesday = new(2026, 9, 9, 10, 0, 0, DateTimeKind.Utc);
+        private static readonly DateTime Thursday = new(2026, 9, 10, 10, 0, 0, DateTimeKind.Utc);
+
+        /// <summary>A day of <paramref name="series"/> with its own event.</summary>
+        /// <param name="edited">Edited on its own, so its date is in the series' exception list.</param>
+        private Event Day(Event series, DateTime slot, bool edited = false, string? googleEventId = null, string title = "Jogging")
+        {
+            var day = new Event
+            {
+                Id = Guid.NewGuid(),
+                Title = title,
+                StartTime = slot,
+                EndTime = slot.AddHours(1),
+                ParentEventId = series.Id,
+                ExceptionDate = slot,
+                UserId = UserId,
+                HabitId = string.Empty,
+                GoogleEventId = googleEventId,
+                ReminderMinutesBefore = new List<int> { 30 }
+            };
+            if (edited) RecurrenceExceptions.Add(series, slot);
+
+            _events.Setup(r => r.GetByIdAsync(day.Id)).ReturnsAsync(day);
+            _events.Setup(r => r.GetOccurrenceChildAsync(series.Id, slot)).ReturnsAsync(day);
+            return day;
+        }
+
+        private void ChildrenOf(Event series, params Event[] days) =>
+            _events.Setup(r => r.GetChildrenAsync(series.Id)).ReturnsAsync(days.ToList());
+
+        private static UpdateEventCommand Edit(
+            Guid id, DateTime slot, DateTime newStart, string scope,
+            TimeSpan? length = null, string title = "Jogging", List<int>? reminders = null) => new()
+        {
+            EventId = id,
+            Title = title,
+            StartTime = newStart,
+            EndTime = newStart + (length ?? TimeSpan.FromHours(1)),
+            HabitId = string.Empty,
+            UserId = UserId,
+            EditScope = scope,
+            OriginalOccurrenceDate = slot,
+            ReminderMinutesBefore = reminders
+        };
+
+        [Fact]
+        public async Task AllOccurrences_TouchedDaysFollowTheSeries_EditedDaysKeepTheirOwn()
+        {
+            // Review round 1, finding 1 (HIGH): a day split off by a ticked task stayed a
+            // frozen copy, so moving the series from 10:00 to 11:00 left it at 10:00 AND
+            // un-hid the series' 11:00 day — the day showed twice, with two reminders.
+            UserHasGoogle(false);
+            var series = Series();
+            var touchedFriday = Day(series, Friday);
+            var touchedMonday = Day(series, Monday);
+            var editedThursday = Day(series, Thursday, edited: true, title: "Moved by hand");
+            editedThursday.StartTime = Thursday.AddHours(5);
+            ChildrenOf(series, touchedFriday, touchedMonday, editedThursday);
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Wednesday, Wednesday.AddHours(1), "AllOccurrences",
+                    length: TimeSpan.FromMinutes(90), title: "Jogging (renamed)"),
+                CancellationToken.None);
+
+            series.StartTime.Should().Be(Wednesday.AddHours(1));
+
+            touchedFriday.StartTime.Should().Be(Friday.AddHours(1), "a touched day moves with its series");
+            touchedFriday.ExceptionDate.Should().Be(Friday.AddHours(1), "so it still stands in for the series' day");
+            touchedFriday.EndTime.Should().Be(Friday.AddHours(1).AddMinutes(90));
+            touchedFriday.Title.Should().Be("Jogging (renamed)");
+
+            editedThursday.StartTime.Should().Be(Thursday.AddHours(5), "an edited day keeps its own time");
+            editedThursday.Title.Should().Be("Moved by hand");
+
+            touchedMonday.StartTime.Should().Be(Monday,
+                "the series now starts on Wednesday, so Monday is history, not a duplicate");
+        }
+
+        [Fact]
+        public async Task ThisAndFuture_TouchedDaysAfterTheSplitMoveToTheNewSeries()
+        {
+            UserHasGoogle(false);
+            var series = Series();
+            var touchedFriday = Day(series, Friday);
+            var touchedMonday = Day(series, Monday);
+            ChildrenOf(series, touchedFriday, touchedMonday);
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Wednesday, Wednesday.AddHours(1), "ThisAndFuture"), CancellationToken.None);
+
+            var newSeries = _added.Single();
+            touchedFriday.ParentEventId.Should().Be(newSeries.Id,
+                "left on the old series, which now ends before it, it would show next to the new series' day");
+            touchedFriday.StartTime.Should().Be(Friday.AddHours(1));
+            touchedMonday.ParentEventId.Should().Be(series.Id, "before the split it stays with the old series");
+            touchedMonday.StartTime.Should().Be(Monday);
+        }
+
+        [Fact]
+        public async Task AllOccurrences_FromAGoogleKnownDay_PushesThatDayToo()
+        {
+            // Review round 1, finding 3 (MEDIUM): only the series was pushed, so Google kept the
+            // day at its old time while the series gained an instance on the same date.
+            UserHasGoogle(true);
+            var series = Series();
+            var day = Day(series, Friday, edited: true, googleEventId: "g-day");
+            ChildrenOf(series, day);
+
+            await UpdateHandler().Handle(
+                Edit(day.Id, Friday, Friday.AddHours(1), "AllOccurrences"), CancellationToken.None);
+
+            series.RecurrenceExceptionDates.Should().Contain("2026-09-11T11:00:00Z",
+                "the day's new slot must be dropped from the series in Google");
+            _queued.Should().Contain(q => q.EventId == day.Id && q.Action == "Update");
+            _queued.Should().Contain(q => q.EventId == series.Id && q.Action == "Update"
+                && q.Payload.Contains("2026-09-11T11:00:00Z"));
+        }
+
+        [Fact]
+        public async Task AllOccurrences_FromALocalOnlyDay_SendsNothingForTheDay()
+        {
+            UserHasGoogle(true);
+            var series = Series();
+            var day = Day(series, Friday);
+            ChildrenOf(series, day);
+
+            await UpdateHandler().Handle(
+                Edit(day.Id, Friday, Friday.AddHours(1), "AllOccurrences"), CancellationToken.None);
+
+            _queued.Should().NotContain(q => q.EventId == day.Id, "Google has never heard of this day");
+            RecurrenceExceptions.Contains(series, Friday.AddHours(1)).Should().BeFalse("it is still only touched");
+        }
+
+        [Fact]
+        public async Task EditThisOccurrence_GoogleConnected_DropsTheDayFromTheSeriesThenInsertsIt()
+        {
+            UserHasGoogle(true);
+            var series = Series();
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Friday, Friday.AddHours(2), "ThisOccurrence"), CancellationToken.None);
+
+            var created = _added.Single();
+            _queued.Select(q => (q.EventId, q.Action)).Should().Equal(
+                (series.Id, "Update"),
+                (created.Id, "Insert"));
+            _queued[0].Payload.Should().Contain("2026-09-11T10:00:00Z");
+        }
+
+        [Fact]
+        public async Task EditThisOccurrence_OfADayGoogleHas_UpdatesItInsteadOfInsertingASecond()
+        {
+            UserHasGoogle(true);
+            var series = Series();
+            var day = Day(series, Friday, edited: true, googleEventId: "g-day");
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Friday, Friday.AddHours(2), "ThisOccurrence"), CancellationToken.None);
+
+            _queued.Should().Contain(q => q.EventId == day.Id && q.Action == "Update");
+            _queued.Should().NotContain(q => q.EventId == day.Id && q.Action == "Insert");
+        }
+
+        [Fact]
+        public async Task EditThisOccurrence_WhileTheDaysInsertIsQueued_UpdatesIt()
+        {
+            UserHasGoogle(true);
+            var series = Series();
+            var day = Day(series, Friday, edited: true);
+            _outbox.Setup(o => o.HasPendingInsertAsync(day.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Friday, Friday.AddHours(2), "ThisOccurrence"), CancellationToken.None);
+
+            _queued.Should().Contain(q => q.EventId == day.Id && q.Action == "Update");
+            _queued.Should().NotContain(q => q.EventId == day.Id && q.Action == "Insert");
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task EditThisOccurrence_GivesTheDayItsOwnReminders(bool reminderSent)
+        {
+            UserHasGoogle(false);
+            var series = Series();
+            series.ReminderMinutesBefore = new List<int> { 30 };
+
+            await UpdateHandler().Handle(
+                Edit(series.Id, Friday, Friday, "ThisOccurrence", reminders: reminderSent ? new List<int> { 5 } : null),
+                CancellationToken.None);
+
+            _added.Single().ReminderMinutesBefore.Should().Equal(reminderSent ? new[] { 5 } : new[] { 30 });
+            series.ReminderMinutesBefore.Should().Equal(30);
+        }
+
+        [Fact]
+        public async Task DeletingADayGoogleHas_SendsOneDelete_AndNoSeriesUpdate()
+        {
+            UserHasGoogle(true);
+            var series = Series();
+            var day = Day(series, Friday, edited: true, googleEventId: "g-day");
+
+            await DeleteHandler().Handle(new DeleteEventCommand(day.Id, UserId), CancellationToken.None);
+
+            _queued.Should().ContainSingle()
+                .Which.Should().Be((day.Id, "Delete", string.Empty));
+        }
+    }
+
+    public class MaterializeOccurrenceCommandHandlerTests
+    {
+        private const string UserId = "user-1";
+        private static readonly DateTime Friday = new(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc);
+
+        private readonly Mock<IEventRepository> _events = new();
+        private readonly Mock<IEventTaskRepository> _tasks = new();
+
+        private MaterializeOccurrenceCommandHandler Handler() => new(
+            _events.Object,
+            new OccurrenceMaterializer(_events.Object, _tasks.Object, new PassThroughUnitOfWork()));
+
+        private Event SeriesOwnedBy(string owner)
+        {
+            var series = new Event
+            {
+                Id = Guid.NewGuid(),
+                StartTime = Friday.AddDays(-30),
+                EndTime = Friday.AddDays(-30).AddHours(1),
+                RecurrenceRule = "RRULE:FREQ=DAILY",
+                UserId = owner,
+                HabitId = string.Empty
+            };
+            _events.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+            _tasks.Setup(r => r.GetByEventIdAsync(series.Id)).ReturnsAsync(new List<EventTask>());
+            return series;
+        }
+
+        [Fact]
+        public async Task SplitsADayOffTheCallersOwnSeries()
+        {
+            var series = SeriesOwnedBy(UserId);
+
+            var id = await Handler().Handle(new MaterializeOccurrenceCommand(series.Id, Friday, UserId), CancellationToken.None);
+
+            id.Should().NotBeNull();
+            _events.Verify(r => r.AddAsync(It.Is<Event>(e => e.ParentEventId == series.Id && e.UserId == UserId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task RefusesAnotherUsersSeries_WithoutWritingAnything()
+        {
+            var series = SeriesOwnedBy("someone-else");
+
+            var id = await Handler().Handle(new MaterializeOccurrenceCommand(series.Id, Friday, UserId), CancellationToken.None);
+
+            id.Should().BeNull();
+            _events.Verify(r => r.AddAsync(It.IsAny<Event>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task ReturnsNothing_ForAMissingSeries()
+        {
+            var id = await Handler().Handle(new MaterializeOccurrenceCommand(Guid.NewGuid(), Friday, UserId), CancellationToken.None);
+
+            id.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Throws_WithoutAUser()
+        {
+            var act = () => Handler().Handle(new MaterializeOccurrenceCommand(Guid.NewGuid(), Friday, ""), CancellationToken.None);
+
+            await act.Should().ThrowAsync<ArgumentException>();
+        }
     }
 }
