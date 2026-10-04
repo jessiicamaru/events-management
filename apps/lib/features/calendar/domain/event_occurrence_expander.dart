@@ -73,6 +73,12 @@ abstract final class EventOccurrenceExpander {
             event.copyWith(
               startTime: date.toUtc(),
               endTime: date.add(duration).toUtc(),
+              // A day of a series starts undone. Completion and focus time belong to a
+              // single day, and live on that day's own event once it is split off. A
+              // series completed before that rule existed would otherwise show every
+              // day as done — hiding it from "up next" and silencing its reminders.
+              isCompleted: false,
+              actualDuration: null,
             ),
           );
         }

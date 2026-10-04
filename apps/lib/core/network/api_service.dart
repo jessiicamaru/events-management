@@ -132,15 +132,35 @@ class ApiService {
     );
   }
 
-  Future<void> completeSession(String id, String actualDuration, bool updateCalendar) async {
+  /// [occurrenceStart] is required when [id] is a repeating series: it says which day
+  /// the session was for, and the server completes that day only.
+  Future<void> completeSession(
+    String id,
+    String actualDuration,
+    bool updateCalendar, {
+    DateTime? occurrenceStart,
+  }) async {
     await _dio.put(
       '/events/$id/complete-session',
       data: {
         'actualDuration': actualDuration,
         'updateCalendar': updateCalendar,
+        'occurrenceStart': ?occurrenceStart?.toUtc().toIso8601String(),
       },
       options: Options(contentType: 'application/json'),
     );
+  }
+
+  /// Gives one day of a repeating series its own event, with a fresh copy of the
+  /// series' tasks, and returns that event's id. Asking again for the same day returns
+  /// the same id.
+  Future<String> materializeOccurrence(String seriesId, DateTime occurrenceStart) async {
+    final response = await _dio.post(
+      '/events/$seriesId/occurrences',
+      data: {'occurrenceStart': occurrenceStart.toUtc().toIso8601String()},
+      options: Options(contentType: 'application/json'),
+    );
+    return response.data as String;
   }
   Future<List<MySquadSummaryModel>> fetchMySquads() async {
     final response = await _dio.get('/squads/list');

@@ -35,6 +35,13 @@ namespace HabitTracker.Domain.Interfaces
         /// </remarks>
         Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc);
 
+        /// <summary>
+        /// The child event that stands in for one occurrence of a repeating series, if that
+        /// day has been split off — matched to the minute on <see cref="Event.ExceptionDate"/>,
+        /// the same precision the client uses to substitute it for the series' occurrence.
+        /// </summary>
+        Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc);
+
         Task<Event?> GetByIdAsync(Guid id);
         Task AddAsync(Event ev);
         Task UpdateAsync(Event ev);

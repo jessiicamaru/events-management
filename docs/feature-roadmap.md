@@ -252,6 +252,20 @@ so nothing maintains them. Before starting §2, decide whether to recover that m
 (the schema is reconstructable from the dump) or design the rollup fresh. See
 `local-dev/README.md`.
 
+### 🟢 5.6c Repeating events shared one state across every day
+
+Fixed on `feat/home-page`. Tasks and completion were stored against the series id, which
+every day shares: ticking a task on Monday ticked it on every day, and finishing one
+session completed the whole series — hiding it from "up next" and stopping its
+reminders. A day is now split off into its own event (with a copy of the series' tasks)
+the first time it is changed. See `OccurrenceMaterializer` and the sync note in CLAUDE.md.
+
+Still open: a split-off day keeps its own time, so if the whole series is later moved to
+a different time of day, days split off *ahead of time* (future days with ticked tasks)
+stay at the old time. Past days staying put is correct; future ones are the edge case.
+Also, the dashboard still counts an untouched series once, on its start date — only days
+that have been split off are counted on their own day.
+
 ### ⚪ 5.6b The heatmap groups in memory
 
 `GetHeatmapQuery` loads every completed event the user has and runs `GroupBy` in C#,

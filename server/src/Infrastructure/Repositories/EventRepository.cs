@@ -25,6 +25,22 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc)
+        {
+            var utc = occurrenceStartUtc.Kind == DateTimeKind.Utc
+                ? occurrenceStartUtc
+                : DateTime.SpecifyKind(occurrenceStartUtc, DateTimeKind.Utc);
+            var minuteStart = new DateTime(utc.Year, utc.Month, utc.Day, utc.Hour, utc.Minute, 0, DateTimeKind.Utc);
+            var minuteEnd = minuteStart.AddMinutes(1);
+
+            return await _context.Events
+                .Where(e => e.ParentEventId == seriesId
+                    && e.ExceptionDate >= minuteStart
+                    && e.ExceptionDate < minuteEnd)
+                .OrderBy(e => e.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc)
         {
             // Written as SQL rather than as a LINQ GroupBy on purpose. EF silently falls

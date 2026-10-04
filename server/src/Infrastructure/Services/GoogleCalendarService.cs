@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Application.Common;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -219,6 +220,15 @@ namespace HabitTracker.Infrastructure.Services
                         {
                             await _eventRepository.DeleteAsync(existingExceptionLocal.Id);
                         }
+
+                        // The day may also exist locally only, split off by a ticked task or a
+                        // finished session. Google cancelled it, so it goes too — otherwise a
+                        // cancelled meeting would stay on the calendar.
+                        var localOnlyDay = OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster.Id, originalDate);
+                        if (localOnlyDay != null)
+                        {
+                            await _eventRepository.DeleteAsync(localOnlyDay.Id);
+                        }
                     }
                     else
                     {
@@ -235,6 +245,19 @@ namespace HabitTracker.Infrastructure.Services
                             existingExceptionLocal.TargetDuration = targetDuration;
                             existingExceptionLocal.ExceptionDate = originalDate;
                             await _eventRepository.UpdateAsync(existingExceptionLocal);
+                        }
+                        else if (OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster.Id, originalDate) is { } localOnlyDay)
+                        {
+                            // Google changed a day the user had already split off locally.
+                            // Adopt it instead of adding a second event for the same day, so its
+                            // tasks and completion are kept.
+                            localOnlyDay.GoogleEventId = ge.Id;
+                            localOnlyDay.Title = ge.Summary ?? "(No Title)";
+                            localOnlyDay.StartTime = startTime;
+                            localOnlyDay.EndTime = endTime;
+                            localOnlyDay.TargetDuration = targetDuration;
+                            localOnlyDay.ExceptionDate = originalDate;
+                            await _eventRepository.UpdateAsync(localOnlyDay);
                         }
                         else
                         {

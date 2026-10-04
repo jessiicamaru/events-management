@@ -67,7 +67,7 @@ class EventDetailsDialog extends ConsumerWidget {
                 const SizedBox(height: 12),
                 _buildDetailRow(context, LucideIcons.checkCircle, translations.translate('status'), event.isCompleted ? translations.translate('completed') : translations.translate('pending')),
                 const SizedBox(height: 16),
-                EventTasksChecklist(eventId: event.id),
+                EventTasksChecklist(event: event),
                 const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,

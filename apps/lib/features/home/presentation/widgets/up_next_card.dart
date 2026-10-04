@@ -98,7 +98,7 @@ class UpNextCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          EventTasksChecklist(eventId: event.id),
+          EventTasksChecklist(event: event),
           const SizedBox(height: 16),
           ShadButton(
             onPressed: () => _startSession(context),

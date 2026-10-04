@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/features/calendar/domain/event_occurrence.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/providers/heatmap_provider.dart';
@@ -125,6 +126,35 @@ class EventsNotifier extends _$EventsNotifier {
       ref.invalidateSelf();
     } catch (e) {
       // Bỏ qua lỗi đồng bộ nền để không crash giao diện chính
+    }
+  }
+
+  /// Requests in flight, keyed by series and day, so two quick taps on the same day
+  /// share one request instead of racing to create the day twice.
+  final Map<String, Future<String>> _splittingOff = {};
+
+  /// The id of the event that holds [day]'s own tasks and completion.
+  ///
+  /// For an ordinary event, or a day already split off, that is just its id. For a day
+  /// of a repeating series — which carries the *series'* id — the server first gives the
+  /// day its own event, with a fresh copy of the series' tasks, and this returns that
+  /// event's id. Then the events are reloaded, so every screen shows the new day in
+  /// place of the series' day.
+  Future<String> materializeOccurrence(EventModel day) {
+    if (!day.isSeriesOccurrence) return Future.value(day.id);
+
+    final key = '${day.id}@${day.startTime.toUtc().toIso8601String()}';
+    return _splittingOff[key] ??= _splitOff(day, key);
+  }
+
+  Future<String> _splitOff(EventModel day, String key) async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      final dayId = await apiService.materializeOccurrence(day.id, day.startTime);
+      ref.invalidateSelf();
+      return dayId;
+    } finally {
+      _splittingOff.remove(key);
     }
   }
 
