@@ -157,8 +157,9 @@ Rather than add a fourth copy, it is now
 `features/calendar/domain/event_occurrence_expander.dart`, with tests. Both copies in
 `HomeWidgetService` were migrated (283 → 161 lines) and its 5 existing tests still pass.
 
-**`command_center_panel.dart` was not migrated** — it is entangled with widget state, and
-doing it here would have widened an already large change. Roadmap item 5.3.
+`command_center_panel.dart` was not migrated here — it was entangled with widget state.
+It was removed on `feat/home-page`, when the panel became the Home screen, whose
+`HomeAgenda` uses the expander. All copies are now gone (roadmap item 5.3).
 
 ### Measured limitation: a malformed RRULE hides the event
 

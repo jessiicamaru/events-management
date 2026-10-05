@@ -5,6 +5,7 @@ using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using HabitTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace HabitTracker.Infrastructure.Repositories
 {
@@ -46,6 +47,28 @@ namespace HabitTracker.Infrastructure.Repositories
             return await _context.Events
                 .Where(e => e.ParentEventId == seriesId)
                 .ToListAsync();
+        }
+
+        public async Task<bool> TryAddOccurrenceDayAsync(Event day)
+        {
+            await _context.Events.AddAsync(day);
+            try
+            {
+                // Inside a transaction EF saves behind a savepoint and rolls back to it on
+                // failure, so the caller's transaction is still usable after this returns false.
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation,
+                ConstraintName: ApplicationDbContext.OneEventPerSeriesDayIndex
+            })
+            {
+                // Still tracked as Added: the next SaveChanges would try to insert it again.
+                _context.Entry(day).State = EntityState.Detached;
+                return false;
+            }
         }
 
         public async Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc)

@@ -41,7 +41,7 @@ namespace HabitTracker.Infrastructure.Repositories
         public async Task<IEnumerable<GoogleCalendarOutbox>> GetUnprocessedAsync(int limit = 50, CancellationToken cancellationToken = default)
         {
             return await _context.GoogleCalendarOutboxes
-                .Where(x => x.ProcessedAt == null && x.RetryCount < 5)
+                .Where(x => x.ProcessedAt == null && x.RetryCount < GoogleCalendarOutbox.MaxRetries)
                 .OrderBy(x => x.CreatedAt)
                 .Take(limit)
                 .ToListAsync(cancellationToken);
@@ -49,8 +49,14 @@ namespace HabitTracker.Infrastructure.Repositories
 
         public async Task<bool> HasPendingInsertAsync(Guid eventId, CancellationToken cancellationToken = default)
         {
+            // An Insert the worker gave up on is not pending: it will never run. Counted as
+            // pending, it made the event look known to Google for good, so every later edit
+            // queued an Update that could only fail, and the day was never sent again.
             return await _context.GoogleCalendarOutboxes
-                .AnyAsync(x => x.EventId == eventId && x.Action == "Insert" && x.ProcessedAt == null, cancellationToken);
+                .AnyAsync(x => x.EventId == eventId
+                    && x.Action == "Insert"
+                    && x.ProcessedAt == null
+                    && x.RetryCount < GoogleCalendarOutbox.MaxRetries, cancellationToken);
         }
 
         public async Task UpdateAsync(GoogleCalendarOutbox entry, CancellationToken cancellationToken = default)

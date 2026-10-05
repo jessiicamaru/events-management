@@ -7,9 +7,10 @@ import 'package:syncfusion_flutter_calendar/calendar.dart';
 /// needs to know "what is actually happening between these two dates" has to expand
 /// that rule and then subtract the occurrences the user has skipped or edited.
 ///
-/// That expansion was copy-pasted in four places — twice in `HomeWidgetService`, once
-/// in the calendar's command centre panel, and once more in what is now `HomeAgenda`.
-/// This is the one definition.
+/// That expansion was copy-pasted in three places — twice in `HomeWidgetService` and
+/// once in the calendar's command centre panel, which has since become the Home screen
+/// (`HomeAgenda`). This is the one definition: Home, the widgets, reminders and the
+/// activity card all go through it.
 abstract final class EventOccurrenceExpander {
   /// Expands recurring events in [events] into their occurrences between
   /// [rangeStart] and [rangeEnd], and returns them alongside the non-recurring

@@ -258,6 +258,14 @@ namespace HabitTracker.Infrastructure.Services
                             localOnlyDay.ExceptionDate = originalDate;
                             await _eventRepository.UpdateAsync(localOnlyDay);
                         }
+                        else if (OccurrenceMaterializer.FindDay(localEvents, localMaster, originalDate) != null)
+                        {
+                            // The day already has an event here that Google has no id for: an
+                            // edited day whose Insert is still queued. Adding Google's version
+                            // beside it would put two events on that day — the database allows
+                            // one. Leave it: the queued Insert sends the user's edit, which is
+                            // the newer one, and links the two.
+                        }
                         else
                         {
                             var newException = new Event

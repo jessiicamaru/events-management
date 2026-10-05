@@ -26,9 +26,9 @@ namespace HabitTracker.Application.Tests.Common
 
         public OccurrenceMaterializerTests()
         {
-            _events.Setup(r => r.AddAsync(It.IsAny<Event>()))
+            _events.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>()))
                 .Callback<Event>(_addedEvents.Add)
-                .Returns(Task.CompletedTask);
+                .ReturnsAsync(true);
             _tasks.Setup(r => r.AddAsync(It.IsAny<EventTask>()))
                 .Callback<EventTask>(_addedTasks.Add)
                 .Returns(Task.CompletedTask);
@@ -110,6 +110,29 @@ namespace HabitTracker.Application.Tests.Common
         }
 
         [Fact]
+        public async Task LosingARaceForTheDay_ReturnsTheWinnersChild_AndCopiesNoTasks()
+        {
+            // Two requests for the same day both pass the lookup; the database takes one
+            // insert and refuses the other. The loser must hand back the winner's child, with
+            // the winner's task copies, rather than fail or add a second set of tasks.
+            var series = Series();
+            var winner = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday };
+            _events.SetupSequence(r => r.GetOccurrenceChildAsync(series.Id, Friday))
+                .ReturnsAsync((Event?)null)
+                .ReturnsAsync(winner);
+            _events.Setup(r => r.TryAddOccurrenceDayAsync(It.IsAny<Event>())).ReturnsAsync(false);
+            _tasks.Setup(r => r.GetByEventIdAsync(series.Id)).ReturnsAsync(new List<EventTask>
+            {
+                new() { Id = Guid.NewGuid(), EventId = series.Id, Title = "Warm up" }
+            });
+
+            var day = await _materializer.FindOrCreateAsync(series, Friday);
+
+            day.Should().BeSameAs(winner);
+            _addedTasks.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task RefusesADayBeforeTheSeriesStarts()
         {
             (await _materializer.FindOrCreateAsync(Series(), SeriesStart.AddDays(-1))).Should().BeNull();
@@ -184,6 +207,28 @@ namespace HabitTracker.Application.Tests.Common
 
             OccurrenceMaterializer.FindLocalOnlyDay(new[] { editedAwaitingInsert }, series, Friday)
                 .Should().BeNull();
+        }
+
+        [Fact]
+        public void FindDay_FindsEditedAndLocalOnlyDaysAlike_ToTheMinute()
+        {
+            // The sync uses it to avoid adding Google's version of a day next to an edited day
+            // whose Insert is still queued — the one case FindLocalOnlyDay deliberately skips.
+            var series = Series(exceptionDates: "2026-09-11T10:00:00Z");
+            var editedAwaitingInsert = new Event { Id = Guid.NewGuid(), ParentEventId = series.Id, ExceptionDate = Friday.AddSeconds(59) };
+            var otherSeries = new Event { Id = Guid.NewGuid(), ParentEventId = Guid.NewGuid(), ExceptionDate = Friday };
+            var events = new[] { otherSeries, editedAwaitingInsert };
+
+            OccurrenceMaterializer.FindDay(events, series, Friday).Should().BeSameAs(editedAwaitingInsert);
+            OccurrenceMaterializer.FindDay(events, series, Friday.AddMinutes(1)).Should().BeNull();
+            OccurrenceMaterializer.FindLocalOnlyDay(events, series, Friday).Should().BeNull();
+        }
+
+        [Fact]
+        public void StandsFor_NeedsAnExceptionDate()
+        {
+            OccurrenceMaterializer.StandsFor(new Event { StartTime = Friday }, Friday).Should().BeFalse();
+            OccurrenceMaterializer.StandsFor(new Event { ExceptionDate = Friday }, Friday).Should().BeTrue();
         }
 
         [Fact]

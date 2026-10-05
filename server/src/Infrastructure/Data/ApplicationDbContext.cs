@@ -6,6 +6,14 @@ namespace HabitTracker.Infrastructure.Data
 {
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
+        /// <summary>
+        /// Unique index allowing one event per series and minute of <see cref="Event.ExceptionDate"/>
+        /// — one split-off day per day of a series. An expression index, so EF's model does not
+        /// know it: it is created in the <c>AddOneEventPerSeriesDayIndex</c> migration, and
+        /// <c>EventRepository.TryAddOccurrenceDayAsync</c> recognises its violation by this name.
+        /// </summary>
+        public const string OneEventPerSeriesDayIndex = "UX_Events_ParentEventId_ExceptionMinute";
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<Habit> Habits { get; set; } = null!;

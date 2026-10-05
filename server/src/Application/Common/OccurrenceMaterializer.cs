@@ -70,8 +70,8 @@ namespace HabitTracker.Application.Common
         /// days: before the series starts, after its UNTIL, or a day the user deleted.
         /// </returns>
         /// <remarks>
-        /// Safe to call repeatedly for the same day: the second call finds the first call's
-        /// child. The date is not checked against the full repeat rule — that needs a
+        /// Safe to call repeatedly for the same day, and concurrently: the second call finds
+        /// the first call's child. The date is not checked against the full repeat rule — that needs a
         /// recurrence engine the server does not have — so a caller could split off a date the
         /// rule would never produce. Such a child is harmless: it shows as a one-off event.
         /// </remarks>
@@ -106,7 +106,15 @@ namespace HabitTracker.Application.Common
                     ExceptionDate = startUtc,
                     IsCompleted = false
                 };
-                await _eventRepository.AddAsync(child);
+
+                // The lookup above and this add are two steps: a second request for the same
+                // day (another device, or a ticked task racing a finished session) can add
+                // its child in between. The database allows one, so the loser takes the
+                // winner's child — with the winner's copy of the tasks — instead of a duplicate.
+                if (!await _eventRepository.TryAddOccurrenceDayAsync(child))
+                {
+                    return await _eventRepository.GetOccurrenceChildAsync(series.Id, startUtc);
+                }
 
                 // The series' tasks are the template for each day. The copy starts unticked
                 // whatever the template says: it is a new day.
@@ -161,17 +169,28 @@ namespace HabitTracker.Application.Common
         /// a cancellation that Google sends back for an edit would delete the edited day.
         /// </para>
         /// </remarks>
-        public static Event? FindLocalOnlyDay(IEnumerable<Event> events, Event series, DateTime occurrenceUtc)
-        {
-            var minute = RecurrenceExceptions.TruncateToMinute(RecurrenceExceptions.ToUtc(occurrenceUtc));
-
-            return events.FirstOrDefault(e =>
+        public static Event? FindLocalOnlyDay(IEnumerable<Event> events, Event series, DateTime occurrenceUtc) =>
+            events.FirstOrDefault(e =>
                 e.ParentEventId == series.Id
                 && string.IsNullOrEmpty(e.GoogleEventId)
-                && e.ExceptionDate != null
-                && RecurrenceExceptions.TruncateToMinute(RecurrenceExceptions.ToUtc(e.ExceptionDate.Value)) == minute
+                && StandsFor(e, occurrenceUtc)
                 && IsLocalOnlyDay(e, series));
-        }
+
+        /// <summary>
+        /// The event standing for <paramref name="occurrenceUtc"/> of <paramref name="series"/>,
+        /// local-only or edited, if there is one. There is at most one: the database allows one
+        /// event per day of a series.
+        /// </summary>
+        public static Event? FindDay(IEnumerable<Event> events, Event series, DateTime occurrenceUtc) =>
+            events.FirstOrDefault(e => e.ParentEventId == series.Id && StandsFor(e, occurrenceUtc));
+
+        /// <summary>
+        /// Whether <paramref name="day"/> stands for the occurrence at <paramref name="occurrenceUtc"/>,
+        /// to the minute — the precision the database's one-event-per-day rule and the client use.
+        /// </summary>
+        public static bool StandsFor(Event day, DateTime occurrenceUtc) =>
+            day.ExceptionDate != null
+            && TruncateToMinute(ToUtc(day.ExceptionDate.Value)) == TruncateToMinute(ToUtc(occurrenceUtc));
 
         private static bool CouldBeOccurrence(Event series, DateTime startUtc)
         {
