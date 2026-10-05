@@ -199,7 +199,7 @@ interfaces.
 
 ### 🟢 5.3 De-duplicate recurrence expansion
 
-Done. All four copies now go through `EventOccurrenceExpander`: the two in
+Done. All three copies now go through `EventOccurrenceExpander`: the two in
 `home_widget_service.dart`, the reminder scheduler, and the one that lived in
 `command_center_panel.dart` — removed on `feat/home-page` when that panel became the home
 screen's `HomeAgenda`.
@@ -272,10 +272,13 @@ dashboard counts every day of a series (2.0). Since `fix/split-off-day-safety` t
 allows one event per day of a series, so two devices touching the same day at once no
 longer create two copies of it.
 
-Still open, all LOW, in `docs/review-code-reports/review-home-page.md`: after a task is
-ticked, the details dialog still acts on the series (8); the edit sheet ticks the series'
-task template (9); "update calendar" on a series day never reaches Google (14); changing
-the repeat rule leaves touched days on days the new rule skips (N1).
+Still open, in `docs/review-code-reports/review-home-page.md`: MEDIUM 5 is half-open —
+the repository SQL and the inbound Google sync path still have no integration test, and
+this area keeps gaining code that only a live run covers. LOW: after a task is ticked, the
+details dialog still acts on the series (8); the edit sheet ticks the series' task template
+(9); XP can be farmed through arbitrary occurrence dates (12); refusing to complete a
+series returns 404 rather than 422 (13); "update calendar" on a series day never reaches
+Google (14); changing the repeat rule leaves touched days on days the new rule skips (N1).
 
 ### ⚪ 5.6b The heatmap groups in memory
 

@@ -387,11 +387,10 @@ namespace HabitTracker.Application.Features.Events.Commands
                 var newSlot = slot + shift;
                 if (newSlot < seriesStartUtc) continue;
 
-                // One event per day of a series (the database enforces it). A day already on
-                // the new slot — an edited one — keeps it, and this one stays as history.
-                if (days.Any(other => other.Id != day.Id
-                    && other.ParentEventId == to.Id
-                    && OccurrenceMaterializer.StandsFor(other, newSlot))) continue;
+                // One event per day of a series (the database enforces it). A day already on the
+                // new slot — an edited one, or one this loop has moved there — keeps it, and
+                // this one stays where it was, as history.
+                if (OccurrenceMaterializer.FindDay(days.Where(other => other.Id != day.Id), to, newSlot) != null) continue;
 
                 day.ParentEventId = to.Id;
                 day.StartTime = newSlot;

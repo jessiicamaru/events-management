@@ -29,24 +29,37 @@ namespace Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // Duplicates already exist: "edit this occurrence" on main added a new child on
-            // every edit of the same day. Keep one per day, preferring the one carrying state
-            // — known to Google, completed, with focus time — and otherwise the newest, which
-            // is the user's last edit. Their task copies go with them (ON DELETE CASCADE).
+            // every edit of the same day. Keep one per day: the one carrying the most state —
+            // known to Google, completed, with focus time, with ticked tasks — and otherwise
+            // the oldest, which is the one `GetOccurrenceChildAsync` has been reading and
+            // writing all along (it orders by CreatedAt). The losers' task copies go with them
+            // (ON DELETE CASCADE), and so do their outbox rows: `GoogleCalendarOutboxes` has no
+            // foreign key to `Events`, so a pending Insert left behind would push an event to
+            // Google that no longer exists here.
             // Not reversible: Down drops the index but cannot bring these rows back.
             migrationBuilder.Sql("""
-                DELETE FROM "Events" e
-                USING (
+                WITH ranked AS (
                     SELECT "Id", row_number() OVER (
                         PARTITION BY "ParentEventId", date_trunc('minute', "ExceptionDate" AT TIME ZONE 'UTC')
                         ORDER BY ("GoogleEventId" IS NOT NULL) DESC,
                                  "IsCompleted" DESC,
                                  ("ActualDuration" IS NOT NULL) DESC,
-                                 "CreatedAt" DESC,
+                                 (SELECT count(*) FROM "EventTasks" t
+                                  WHERE t."EventId" = "Events"."Id" AND t."IsCompleted") DESC,
+                                 "CreatedAt",
                                  "Id") AS rank
                     FROM "Events"
                     WHERE "ParentEventId" IS NOT NULL AND "ExceptionDate" IS NOT NULL
-                ) ranked
-                WHERE e."Id" = ranked."Id" AND ranked.rank > 1;
+                ),
+                losers AS (
+                    SELECT "Id" FROM ranked WHERE rank > 1
+                ),
+                outbox AS (
+                    DELETE FROM "GoogleCalendarOutboxes"
+                    WHERE "EventId" IN (SELECT "Id" FROM losers)
+                    RETURNING 1
+                )
+                DELETE FROM "Events" WHERE "Id" IN (SELECT "Id" FROM losers);
                 """);
 
             migrationBuilder.Sql("""
