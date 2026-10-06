@@ -8,6 +8,7 @@ import 'package:habit_tracker/features/habits/domain/streak_at_risk.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/home/domain/home_agenda.dart';
 import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
+import 'package:habit_tracker/features/home/presentation/providers/home_clock_provider.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/activity_summary_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/habits_without_slot_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/home_header.dart';
@@ -39,7 +40,9 @@ class HomeScreen extends ConsumerWidget {
 
     // Read once per build, and pass it down: two widgets deciding "now" separately
     // could disagree across a minute boundary and render an inconsistent screen.
-    final now = DateTime.now();
+    // It comes from a provider rather than DateTime.now() so that the streak cutoff
+    // rebuilds this screen — see homeClockProvider.
+    final now = ref.watch(homeClockProvider);
 
     final agenda = HomeAgenda.build(
       events: eventsAsync.value ?? const [],
@@ -84,7 +87,9 @@ class HomeScreen extends ConsumerWidget {
                 StreakAtRiskCard(
                   atRisk: atRisk,
                   // The calendar is where the occurrence can be opened, started or
-                  // ticked; Home only points at it.
+                  // ticked; Home only points at it. Every at-risk row is today's and
+                  // CalendarScreen opens on today, so the habit itself adds nothing to
+                  // the destination yet.
                   onTapHabit: (_) => context.go('/calendar'),
                 ),
                 const SizedBox(height: 12),

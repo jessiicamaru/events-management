@@ -59,6 +59,7 @@ abstract final class StreakNudgePlanner {
         // Unused for this kind; the body is built from the habit's name.
         minutesBefore: 0,
         kind: ReminderKind.streakAtRisk,
+        alsoAtRisk: atRisk.length - 1,
       ),
     ];
   }

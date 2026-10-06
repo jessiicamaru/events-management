@@ -3,7 +3,6 @@ import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/notifications/notification_service.dart';
 import 'package:habit_tracker/core/notifications/reminder_planner.dart';
 import 'package:habit_tracker/core/notifications/streak_nudge_planner.dart';
-import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
@@ -16,9 +15,15 @@ final notificationServiceProvider = Provider<NotificationService>(
 /// Builds the notification body for one reminder, in the user's language.
 String buildReminderBody(AppTranslations translations, ScheduledReminder reminder) {
   if (reminder.kind == ReminderKind.streakAtRisk) {
+    // The title names the habit with most to lose; the body says how many others are in
+    // the same position, so one notification does not read as a single-habit alert.
+    final others = reminder.alsoAtRisk;
+
+    if (others <= 0) return translations.translate('streak_nudge_body');
+
     return translations.translate(
-      'streak_nudge_body',
-      params: {'hour': '${AppConstants.streakAtRiskHour}'},
+      'streak_nudge_body_multi',
+      params: {'n': '$others'},
     );
   }
 
@@ -61,7 +66,10 @@ final reminderSyncProvider = Provider<void>((ref) {
   final service = ref.read(notificationServiceProvider);
   final translations = ref.watch(translationsProvider);
   final habitsAsync = ref.watch(habitsProvider);
-  final nudgesOn = ref.watch(appSettingsProvider).streakNudges;
+  // Narrowed to the one field: a theme change must not re-register every alarm.
+  final nudgesOn = ref.watch(
+    appSettingsProvider.select((settings) => settings.streakNudges),
+  );
   final now = DateTime.now();
 
   final reminders = [

@@ -38,6 +38,19 @@ class AppSettings {
       streakNudges: streakNudges ?? this.streakNudges,
     );
   }
+
+  // Value equality so that watchers only rebuild on a change they care about. Without it
+  // every copyWith looks new to Riverpod, and changing the accent colour would make
+  // reminderSyncProvider cancel and re-register every pending notification.
+  @override
+  bool operator ==(Object other) =>
+      other is AppSettings &&
+      other.themeMode == themeMode &&
+      other.primaryColor == primaryColor &&
+      other.streakNudges == streakNudges;
+
+  @override
+  int get hashCode => Object.hash(themeMode, primaryColor, streakNudges);
 }
 
 @riverpod

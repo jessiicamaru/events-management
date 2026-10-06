@@ -588,6 +588,10 @@ class AppTranslations {
       AppLocale.en: 'Still open today — finish it to keep your streak',
       AppLocale.vi: 'Hôm nay vẫn chưa xong — hoàn thành để giữ chuỗi',
     },
+    'streak_nudge_body_multi': {
+      AppLocale.en: 'Still open today, with {n} more — finish them to keep your streaks',
+      AppLocale.vi: 'Hôm nay vẫn chưa xong, cùng {n} thói quen khác — hoàn thành để giữ chuỗi',
+    },
     'reminder_starting_now': {
       AppLocale.en: 'Starting now',
       AppLocale.vi: 'Bắt đầu ngay',

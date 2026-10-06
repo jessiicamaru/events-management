@@ -35,6 +35,15 @@ class ScheduledReminder {
   /// the overwhelming majority and every existing call site means one.
   final ReminderKind kind;
 
+  /// How many *other* habits are at risk alongside [title]'s, for
+  /// [ReminderKind.streakAtRisk]. Always `0` for an event reminder, which is about one
+  /// event by definition.
+  ///
+  /// The nudge is deliberately one notification for the whole evening, so without this the
+  /// body could only ever describe the habit in the title and would read as a single-habit
+  /// alert when three were at stake.
+  final int alsoAtRisk;
+
   const ScheduledReminder({
     required this.id,
     required this.eventId,
@@ -43,6 +52,7 @@ class ScheduledReminder {
     required this.eventStart,
     required this.minutesBefore,
     this.kind = ReminderKind.eventReminder,
+    this.alsoAtRisk = 0,
   });
 
   @override
@@ -54,16 +64,25 @@ class ScheduledReminder {
       other.fireAt == fireAt &&
       other.eventStart == eventStart &&
       other.minutesBefore == minutesBefore &&
-      other.kind == kind;
+      other.kind == kind &&
+      other.alsoAtRisk == alsoAtRisk;
 
   @override
-  int get hashCode =>
-      Object.hash(id, eventId, title, fireAt, eventStart, minutesBefore, kind);
+  int get hashCode => Object.hash(
+        id,
+        eventId,
+        title,
+        fireAt,
+        eventStart,
+        minutesBefore,
+        kind,
+        alsoAtRisk,
+      );
 
   @override
   String toString() =>
       'ScheduledReminder(id: $id, eventId: $eventId, fireAt: $fireAt, '
-      'minutesBefore: $minutesBefore, kind: ${kind.name})';
+      'minutesBefore: $minutesBefore, kind: ${kind.name}, alsoAtRisk: $alsoAtRisk)';
 }
 
 /// Decides which reminders should exist, given the user's events.
@@ -147,12 +166,18 @@ abstract final class ReminderPlanner {
     return reminders;
   }
 
-  /// A stable 31-bit id for one reminder of one occurrence.
+  /// A stable 30-bit id for one reminder of one occurrence.
   ///
   /// Android notification ids are 32-bit signed ints, so the hash is masked to stay
   /// positive. Derived from the event id, the occurrence's start minute **and** the
   /// offset — without the offset, an event's "1 hour before" and "5 min before" would
   /// collide and only one would survive.
+  ///
+  /// The mask is [AppConstants.eventReminderIdMask], one bit narrower than the available
+  /// range, which leaves everything above it free for fixed ids like
+  /// [AppConstants.streakNudgeNotificationId] — those live outside this space rather than
+  /// merely being unlikely to land in it. Losing a bit costs nothing: collisions here are
+  /// handled by `seenIds` anyway, and the space is still 40 000× the reminder cap.
   static int reminderId(
     String eventId,
     DateTime occurrenceStart,
@@ -167,6 +192,6 @@ abstract final class ReminderPlanner {
     );
 
     return Object.hash(eventId, slot.millisecondsSinceEpoch, minutesBefore) &
-        0x7FFFFFFF;
+        AppConstants.eventReminderIdMask;
   }
 }

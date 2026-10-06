@@ -39,8 +39,15 @@ class HabitAtRisk {
 ///
 /// A habit is at risk when all of these hold:
 ///   * its streak is alive (`currentStreak > 0`) — there is something to lose;
+///   * **nothing** it has today is completed yet — one completion already secures the day,
+///     see below;
 ///   * it has an occurrence today that is not completed;
 ///   * the day is running out: the time is at or past [AppConstants.streakAtRiskHour].
+///
+/// The second rule is the server's, not the calendar's. `StreakCalculator.FromStartTimes`
+/// reduces completions to `Distinct()` calendar dates, so a habit booked twice a day has
+/// its day secured by whichever slot is ticked first — the other one being open is a plan
+/// not followed through, not a streak about to break.
 ///
 /// A habit with nothing booked today is **not** at risk here. Whether the streak survives
 /// an unbooked day is the day-boundary question in roadmap 5.1, and guessing at it would
@@ -75,9 +82,13 @@ abstract final class StreakAtRisk {
     for (final habit in habits) {
       if (habit.currentStreak <= 0) continue;
 
-      final unfinished = today
-          .where((o) => o.habitId == habit.id && !o.isCompleted)
-          .toList()
+      final mine = today.where((o) => o.habitId == habit.id).toList();
+
+      // One completion is all the streak needs for the day, so a habit already ticked has
+      // nothing at risk however much else is still booked.
+      if (mine.any((o) => o.isCompleted)) continue;
+
+      final unfinished = mine.where((o) => !o.isCompleted).toList()
         ..sort((a, b) => a.startTime.compareTo(b.startTime));
 
       if (unfinished.isEmpty) continue;
@@ -98,5 +109,26 @@ abstract final class StreakAtRisk {
     final local = now.toLocal();
 
     return DateTime(local.year, local.month, local.day, cutoffHour);
+  }
+
+  /// The first cutoff strictly after [now] — today's if it is still ahead, otherwise
+  /// tomorrow's.
+  ///
+  /// This is what a screen showing the card has to wake up for: [evaluate] is a function
+  /// of the clock, and nothing else re-renders at 20:00 on its own.
+  static DateTime nextCutoffAfter(
+    DateTime now, {
+    int cutoffHour = AppConstants.streakAtRiskHour,
+  }) {
+    final local = now.toLocal();
+    final today = cutoffFor(local, cutoffHour: cutoffHour);
+
+    if (today.isAfter(local)) return today;
+
+    // Built from the next day's date rather than by adding 24 hours, so a DST shift moves
+    // the cutoff with the wall clock instead of an hour off it.
+    final tomorrow = DateTime(local.year, local.month, local.day + 1);
+
+    return DateTime(tomorrow.year, tomorrow.month, tomorrow.day, cutoffHour);
   }
 }

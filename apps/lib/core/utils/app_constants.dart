@@ -66,14 +66,28 @@ class AppConstants {
   /// has a streak to lose is worth a nudge.
   ///
   /// A fixed hour on purpose. The data for a per-habit time exists (the hour each habit
-  /// is usually completed at), but a single hour is what makes the rule explainable, and
-  /// it is the same decision as roadmap 5.1's day boundary — better made once, for both.
+  /// is usually completed at), but a single hour is what makes the rule explainable.
+  ///
+  /// It is **not** yet the same decision as roadmap 5.1's day boundary, and the two are
+  /// currently made in different clocks: this is the device's local hour, while the
+  /// server's streak day is a hardcoded UTC+7 (`StreakCalculator.DefaultDayBoundaryOffset`).
+  /// For a user west of UTC+7 the cutoff therefore falls inside what the backend already
+  /// counts as the next day. Reconciling them is 5.1's job; until then this constant is
+  /// the one place to change the client half.
   static const int streakAtRiskHour = 20;
 
   /// Notification id for the evening nudge. Fixed, unlike event reminders, which derive
   /// theirs from the occurrence: there is at most one nudge pending at a time, and
   /// replanning must replace it rather than stack a second one.
+  ///
+  /// Above [eventReminderIdMask], so it cannot be the id a hashed event reminder lands on.
+  /// The two are scheduled in one `applyPlan` call with no shared dedupe between them, so
+  /// an overlap would mean one silently overwriting the other.
   static const int streakNudgeNotificationId = 0x7FFFFFF0;
+
+  /// Mask applied to hashed event-reminder ids (`ReminderPlanner.reminderId`), keeping
+  /// them positive **and** below every fixed notification id above.
+  static const int eventReminderIdMask = 0x3FFFFFFF;
 
   // Routing
   /// Where a signed-in user lands: after login, and when opening the app.

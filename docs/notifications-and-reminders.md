@@ -104,10 +104,16 @@ behind the app's back — wholesale replacement cannot leave a reminder for an e
 no longer exists.
 
 **Stable ids, keyed on the offset too.** `reminderId(eventId, occurrenceStart, minutesBefore)`
-hashes all three, masked to a positive 31-bit int (Android ids are 32-bit signed).
-Re-planning reuses the same id and replaces the alarm rather than stacking a duplicate.
-The offset is part of the key because without it an event's "1 hour before" and "5 min
-before" would collide and only one would survive — a test covers exactly that.
+hashes all three, masked with `AppConstants.eventReminderIdMask` to a positive 30-bit int
+(Android ids are 32-bit signed). Re-planning reuses the same id and replaces the alarm rather
+than stacking a duplicate. The offset is part of the key because without it an event's
+"1 hour before" and "5 min before" would collide and only one would survive — a test covers
+exactly that.
+
+The mask is one bit narrower than the available range on purpose: everything above it is
+reserved for **fixed** ids, currently `AppConstants.streakNudgeNotificationId`. Hashed and
+fixed ids reach the plugin in the same `applyPlan` call with no shared dedupe between them,
+so they have to be disjoint by construction rather than merely unlikely to collide.
 
 **A 7-day horizon, capped at 250 reminders.** Android limits how many alarms an app may
 hold, and the data changes daily, so scheduling further ahead would mostly be scheduling
@@ -144,6 +150,46 @@ dependency (`GoogleCalendarSyncTracker`); this one cannot do that.
 rather than formatting text itself — the service has no locale and should not own
 user-facing strings. `translate()` gained an optional `params` argument for `{n}`
 placeholders so counts stay inside the translated string.
+
+---
+
+## The evening streak nudge
+
+A second kind of notification shares this machinery. `StreakNudgePlanner` schedules one
+"your streak is about to break" alarm for the evening; `StreakAtRisk` decides who is in it.
+Both are pure and take their clock as a parameter, like `ReminderPlanner`.
+
+**It rides in the same plan, and must.** `applyPlan` opens with `cancelAll()`, so two
+separate calls would mean whichever ran second wiped the first. `reminderSyncProvider`
+therefore builds one list — event reminders plus at most one nudge — and applies it once.
+This is also why the settings switch needs no teardown code: with the switch off the planner
+returns an empty list, and the next `applyPlan` simply does not re-register it.
+
+**Spread in *after* the cap.** `ReminderPlanner` truncates at 250; the nudge is appended to
+the result rather than planned inside it, so a full calendar cannot push it out. Scheduled at
+the cutoff, 20:00 is later than most event reminders and would otherwise be the first entry
+dropped.
+
+**One notification, not one per habit.** Several habits at risk produce a single alarm: the
+title names the one with the longest streak and `ScheduledReminder.alsoAtRisk` carries how
+many others there are, so the body can say so instead of reading as a single-habit alert.
+`ReminderKind` on `ScheduledReminder` is what keeps the two bodies apart — a nudge has
+`minutesBefore: 0`, which without the kind would render as "Starting now".
+
+**A fixed id.** There is at most one nudge pending, so re-planning must replace it rather
+than stack a second — see the id note above for why it sits outside the hashed range.
+
+**What it deliberately does not do.** A habit with nothing booked today is not flagged (that
+is 5.1), a habit already ticked today is not flagged even with another slot open (one
+completion secures the calendar day), and nothing is scheduled once the cutoff has passed —
+Home still shows the card. The cutoff is the device's local hour while the streak day is the
+server's UTC+7; roadmap 5.1 has the measured divergence.
+
+**Where it lives.** `core/notifications/streak_nudge_planner.dart`,
+`features/habits/domain/streak_at_risk.dart`, the card in
+`features/home/presentation/widgets/streak_at_risk_card.dart`, and the switch in
+`SettingsScreen` (`settings_streak_nudges`, on by default). Home rebuilds at the cutoff via
+`homeClockProvider`, because nothing else on that screen re-renders because time passed.
 
 ---
 
@@ -256,8 +302,9 @@ Neither is a bug in this feature, and neither is worked around.
   own reminder model (`overrides` on an event), so mapping between them is real work, not a
   field to add to the payload.
 - **No reminders for habits that have no event.** Reminders attach to scheduled events.
-  A habit with `TargetDays` but nothing on the calendar gets nothing. Roadmap 1.2
-  (streak-at-risk) is the feature that covers that case.
+  A habit with `TargetDays` but nothing on the calendar gets nothing — and the streak nudge
+  below does not cover it either: it deliberately only looks at booked occurrences. Whether
+  an unbooked day breaks a streak is roadmap **5.1**, not 1.2.
 - **No action buttons** ("complete", "snooze") on the notification.
 - **No iOS verification.** The Darwin paths are written and permission handling is in
   place, but nothing has been run on an Apple device or simulator.

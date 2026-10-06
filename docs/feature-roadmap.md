@@ -3,7 +3,7 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-13 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-12 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
 **Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
 needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
@@ -58,8 +58,14 @@ alive, it has an unfinished occurrence today, and the local time has passed
 card above the agenda, and `StreakNudgePlanner` schedules one notification at the cutoff —
 one for the evening, not one per habit. The switch is in Settings, on by default.
 
-The threshold is a fixed hour, not a per-habit one: the data for the second exists, but the
-hour is the same decision as 5.1's day boundary and is better made once, for both.
+The threshold is a fixed hour, not a per-habit one: the data for the second exists, but a
+single hour is what makes the rule explainable. It is *not* the same decision as 5.1's day
+boundary — see the note there: the cutoff is device-local while the streak day is a
+hardcoded UTC+7, so 5.1 still has both halves to reconcile.
+
+A habit already ticked today is not flagged even if another slot is still open: the streak
+needs one completion per calendar day (`StreakCalculator` distincts on date), so the open
+slot is a plan not followed through rather than a streak about to break.
 
 Still open: a habit with **nothing booked** today is not flagged, because whether its
 streak survives an unplanned day is exactly 5.1. The Android widgets do not show it either
@@ -195,6 +201,23 @@ Carried over from the audit; these are not features but they block or slow the a
 heatmaps are off by a day for any user outside that zone. The seam exists (every method takes
 an optional offset); the product decision does not. **Device timezone or a profile setting?**
 Either way it shifts every existing user's streak, so decide before the user base grows.
+
+There are now **two** clocks to reconcile, not one. 1.2 added a second: the streak-at-risk
+cutoff (`AppConstants.streakAtRiskHour`) is the *device's* local 20:00, while the day it is
+protecting is the server's UTC+7 day. Measured — the same 20:00 device-local moment, and the
+calendar day the backend files it under:
+
+| Device zone | 20:00 local, in UTC | Server's day |
+| --- | --- | --- |
+| UTC+7 | 13:00Z | same day |
+| UTC+0 | 20:00Z | **next day** |
+| UTC−5 | 01:00Z | **next day** |
+| UTC−8 | 04:00Z | **next day** |
+
+So for everyone west of UTC+7 the nudge already fires inside what the server counts as
+tomorrow. Streaks still survive (the shift is uniform day to day, and `isAlive` accepts today
+or yesterday), but whatever this item decides has to set both the boundary and the cutoff,
+and in the same clock.
 
 ### ⚪ 5.2 Flutter repository layer
 

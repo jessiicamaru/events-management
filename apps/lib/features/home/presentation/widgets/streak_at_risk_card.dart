@@ -18,7 +18,9 @@ class StreakAtRiskCard extends ConsumerWidget {
 
   final List<HabitAtRisk> atRisk;
 
-  /// Opens that habit's day — the occurrence that would keep the streak.
+  /// Called with the row that was tapped. Every row is today's, so the caller has nowhere
+  /// else to send them than today — the habit is passed so a future destination (the
+  /// occurrence itself, rather than the day) does not need the signature changed.
   final ValueChanged<HabitAtRisk> onTapHabit;
 
   @override

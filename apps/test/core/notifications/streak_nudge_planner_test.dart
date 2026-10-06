@@ -83,6 +83,50 @@ void main() {
 
     expect(nudges, hasLength(1));
     expect(nudges.single.title, 'Run', reason: 'the longest streak leads');
+    expect(nudges.single.alsoAtRisk, 1,
+        reason: 'the body has to say the other one is at stake too');
+  });
+
+  test('a lone habit at risk reports no others', () {
+    expect(plan(now: at(9)).single.alsoAtRisk, 0);
+  });
+
+  test('schedules nothing when the habit was ticked at another slot today', () {
+    // One completion secures the calendar day, so the open evening slot is not a streak
+    // about to break.
+    final nudges = StreakNudgePlanner.plan(
+      events: [
+        event(hour: 7, completed: true),
+        EventModel(
+          id: 'event-evening',
+          title: 'Read',
+          startTime: at(21),
+          endTime: at(21).add(const Duration(minutes: 30)),
+          habitId: 'habit-1',
+        ),
+      ],
+      habits: [habit],
+      now: at(9),
+      enabled: true,
+    );
+
+    expect(nudges, isEmpty);
+  });
+
+  test('the nudge id is outside the space event reminders hash into', () {
+    // Both plans go to one applyPlan with no shared dedupe, so an overlap would mean one
+    // silently overwriting the other.
+    expect(
+      AppConstants.streakNudgeNotificationId & AppConstants.eventReminderIdMask,
+      isNot(AppConstants.streakNudgeNotificationId),
+    );
+
+    for (var i = 0; i < 20000; i++) {
+      final id = ReminderPlanner.reminderId('evt-$i', at(7), 15);
+      expect(id, lessThanOrEqualTo(AppConstants.eventReminderIdMask));
+      expect(id, isNot(AppConstants.streakNudgeNotificationId));
+      expect(id, isNonNegative);
+    }
   });
 
   test('an event reminder keeps its own kind, so the body text cannot be swapped', () {
