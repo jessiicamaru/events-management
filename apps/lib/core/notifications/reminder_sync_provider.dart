@@ -2,7 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/notifications/notification_service.dart';
 import 'package:habit_tracker/core/notifications/reminder_planner.dart';
+import 'package:habit_tracker/core/notifications/streak_nudge_planner.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
+import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 
 /// The app's single [NotificationService].
 final notificationServiceProvider = Provider<NotificationService>(
@@ -11,6 +15,13 @@ final notificationServiceProvider = Provider<NotificationService>(
 
 /// Builds the notification body for one reminder, in the user's language.
 String buildReminderBody(AppTranslations translations, ScheduledReminder reminder) {
+  if (reminder.kind == ReminderKind.streakAtRisk) {
+    return translations.translate(
+      'streak_nudge_body',
+      params: {'hour': '${AppConstants.streakAtRiskHour}'},
+    );
+  }
+
   final minutes = reminder.minutesBefore;
 
   if (minutes <= 0) return translations.translate('reminder_starting_now');
@@ -30,12 +41,16 @@ String buildReminderBody(AppTranslations translations, ScheduledReminder reminde
   );
 }
 
-/// Keeps the OS's pending reminders in step with the user's events.
+/// Keeps the OS's pending notifications in step with the user's events and habits.
 ///
 /// Watched from the root widget, in the same way as `homeWidgetSyncProvider`: any change
 /// to events re-plans and reschedules. Reminders are configured per event, so there is no
 /// global switch to consult — an event with an empty reminder set simply contributes
 /// nothing, and if no event has any, the plan is empty and everything is cancelled.
+///
+/// It also carries this evening's streak nudge (`StreakNudgePlanner`), because
+/// `applyPlan` cancels every pending notification it is not given: planned separately,
+/// whichever ran second would wipe the other.
 ///
 /// It only ever *writes* to the notification plugin — it never invalidates the providers
 /// it watches, which is what keeps this from looping.
@@ -45,11 +60,22 @@ final reminderSyncProvider = Provider<void>((ref) {
 
   final service = ref.read(notificationServiceProvider);
   final translations = ref.watch(translationsProvider);
+  final habitsAsync = ref.watch(habitsProvider);
+  final nudgesOn = ref.watch(appSettingsProvider).streakNudges;
+  final now = DateTime.now();
 
-  final reminders = ReminderPlanner.plan(
-    events: eventsAsync.value!,
-    now: DateTime.now(),
-  );
+  final reminders = [
+    ...ReminderPlanner.plan(events: eventsAsync.value!, now: now),
+    // Habits are a separate request, so the nudge simply waits for them rather than
+    // holding up the event reminders.
+    if (habitsAsync.hasValue)
+      ...StreakNudgePlanner.plan(
+        events: eventsAsync.value!,
+        habits: habitsAsync.value!,
+        now: now,
+        enabled: nudgesOn,
+      ),
+  ];
 
   // Fire and forget — rescheduling is best-effort and must not block a rebuild.
   // applyPlan cancels everything first, so an empty plan clears any stale alarms.

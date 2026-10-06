@@ -3,7 +3,7 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-12 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-13 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
 **Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
 needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
@@ -50,15 +50,20 @@ month cancelled every pending reminder.
 Scheduled on-device notifications a configurable number of minutes before an event starts.
 No server, no FCM, works offline.
 
-### ⚪ 1.2 Streak-at-risk nudge
+### 🟢 1.2 Streak-at-risk nudge
 
-A habit whose streak is alive, whose occurrence today is still incomplete, and where the day
-is running out. Pure heuristic on top of `StreakCalculator` — no new data.
+**Done — branch `feat/streak-at-risk`.** A habit counts as at risk when its streak is
+alive, it has an unfinished occurrence today, and the local time has passed
+`AppConstants.streakAtRiskHour` (20:00). `StreakAtRisk.evaluate` decides it, Home shows a
+card above the agenda, and `StreakNudgePlanner` schedules one notification at the cutoff —
+one for the evening, not one per habit. The switch is in Settings, on by default.
 
-- Surface in-app, on the home widget, and as a notification (needs 1.1).
-- Decide the "running out" threshold: a fixed local hour, or a proportion of the user's
-  usual completion time for that habit (data exists for the second; start with the first).
-- Feels intelligent, costs a query.
+The threshold is a fixed hour, not a per-habit one: the data for the second exists, but the
+hour is the same decision as 5.1's day boundary and is better made once, for both.
+
+Still open: a habit with **nothing booked** today is not flagged, because whether its
+streak survives an unplanned day is exactly 5.1. The Android widgets do not show it either
+— they would need the habits request, which they do not make today.
 
 ### ⚪ 1.3 Weekly review
 
@@ -155,7 +160,7 @@ Cheap, and the empty-state problem is real for a new user.
 
 ### ⚪ 4.1 Offline-first
 
-`docs/project-plan.md` specified `isar`/`hive` for this and it was never built — there is no
+`docs/archive/project-plan.md` specified `isar`/`hive` for this and it was never built — there is no
 local database, and providers call `ApiService` directly. This is a design task, not a library
 swap: it has to fit the existing stale-while-revalidate + SignalR sync
 (`docs/stale-while-revalidate-sync.md`), and the Flutter side has no repository layer to put a
@@ -299,7 +304,7 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 One loop at a time beats five disconnected features:
 
 1. ~~**1.1 reminders**~~ — done (PR #24)
-2. **1.2 streak-at-risk** — reuses 1.1's plumbing; Home is the natural place to show it
+2. ~~**1.2 streak-at-risk**~~ — done (`feat/streak-at-risk`)
 3. **2.1 plan vs actual** — best value-to-effort chart
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own

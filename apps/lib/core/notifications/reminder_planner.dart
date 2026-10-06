@@ -2,6 +2,17 @@ import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/domain/event_occurrence_expander.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 
+/// What a scheduled notification is for. The service treats them alike; only the body
+/// text and the id differ.
+enum ReminderKind {
+  /// An event is about to start.
+  eventReminder,
+
+  /// A habit with a live streak is still unfinished and the day is running out
+  /// (`StreakAtRisk`).
+  streakAtRisk,
+}
+
 /// One notification the app intends to post at a specific local time.
 class ScheduledReminder {
   /// Stable across re-planning: the same occurrence and offset always produce the same
@@ -20,6 +31,10 @@ class ScheduledReminder {
   /// Which of the event's reminder offsets this is. `0` means "when it starts".
   final int minutesBefore;
 
+  /// Which kind of notification this is. Event reminders are the default because they are
+  /// the overwhelming majority and every existing call site means one.
+  final ReminderKind kind;
+
   const ScheduledReminder({
     required this.id,
     required this.eventId,
@@ -27,6 +42,7 @@ class ScheduledReminder {
     required this.fireAt,
     required this.eventStart,
     required this.minutesBefore,
+    this.kind = ReminderKind.eventReminder,
   });
 
   @override
@@ -37,16 +53,17 @@ class ScheduledReminder {
       other.title == title &&
       other.fireAt == fireAt &&
       other.eventStart == eventStart &&
-      other.minutesBefore == minutesBefore;
+      other.minutesBefore == minutesBefore &&
+      other.kind == kind;
 
   @override
   int get hashCode =>
-      Object.hash(id, eventId, title, fireAt, eventStart, minutesBefore);
+      Object.hash(id, eventId, title, fireAt, eventStart, minutesBefore, kind);
 
   @override
   String toString() =>
       'ScheduledReminder(id: $id, eventId: $eventId, fireAt: $fireAt, '
-      'minutesBefore: $minutesBefore)';
+      'minutesBefore: $minutesBefore, kind: ${kind.name})';
 }
 
 /// Decides which reminders should exist, given the user's events.

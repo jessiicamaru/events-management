@@ -61,6 +61,20 @@ class AppConstants {
   /// Android notification channel for event reminders.
   static const String reminderChannelId = 'event_reminders';
 
+  // Streak-at-risk nudge
+  /// Local hour from which a day counts as "running out", so an unfinished habit that
+  /// has a streak to lose is worth a nudge.
+  ///
+  /// A fixed hour on purpose. The data for a per-habit time exists (the hour each habit
+  /// is usually completed at), but a single hour is what makes the rule explainable, and
+  /// it is the same decision as roadmap 5.1's day boundary — better made once, for both.
+  static const int streakAtRiskHour = 20;
+
+  /// Notification id for the evening nudge. Fixed, unlike event reminders, which derive
+  /// theirs from the occurrence: there is at most one nudge pending at a time, and
+  /// replanning must replace it rather than stack a second one.
+  static const int streakNudgeNotificationId = 0x7FFFFFF0;
+
   // Routing
   /// Where a signed-in user lands: after login, and when opening the app.
   ///

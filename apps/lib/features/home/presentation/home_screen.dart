@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
+import 'package:habit_tracker/features/habits/domain/streak_at_risk.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/home/domain/home_agenda.dart';
 import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/activity_summary_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/habits_without_slot_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/home_header.dart';
+import 'package:habit_tracker/features/home/presentation/widgets/streak_at_risk_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/today_schedule_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/up_next_card.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
@@ -45,6 +47,12 @@ class HomeScreen extends ConsumerWidget {
       now: now,
     );
 
+    final atRisk = StreakAtRisk.evaluate(
+      events: eventsAsync.value ?? const [],
+      habits: habitsAsync.value ?? const [],
+      now: now,
+    );
+
     // Only a first load blocks. A refresh keeps the previous agenda on screen
     // rather than replacing a usable page with a spinner.
     if (eventsAsync.isLoading && !eventsAsync.hasValue) {
@@ -70,6 +78,17 @@ class HomeScreen extends ConsumerWidget {
                 totalToday: agenda.totalToday,
               ),
               const SizedBox(height: 20),
+              // Above the agenda, and only in the evening: at that hour this is the one
+              // thing on the screen with a deadline.
+              if (atRisk.isNotEmpty) ...[
+                StreakAtRiskCard(
+                  atRisk: atRisk,
+                  // The calendar is where the occurrence can be opened, started or
+                  // ticked; Home only points at it.
+                  onTapHabit: (_) => context.go('/calendar'),
+                ),
+                const SizedBox(height: 12),
+              ],
               if (agenda.focusEvent != null)
                 UpNextCard(
                   event: agenda.focusEvent!,

@@ -16,18 +16,26 @@ class AppSettings {
   final ThemeMode themeMode;
   final AppColorTheme primaryColor;
 
+  /// Whether the evening "your streak is about to break" notification is wanted.
+  /// On by default: a nudge nobody asked for is the point of the feature, and it is one
+  /// notification a day at most, only when something is actually at risk.
+  final bool streakNudges;
+
   const AppSettings({
     required this.themeMode,
     required this.primaryColor,
+    this.streakNudges = true,
   });
 
   AppSettings copyWith({
     ThemeMode? themeMode,
     AppColorTheme? primaryColor,
+    bool? streakNudges,
   }) {
     return AppSettings(
       themeMode: themeMode ?? this.themeMode,
       primaryColor: primaryColor ?? this.primaryColor,
+      streakNudges: streakNudges ?? this.streakNudges,
     );
   }
 }
@@ -36,6 +44,7 @@ class AppSettings {
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   static const _themeModeKey = 'settings_theme_mode';
   static const _primaryColorKey = 'settings_primary_color';
+  static const _streakNudgesKey = 'settings_streak_nudges';
 
   @override
   AppSettings build() {
@@ -55,7 +64,11 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       orElse: () => AppColorTheme.zinc,
     );
 
-    return AppSettings(themeMode: themeMode, primaryColor: primaryColor);
+    return AppSettings(
+      themeMode: themeMode,
+      primaryColor: primaryColor,
+      streakNudges: prefs.getBool(_streakNudgesKey) ?? true,
+    );
   }
 
   Future<void> updateThemeMode(ThemeMode mode) async {
@@ -68,5 +81,11 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final prefs = ref.read(sharedPreferencesProvider);
     await prefs.setInt(_primaryColorKey, color.index);
     state = state.copyWith(primaryColor: color);
+  }
+
+  Future<void> updateStreakNudges(bool enabled) async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setBool(_streakNudgesKey, enabled);
+    state = state.copyWith(streakNudges: enabled);
   }
 }
