@@ -6,13 +6,583 @@ Base: `13b0f52` (local `main`, merge of PR #26) · Reviewed by: Claude Code
 | --- | --- | --- | --- |
 | 1 | `622eb9b` feat(home): nudge a streak that is about to break, and reorganise the docs | 2026-09-12 | 0 HIGH, 2 MEDIUM, 5 LOW, 6 INFO — **MEDIUM 1 and 2 block merge** |
 | 2 | uncommitted working tree (fixes applied on top of `622eb9b`) | 2026-09-12 | 11 closed (both MEDIUM), 2 INFO open by choice; 1 finding **corrected** (5) and 1 **re-explained** (7). No new findings. **Nothing blocking.** |
+| 3 | `2473aa2` fix(home): address the review of the streak-at-risk nudge (round 2, now committed) | 2026-09-12 | Round 2 re-verified independently, all 11 closures hold, 0 re-opened. 5 new: 1 MEDIUM, 1 LOW, 3 INFO — **MEDIUM 14 blocks merge** |
+| 4 | uncommitted working tree (fixes for round 3) | 2026-09-12 | 4 closed (the MEDIUM and 3 INFO), 1 closed by decision (15, the planner now reaches two evenings). 1 round-3 claim **qualified** (the probe technique). No new findings. **Nothing blocking.** |
+| 5 | `5de7052` fix(notifications): plan the nudge two evenings ahead, and take the clock off the wall (round 4, now committed) | 2026-09-12 | Round 4 re-verified independently, all 5 closures hold, 0 re-opened; finding 14 confirmed by the clock (suite run at 22:04). 2 new LOW, both doc/guard-rail. **Nothing blocking.** |
+| 6 | uncommitted working tree (fixes for round 5) | 2026-09-12 | Both LOW closed, one with a test that fails if the constant is raised. Round 5's two load-bearing claims re-verified against the server. No new findings. **Nothing blocking.** |
 
-> `git log main..HEAD` returns exactly one commit, so `main` is the branch's real base and
-> the three-dot diff is its real scope. No drift adjustment needed.
+> `main` is the branch's real base: `git log main..HEAD` is `622eb9b` (round 1), `2473aa2`
+> (round 2's fixes), `53cd5cc` (the report), `5de7052` (round 4's fixes) — so the three-dot
+> diff is the branch's real scope. No drift adjustment needed.
 
 ---
 
-# Round 2 — uncommitted working tree
+# Round 6 — uncommitted working tree (fixes for round 5)
+
+Round 5's two findings, fixed. Both rested on a claim about code this branch does not touch,
+so both claims were checked against the source before acting.
+
+## Status of round 5 findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 19 | [LOW] `streakNudgeEvenings` documents the wrong upper bound | ✅ **Closed** — the comment now names the server's grace as the limit, and a test pins the value |
+| 20 | [LOW] "At most one nudge" still stated in four places | ✅ **Closed** — all four rewritten |
+| 11, 13 | open by choice since round 2 | ⚠️ Unchanged |
+
+### Finding 19 — closed, and the claim behind it verified
+
+The finding's load-bearing claim is about the server, so it was read there rather than taken
+from the report. `StreakCalculator.cs:90-93`:
+
+```csharp
+// A streak only "counts" while it is still alive: it must reach today, or yesterday
+// (the user still has today to keep it going).
+var today = ToLocalDate(DateTime.UtcNow, offset);
+var isAlive = previous!.Value == today || previous.Value == today.AddDays(-1);
+```
+
+So a `currentStreak` the client planned from is true for today and tomorrow, and wrong from
+the day after — which is exactly two evenings. Round 5 is right, and right about the id space
+being slack rather than binding (`0x7FFFFFF0 + 1 = 2 147 483 633`, 14 below the ceiling, so
+16 evenings would fit).
+
+Fixed where the next person will look: the constant's own comment now leads with "Two is the
+ceiling, and the limit is the server's", explains what a D+2 nudge would claim, and demotes
+the id space to a parenthesis. The same sentence is recorded in roadmap 5.1, next to the two
+clocks it already reconciles.
+
+And pinned, because round 5's point was that nothing failed if the value moved — `evenings` is
+a parameter and the test that exercises it passes its own value:
+
+| | Before | After |
+| --- | --- | --- |
+| `streakNudgeEvenings = 5` | whole suite passes; 3 of the 5 alarms protect a dead streak | **2 tests fail**, naming the server's grace as the reason |
+
+### Finding 20 — closed: four statements, all four rewritten
+
+| Where | Now reads |
+| --- | --- |
+| `app_constants.dart:79-82` | "one nudge per planned evening ([streakNudgeEvenings]), at consecutive ids from this base" |
+| `streak_nudge_planner.dart:15` | "One nudge per evening in range, never one per habit" — keeping the claim that is still true, that several habits share one notification |
+| `notifications-and-reminders.md:164` | "event reminders plus up to `streakNudgeEvenings` nudges" |
+| `notifications-and-reminders.md:179` | **Ids.** — a fixed base plus the evening's index, replacing **A fixed id.** eight lines above the paragraph that contradicted it |
+
+`grep -rn "at most one nudge" apps/lib docs` now returns nothing outside this report.
+
+## Round 6 verification
+
+| Item | Round 5 | Round 6 |
+| --- | --- | --- |
+| `flutter test` | 234 pass / 0 fail | **235 pass / 0 fail** (the new ceiling test) |
+| `flutter analyze` | `No issues found!` | `No issues found!` |
+| Negative control: `streakNudgeEvenings = 5` | suite passed — the finding | **2 tests fail** |
+| `grep -rn "at most one nudge"` outside this report | 4 hits | **0** |
+| `StreakCalculator` grace read at source | quoted by round 5 | ✔ re-read: `isAlive` is today or yesterday |
+| `dotnet test` | not re-run | not re-run — still 0 server files in `main...HEAD` |
+
+## Round 6 notes
+
+- Both findings were documentation-shaped, and both were created by round 4's behaviour
+  change rather than by the original commit — the pattern round 5 names (a correct change
+  leaving the sentences that explained the old design standing next to it) is now at three
+  occurrences across the branch, and the fix each time was cheap.
+- Finding 19 is the only one of the 20 that protects a future change rather than current
+  behaviour, and it is the one that got a test.
+
+---
+
+# Round 5 — review `5de7052`, independent verification of round 4
+
+Round 4 was written against an uncommitted tree; that tree is now `5de7052`
+(`fix(notifications): plan the nudge two evenings ahead, and take the clock off the wall`)
+and `git status` is clean. Every round-4 claim was re-run here.
+
+This round had one advantage round 4 did not: it ran at **22:04 local**, inside the
+20:00–23:59 window round 3 predicted would fail. So finding 14 could be verified the direct
+way — by the clock — instead of by the lowered-cutoff proxy.
+
+## Verifying round 4's claims
+
+| Round 4 claimed | I verified with | Result |
+| --- | --- | --- |
+| `flutter test` → 234 pass / 0 fail | `flutter test` at 22:04 local | ✔ `00:28 +234: All tests passed!` |
+| `flutter analyze` → clean | `flutter analyze` | ✔ `No issues found! (ran in 8.8s)` |
+| Finding 14 closed — the hour cannot reach the tests | ran the whole suite **after 20:00** (22:04:10 → 22:04:45) | ✔ 234 pass — see below for the before/after |
+| …by taking the scheduling path off the wall clock | `grep -n 'DateTime.now()\|clock.now()'` over the four streak source files and their three test files | ✔ no wall-clock read left on the path; only comments mention `DateTime.now()` |
+| Finding 15 closed — two evenings are planned | probe: habit booked tonight and tomorrow, planned 09:00 | ✔ `9/12 20:00 id=2147483632`, `9/13 20:00 id=2147483633` |
+| …each evening gets its own id | same probe | ✔ distinct, consecutive from the base |
+| Finding 16 closed — `fakeAsync(initialTime:)` | read `home_clock_provider_test.dart:13-16,42` | ✔ both tests pinned to a fixed morning |
+| Finding 17 closed — `4 million×` | `reminder_planner.dart:180`; `1073741824 / 250 = 4294967` | ✔ |
+| Finding 18 closed — uses `commonTestOverrides` | `reminder_sync_provider_test.dart:15,112`; the local copy is gone | ✔ |
+| "the cutoff-moved probe also fails 5 tests, and they hardcode the hour" | `flutter test` with `streakAtRiskHour = 17` | ✔ **229 pass / 5 fail**, all 5 in `streak_at_risk_test.dart`, all 5 asserting the hour itself |
+| "`grep -rn 'DateTime.now()' test/` → 9 hits in 5 files" | same grep | ✔ 9 hits, 5 files; the only streak-path one is `home_screen_test.dart:36` |
+| `dotnet test` not re-run, 0 server files | `git diff --name-only main...HEAD` → no `server/` entry | ✔ |
+
+### Finding 14 — measured before and after, at the same instant
+
+Round 3 proved this by lowering the cutoff, because it ran at 18:0x. Running at 22:0x, the
+real comparison is available. `2473aa2`'s three files (provider, planner, test) checked out
+into the tree, run, then restored:
+
+| Same instant, 22:07 local | Result |
+| --- | --- |
+| `2473aa2` (round 3's state) | **3 fail** — `sends event reminders and the streak nudge in ONE applyPlan call`, `builds the nudge body from the habit…`, `names the other habits at risk…` |
+| `5de7052` (now) | **0 fail** (234 pass, whole suite, 22:04) |
+
+The three failures are exactly the three round 3 named, so round 3's count was right and its
+proxy was measuring the right thing. Round 4's qualification of that probe is also right, and
+worth keeping: with the constant lowered, five tests in `streak_at_risk_test.dart` fail
+because they hardcode 20:00 in their fixtures, not because they read a clock. The probe is
+sound for the scheduling tests and is not a general clock-dependence detector.
+
+Round 4's five closures all hold. Two new findings, both LOW, both about what the
+two-evening change did to the statements around it.
+
+## New findings
+
+### 19 [LOW] `streakNudgeEvenings` documents the wrong upper bound — the real limit is 2, and it is on the server
+
+`app_constants.dart:97-98` closes the new constant's comment with the constraint to respect
+when changing it:
+
+> Ids run from [streakNudgeNotificationId] upwards, one per evening, so this must stay
+> small enough that they do not run past the signed 32-bit ceiling.
+
+That constraint is real but slack. Measured: `0x7FFFFFF0 + 2 - 1 = 2 147 483 633` against a
+ceiling of `2 147 483 647` — **14 spare**, so the id space alone permits 16 evenings.
+
+The binding constraint is somewhere else entirely, and unmentioned:
+`StreakCalculator.FromStartTimes` (`server/src/Application/Common/StreakCalculator.cs:88-89`)
+
+```csharp
+var today = ToLocalDate(DateTime.UtcNow, offset);
+var isAlive = previous!.Value == today || previous.Value == today.AddDays(-1);
+```
+
+A streak whose last completion was day D reports `currentStreak > 0` on D and on D+1, and
+`0` from D+2. The planner decides every evening in range from the habit list as it stands at
+planning time, and `StreakAtRisk.evaluate` gates on `currentStreak > 0` — confirmed by
+holding the events fixed and setting the streak to 0, which takes the plan from 2 nudges to
+**0**. So planning D and D+1 is exactly as far as today's streak value stays true. **Two is
+the maximum truthful value, and it matches `isAlive`'s one-day grace by coincidence of
+reading, not by anything written down.**
+
+Nothing stops it moving. `evenings` is a named parameter with the constant as its default,
+and the test that exercises it (`stays inside the evenings it was given`) passes its own
+value — so no test fails if the constant changes. Measured with the parameter alone, no
+source edit:
+
+```
+PROBE evenings=2 -> 9/12 id=2147483632, 9/13 id=2147483633
+PROBE evenings=4 -> 9/12 id=2147483632, 9/13 id=2147483633, 9/14 id=2147483634, 9/15 id=2147483635
+```
+
+At `evenings = 4`, the 9/14 and 9/15 alarms are scheduled for days on which the streak they
+are protecting is already dead under the server's own rule — the notification would read
+"Still open today — finish it to keep your streak" about a streak that broke two nights
+earlier. That is the failure mode round 1's finding 1 was about: a nudge that is wrong on its
+face is how the switch gets turned off, and it is on by default.
+
+Impact: none today, because the value is 2. It is a trap for the next change, and the comment
+points the reader at the wrong guard rail — "plenty of room below 2^31" invites 5.
+
+**Fix**: say which limit actually binds, in the constant's comment and in the roadmap 5.1
+note where the two clocks are already reconciled:
+
+> Two, and two is the ceiling: `StreakCalculator` reports a streak as alive on the
+> completion day and the day after, so a nudge planned further out than D+1 can fire about a
+> streak that is already broken. Raising this needs the server's `isAlive` grace raised
+> first. (The id space allows 16, which is not the binding constraint.)
+
+Worth a test as well, since nothing currently pins it — a one-liner asserting
+`streakNudgeEvenings <= 2` with that reason as the `reason:` string would fail the day
+somebody bumps it.
+
+### 20 [LOW] "At most one nudge" is still stated in four places, and the docs now contradict themselves eight lines apart
+
+Round 4 changed the invariant from one pending nudge at a fixed id to `streakNudgeEvenings`
+nudges at consecutive ids, and updated the paragraphs it added without revisiting the ones
+that asserted the old rule:
+
+| Where | Says | Now |
+| --- | --- | --- |
+| `app_constants.dart:80-81` | "there is **at most one nudge pending at a time**, and replanning must replace it rather than stack a second one" | up to 2, at 2 ids — and this is the comment on `streakNudgeNotificationId`, directly above the new `streakNudgeEvenings` that broke it |
+| `streak_nudge_planner.dart:15` | "**At most one nudge exists at a time.**" | class doc of the file round 4 rewrote |
+| `notifications-and-reminders.md:164` | "one list — event reminders plus **at most one nudge** — and applies it once" | up to 2 |
+| `notifications-and-reminders.md:179` | "**A fixed id.** There is at most one nudge pending, so re-planning must replace it rather than stack a second" | the id is no longer fixed |
+
+The last one is the sharp edge: eight lines below it, at `:187`, the same section says "Each
+evening gets its own id (`streakNudgeNotificationId + n`), or the second would overwrite the
+first." A reader gets both rules in one screen, and the wrong one comes first and is bolded
+as a heading.
+
+The second sentence of the planner's class doc is still right and should stay — "Several
+habits at risk are one notification, not one each" is a different claim, and true.
+
+Impact: documentation only, but this is the third round in a row with a finding in this class
+(round 1's finding 6, round 3's finding 17), and all three were in comments that justify a
+design decision rather than in prose nobody reads. The id comment is the one that tells the
+next person why the nudge id sits above the mask; a reader who believes "fixed, one at a
+time" will not think to check that `+ evening` stays below the ceiling — which is finding 19.
+
+**Fix**: four edits. `at most one nudge pending at a time` → `one nudge per planned evening
+(AppConstants.streakNudgeEvenings), at consecutive ids from this base`; the planner's
+`At most one nudge exists at a time.` → `One nudge per evening in range, never one per
+habit.`; `plus at most one nudge` → `plus up to streakNudgeEvenings nudges`; and turn the
+**A fixed id** paragraph into **Ids** — a fixed base plus the evening index — or delete it,
+since `:187` already says it correctly.
+
+## Round 5 verification
+
+| Item | Round 4 | Round 5 |
+| --- | --- | --- |
+| `flutter test` | 234 pass / 0 fail (at 18:12) | **234 pass / 0 fail (at 22:04 — after the cutoff)** |
+| `2473aa2` at the same instant | not measured | **3 fail** — the before/after round 3 predicted |
+| `flutter test`, cutoff moved into the past | 229 pass / 5 fail | **229 pass / 5 fail** — reproduced, all 5 hardcode the hour |
+| `flutter analyze` | `No issues found!` | `No issues found!` |
+| Wall-clock reads on the streak path | — | **0** in `lib/`, 0 in its three test files |
+| Nudges planned at 09:00, booked tonight + tomorrow | 2 | **2**, ids `…632`/`…633`, distinct days |
+| Nudge ids vs the 32-bit ceiling | "must stay small enough" | **14 spare at 2; 16 evenings would fit** — finding 19 |
+| Plan size with a full calendar | 251 (round 1, one nudge) | **252** (250 event reminders + 2 nudges); both nudges still survive the cap |
+| Round 4 findings re-opened | — | **0** |
+| `dotnet test` | not re-run | not re-run — 0 server files in `main...HEAD` |
+| `git status --porcelain` after probes | empty | empty (constant restored, reverted files restored, scratch tests deleted) |
+
+## Round 5 notes
+
+- Findings 19 and 20 are the same shape: round 4's change was right, and the sentences
+  explaining the old design were left standing next to it. Neither changes behaviour.
+- `home_screen_test.dart:36` still reads the real `DateTime.now()` on purpose (a fixed date
+  would drift out of "today"), so `HomeScreen` renders against the real hour in tests. That is
+  now empirically covered on both sides of the cutoff — the suite passed at 18:0x in round 3
+  and at 22:04 here — but it holds because those fixtures happen to raise no at-risk card, not
+  by construction. If an at-risk fixture is ever added there, it needs `withClock`.
+- Findings 11 and 13 remain open by choice on round 2's reasoning. 13 (double expansion) is
+  slightly worse now — the planner runs one `expand` per evening, so two instead of one per
+  re-plan — and still not worth coupling `HomeAgenda` and `StreakAtRisk` to fix.
+- **Nothing blocking.** 19 and 20 are both worth doing before merge because they are comment
+  edits and one test, and 19 is the one that protects the next change.
+
+---
+
+# Round 4 — uncommitted working tree (now committed as `5de7052`)
+
+Round 3's findings, fixed on top of `2473aa2`. Nothing in round 3 was taken on trust: the
+blocking finding was reproduced here before being fixed, and every fix has a negative control.
+
+## Status of round 3 findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| 14 | [MEDIUM] `reminderSyncProvider` tests fail from 20:00 onwards, so CI fails a sixth of the day | ✅ **Closed** — the scheduling path reads `clock.now()`; the tests pin it |
+| 15 | [LOW] The nudge is only ever planned for today, so a day without the app gets none | ✅ **Closed by decision** — the planner now reaches `AppConstants.streakNudgeEvenings` (2) evenings |
+| 16 | [INFO] `home_clock_provider_test` throws for one minute a day | ✅ **Closed** — `fakeAsync(initialTime: …)` |
+| 17 | [INFO] The id-space comment is out by a factor of 100 | ✅ **Closed** — now "4 million×" |
+| 18 | [INFO] The test file re-declares the locale overrides | ✅ **Closed** — uses `commonTestOverrides` |
+| 11, 13 | open by choice in round 2 | ⚠️ Unchanged |
+
+### Finding 14 — closed: the scheduling path has a clock
+
+Reproduced first, with round 3's own technique (the cutoff moved into the past rather than
+the clock into the future — the same comparison). Local time was 18:12:
+
+```
+$ sed -i 's/streakAtRiskHour = 20;/streakAtRiskHour = 17;/' lib/core/utils/app_constants.dart
+$ flutter test test/core/notifications/reminder_sync_provider_test.dart test/features/home/presentation/home_clock_provider_test.dart
+00:00 +8 -3: Some tests failed.
+```
+
+`reminder_sync_provider.dart:139` now reads `clock.now()`, the way `homeClockProvider`
+already did, and the test file pins both the fixtures and the provider's clock
+(`withClock(Clock.fixed(…))` inside `settle`, fixtures built from one fixed morning).
+
+| | Before 20:00 local | From 20:00 local |
+| --- | --- | --- |
+| `reminderSyncProvider` tests, round 3 | 6 pass | 3 pass, 3 fail |
+| `reminderSyncProvider` tests, now | 22 pass (file total) | 22 pass — the hour cannot reach them |
+
+Negative control: `clock.now()` back to `DateTime.now()` → 2 tests fail.
+
+### Finding 15 — closed by decision: the nudge reaches two evenings
+
+Round 3 left this as "decide it and write it down, either is legitimate". Decided: extend it.
+`StreakNudgePlanner.plan` walks `StreakAtRisk.nextCutoffAfter` for
+`AppConstants.streakNudgeEvenings` (2) evenings, skipping any with nothing at risk, and gives
+each its own id (`streakNudgeNotificationId + n`) so the second cannot overwrite the first.
+
+| | Round 3 | Now |
+| --- | --- | --- |
+| Planned at 09:00, habit booked tonight and tomorrow | 1 nudge (tonight) | **2** (tonight 20:00, tomorrow 20:00) |
+| Planned at 23:30, habit booked tomorrow | none | **1** (tomorrow 20:00) |
+| Tonight done, tomorrow booked | 1 (tonight, wrongly) | **1** (tomorrow only) |
+
+Why extend rather than document the limit: planning only today's cutoff meant the feature
+covered exactly the days the app was already opened before 20:00, and the evening after a
+quiet day is the one that needs it. Tomorrow's nudge assumes tomorrow's booked habits are not
+done, which they cannot be yet; completing one re-plans the set and drops it. The cost is at
+most one extra pending alarm.
+
+Written down as round 3 asked: the "How far ahead it reaches" paragraph in
+`notifications-and-reminders.md`, the constant's own comment, and roadmap 1.2 — which now also
+records what is still true, that a phone left unopened for longer than two days stops getting
+a nudge.
+
+Negative controls: planning from `cutoffFor` instead of `nextCutoffAfter` → 2 fail; one
+evening instead of the constant → 3 fail; one shared id → 1 fails.
+
+### Findings 16, 17, 18 — closed
+
+`fakeAsync(initialTime: morning, …)` in both tests of `home_clock_provider_test`, so the
+step back from the cutoff can no longer go negative; `40 000×` → `4 million×` in
+`reminder_planner.dart:180` (`1 073 741 824 / 250 = 4 294 967`, as round 2's write-up had it);
+and the local `commonOverridesForLocale` is gone in favour of `commonTestOverrides`.
+
+## A round-3 claim qualified
+
+Round 3 measured finding 14 by lowering `streakAtRiskHour`. Run against the **whole** suite
+that probe also fails 5 tests in `streak_at_risk_test.dart` — and those are not clock-dependent
+at all: they build fixed `DateTime`s and assert behaviour either side of 20:00, so moving the
+constant invalidates their premise by construction. The probe is sound for the scheduling
+tests round 3 used it on, and it is not a general "clock dependence" detector. Checked the
+other way round: `grep -rn 'DateTime.now()' test/` now returns 9 hits in 5 files, and the only
+one on a streak path is `home_screen_test.dart:36`, which reads the clock on purpose (a fixed
+date would drift out of "today") and renders no at-risk card in its fixtures.
+
+## Round 4 verification
+
+| Item | Round 3 | Round 4 |
+| --- | --- | --- |
+| `flutter test` | 230 pass / 0 fail | **234 pass / 0 fail** (4 new tests) |
+| `flutter test`, cutoff moved into the past | 227 pass / 3 fail | **229 pass / 5 fail** — all 5 are the hardcoded-hour tests above; the 3 scheduling failures are gone |
+| `flutter analyze` | `No issues found!` | `No issues found!` |
+| Negative controls | — | 4 of 4 caught (clock, `nextCutoffAfter`, the evening count, the shared id) |
+| `dotnet test` | not re-run | not re-run — still 0 server files in `main...HEAD` |
+| `git status --porcelain` after probes | empty | empty (constant restored) |
+
+---
+
+# Round 3 — review `2473aa2`, independent verification of round 2
+
+Round 2 was written against an uncommitted tree. That tree is now `2473aa2`
+(`fix(home): address the review of the streak-at-risk nudge`) and `git status` is clean, so
+this round reviews the same code round 2 claimed to, as a commit. Nothing below is carried
+over from round 2 on trust: every claim was re-run here.
+
+## Verifying round 2's claims
+
+| Round 2 claimed | I verified with | Result |
+| --- | --- | --- |
+| `flutter test` → 230 pass / 0 fail | `flutter test` | ✔ `00:27 +230: All tests passed!` |
+| `flutter analyze` → clean | `flutter analyze` | ✔ `No issues found! (ran in 53.2s)` |
+| Finding 1 closed — a habit ticked today is not flagged | read `streak_at_risk.dart:85-94`; the `mine.any(isCompleted)` guard is there, with its three tests | ✔ |
+| Finding 7 closed — the watch is narrowed | `reminder_sync_provider.dart:136-138` is `appSettingsProvider.select((s) => s.streakNudges)` | ✔ |
+| …and `AppSettings` gained `==`/`hashCode` | `app_settings_provider.dart:30-41` | ✔ |
+| Finding 10 closed — the id spaces are disjoint | `eventReminderIdMask = 0x3FFFFFFF` (max 1 073 741 823) vs `streakNudgeNotificationId = 0x7FFFFFF0` (2 147 483 632) | ✔ disjoint by construction |
+| Finding 4 closed — Home wakes at the cutoff | `home_clock_provider.dart:182-191`, one `Timer` to `nextCutoffAfter`, `ref.onDispose(timer.cancel)` | ✔ — but its test has a wall-clock edge, see **16** |
+| Finding 6 closed — the docs match the feature | read the new "The evening streak nudge" section and the rewritten gap bullet in `notifications-and-reminders.md` | ✔ |
+| "2^30 is still about four million times the 250 cap" | `1073741824 / 250 = 4294967` | ✔ in the report — ✘ in the source comment it summarises, see **17** |
+| `dotnet test` → 144 pass | **not re-run.** `git diff --name-only main...HEAD` piped through `grep -c '^server/'` → `0` | no server file is in this branch's diff |
+
+Round 2's fixes hold. The findings below are new, and three of them are in code round 2
+added.
+
+## New findings
+
+### 14 [MEDIUM] The new `reminderSyncProvider` tests fail every day from 20:00 onwards, and CI runs in UTC
+
+`reminder_sync_provider_test.dart:62-63` builds its fixtures from the wall clock:
+
+```dart
+final soon = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 9, minute: 0);
+final today = DateTime.now();
+```
+
+and `reminderSyncProvider` reads the wall clock too (`reminder_sync_provider.dart:139`):
+
+```dart
+final now = DateTime.now();
+```
+
+`StreakNudgePlanner.plan` returns `const []` once the cutoff has passed
+(`streak_nudge_planner.dart:37-38`), so every assertion about a nudge in that file is
+implicitly asserting *"this suite is being run before 20:00 local"*. Three of the six
+`reminderSyncProvider` tests are.
+
+Reproduced with the only lever available without changing the system clock — moving the
+cutoff into the past instead of moving `now` into the future, which is the same comparison.
+Local time was 18:0x, so `streakAtRiskHour = 17` reproduces exactly what 20:00 does:
+
+```
+$ sed -i 's/streakAtRiskHour = 20;/streakAtRiskHour = 17;/' lib/core/utils/app_constants.dart
+$ flutter test test/core/notifications/reminder_sync_provider_test.dart
+00:00 +1 -2: builds the nudge body from the habit, not from minutesBefore [E]
+  Expected: contains 'Still open today — finish it to keep your streak'
+    Actual: []
+00:00 +1 -3: names the other habits at risk in the body when there are several [E]
+  Expected: contains 'Still open today, with 2 more — finish them to keep your streaks'
+    Actual: []
+00:00 +6 -3: Some tests failed.
+```
+
+(The constant is restored; `git status --porcelain` is empty.)
+
+The third casualty is `sends event reminders and the streak nudge in ONE applyPlan call` —
+the test written specifically to hold down the thing `CLAUDE.md` and the commit message both
+single out as easy to get wrong.
+
+| | Before 20:00 local | From 20:00 local |
+| --- | --- | --- |
+| `reminderSyncProvider` tests | 6 pass | **3 pass, 3 fail** |
+
+Impact: `.github/workflows/ci.yml:72` runs `flutter test` on `ubuntu-latest`, whose clock is
+UTC. So **every push landing between 20:00 and 23:59 UTC fails CI** — a sixth of the day — on
+a branch nobody touched. For a maintainer in UTC+7 that window is 03:00–06:59 local, so it
+will look like a flake that never reproduces. It also means the project rule "run
+`flutter test` and report results before calling anything done" is being satisfied by a gate
+that only tells the truth 20 hours a day, and a real regression in the combined plan would be
+indistinguishable from the hour.
+
+**Fix** — the technique is already in this branch. Round 2 made `homeClockProvider` testable
+by reading `clock.now()`; the scheduling path did not get the same treatment. Give it the
+same:
+
+```dart
+// reminder_sync_provider.dart
+import 'package:clock/clock.dart';
+...
+-  final now = DateTime.now();
++  final now = clock.now();
+```
+
+then pin the fixtures and wrap each test body:
+
+```dart
+final at9am = DateTime(2026, 9, 12, 9, 0);
+...
+await withClock(Clock.fixed(at9am), () async { await settle(container); ... });
+```
+
+`clock` is already a direct dependency (`pubspec.yaml`, added in round 2). This also unlocks
+the case that currently cannot be tested at all and that finding 15 is about: what the
+provider does *after* the cutoff.
+
+### 15 [LOW] The nudge only exists on days the app is opened before 20:00 — nothing is ever scheduled for tomorrow
+
+`StreakNudgePlanner.plan` asks `StreakAtRisk.cutoffFor(now)`, which is *today's* cutoff by
+construction (`streak_at_risk.dart:105-112`), and returns empty once it has passed. Nothing
+plans a day ahead. Measured — a habit with a live streak booked at 21:00 for three straight
+evenings, none completed:
+
+```
+PROBE now=2026-09-12 09:00 -> fireAt 2026-09-12 20:00
+PROBE now=2026-09-12 19:59 -> fireAt 2026-09-12 20:00
+PROBE now=2026-09-12 20:01 -> NO NUDGE
+PROBE now=2026-09-12 21:30 -> NO NUDGE
+PROBE now=2026-09-12 23:59 -> NO NUDGE
+```
+
+At 20:01 the planner returns nothing at all — not "nothing for tonight", nothing. The
+contrast with the other planner at the same instant, on the same three events, is the point:
+
+```
+PROBE eventReminder fireAt=2026-09-12 20:45
+PROBE eventReminder fireAt=2026-09-13 20:45
+PROBE eventReminder fireAt=2026-09-14 20:45
+PROBE total=3
+```
+
+`ReminderPlanner` reaches seven days out (`AppConstants.reminderHorizon`); the nudge reaches
+the end of the current evening. And since `reminderSyncProvider` re-runs only when events,
+habits, the locale or the switch change — there is no timer on it — the pending nudge set is
+whatever the last pre-cutoff run of the app left behind.
+
+Impact: a user whose last session on Saturday was at 21:00, and who does not open the app at
+all on Sunday, gets no nudge on Sunday evening — the day they most needed one. The feature
+silently covers only days the app was already used. This is not a bug in any single function;
+it is a consequence of planning "today's cutoff" that nothing states. The docs come close and
+stop short — `notifications-and-reminders.md` says "nothing is scheduled once the cutoff has
+passed — Home still shows the card", which reads as *for tonight* but actually means *at
+all*.
+
+Mitigating: planning tomorrow's nudge is not free, because tomorrow's completion state is
+unknowable and every booked habit with a live streak would qualify. It is self-correcting
+(any session tomorrow re-plans and drops it), but it is a real design decision, not an
+oversight to patch blindly.
+
+**Fix**: decide it and write it down. Either extend the planner to the next cutoff as well —
+cheap, at most one extra alarm, self-correcting — or add one sentence to the "What it
+deliberately does not do" list in `notifications-and-reminders.md` and to roadmap 1.2's
+"Still open" paragraph, saying the nudge covers only days the app runs before the cutoff. The
+second is a legitimate answer; leaving it unsaid is not.
+
+### 16 [INFO] `home_clock_provider_test` throws outright for one minute a day
+
+Same root cause as 14, narrower window. `home_clock_provider_test.dart:20-23`:
+
+```dart
+final untilCutoff = cutoff.difference(first);
+async.elapse(untilCutoff - const Duration(minutes: 1));
+```
+
+`fakeAsync` starts its clock at the real `DateTime.now()`, so between 19:59:00 and 19:59:59
+local `untilCutoff` is under a minute and the subtraction goes negative. Measured:
+
+```
+PROBE now=2026-09-12 19:59:30 untilCutoff=0:00:30  minusOneMinute=-0:00:30
+PROBE negative elapse: THROWS -> Invalid argument (duration): may not be negative
+```
+
+Not a failed expectation — an `ArgumentError` out of the test body. One minute in 1440, so it
+will essentially never be seen; worth fixing in the same pass as 14 because it is the same
+fix. `fakeAsync` takes an `initialTime`, so pinning it removes the dependency entirely.
+
+### 17 [INFO] The id-space comment is out by a factor of 100, and contradicts the report that justified it
+
+`reminder_planner.dart:180`:
+
+> and the space is still 40 000× the reminder cap.
+
+`0x3FFFFFFF + 1 = 1 073 741 824`; the cap is 250; the ratio is **4 294 967**. Round 2's own
+write-up says "about four million times the 250 cap", which is right — the number that landed
+in the source is not. Harmless arithmetic, but this is the sentence justifying the bit that
+was deliberately given up in finding 10's fix, so it is the one that has to be right. Change
+`40 000×` to `4 million×`.
+
+### 18 [INFO] The new test file re-declares the locale overrides `test_utils.dart` already exports
+
+`reminder_sync_provider_test.dart:311-313` ends with a local `commonOverridesForLocale`,
+which is a subset of `commonTestOverrides` in `test/test_utils.dart:8-11` — the helper
+`CLAUDE.md` names for exactly this ("use `commonTestOverrides` from `test/test_utils.dart`
+for locale"). No behavioural difference today; it is a second place to update when the locale
+setup changes, and a grep for the canonical name will not find this file.
+
+## Round 3 verification
+
+| Item | Round 2 | Round 3 |
+| --- | --- | --- |
+| `flutter test` (at 18:0x local) | 230 pass / 0 fail | **230 pass / 0 fail** — reproduced |
+| `flutter test` (cutoff in the past) | not measured | **227 pass / 3 fail** — finding 14 |
+| `flutter analyze` | `No issues found!` | `No issues found!` |
+| `dotnet test` | 144 pass / 0 fail | not re-run — 0 server files in `main...HEAD` |
+| `git status --porcelain` after probes | — | empty (constant restored, scratch tests deleted) |
+| Nudge scheduled at 20:01 with 3 evenings booked | not measured | **none**, vs 3 event reminders — finding 15 |
+| Round 2 findings re-opened | — | **0** |
+
+## Round 3 notes
+
+- Findings 14 and 16 are both in test code round 2 added, and both come from the same
+  omission: the clock was made injectable on the display path (`homeClockProvider`) and left
+  as `DateTime.now()` on the scheduling path. One import fixes the class of problem.
+- Finding 15 is the only one about shipped behaviour, and it is a decision to record rather
+  than a defect to patch.
+- Findings 11 and 13 stay open by choice on round 2's reasoning, which I re-read and agree
+  with; nothing has changed that would reopen them.
+- **Blocking: 14.** 15–18 are not.
+
+---
+
+# Round 2 — uncommitted working tree (now committed as `2473aa2`)
 
 Fixes applied on top of `622eb9b`, not yet committed (no git operations without being asked).
 Everything below was re-measured on the working tree; nothing is carried over from round 1 on
@@ -652,17 +1222,35 @@ Design decisions that hold up:
   it out — measured at exactly the boundary.
 - **Both plans go through one `applyPlan`**, which `cancelAll()` makes mandatory rather than
   tidy, and which also gives the settings switch its teardown for free.
-- **One notification for the evening, not one per habit**, with a fixed id so re-planning
-  replaces rather than stacks.
+- **One notification per evening, not one per habit**, with an id derived from the evening
+  so re-planning replaces rather than stacks, and tomorrow's cannot overwrite tonight's.
 - **A habit with nothing booked is deliberately not flagged**, with the reason recorded in
   three places instead of left implicit.
 - **`ReminderKind` defaults to `eventReminder`** and was folded into `==`, `hashCode` and
   `toString` in the same edit, so no existing call site changed meaning.
 
-After 2 rounds: 13 findings, 11 closed, 2 open by choice (11, the notification payload —
+After 6 rounds: 20 findings, 18 closed, 2 open by choice (11, the notification payload —
 nothing reads payloads yet, and the encoding should be chosen with the tap handler; and 13,
 the double occurrence expansion — measured to cost one comparison for 20 hours of the day).
 **No HIGH, no MEDIUM left. Does not block merge.**
+
+Rounds 3 and 4 were worth the extra pass. Round 3 caught the one thing the suite could not
+tell anyone — three tests that only held before 20:00, on a project whose CI runs in UTC — and
+it caught it by re-running round 2's claims rather than reading them. Round 4 closed that with
+the technique the branch had already introduced for the display path, and took round 3's open
+design question (the nudge reaching only today) as a decision to make rather than a note to
+file: the planner now covers two evenings, which is what makes the feature work on the day
+after a quiet one. The bug class behind findings 14 and 16 is the same one round 1 and 2 kept
+finding in this branch — time read from the wall clock in code that decides by comparing
+against a cutoff — and it is now injectable on both paths.
+
+Rounds 5 and 6 found no behaviour left to fix and went after the statements around it instead:
+the comment on the nudge id still described one pending notification, and the new constant's
+comment pointed at the 32-bit ceiling when the limit that actually binds is the server's
+one-day streak grace. Both were created by round 4's own fix. The second is the more useful
+finding of the two, because "raise it if you want more evenings" would have been a reasonable
+next change and the code would not have stopped it — so it is now the one invariant in this
+feature held by an assertion rather than by a comment.
 
 Round 1's finding 1 was the one that mattered: the rule the branch implemented ("an
 unfinished occurrence today") was not the rule the streak uses ("any completion today"), and
@@ -738,4 +1326,63 @@ python -c "...remove the cutoff timer..."     && flutter test  # 1 test
 python -c "...remove ref.onDispose..."        && flutter test  # 2 tests
 grep -n "ShellRoute|StatefulShellRoute" app_router.dart       # plain ShellRoute - finding 5
 git status --porcelain                                        # no stray probe files
+```
+
+### Round 3
+
+As recorded in that round's own write-up:
+
+```
+flutter test                                                  # 230 pass / 0 fail
+flutter analyze                                               # No issues found (53.2s)
+sed -i 's/streakAtRiskHour = 20;/streakAtRiskHour = 17;/' app_constants.dart
+flutter test test/core/notifications/reminder_sync_provider_test.dart  # +6 -3 -> finding 14
+# probe scripts for the nudge horizon and the fakeAsync edge (temp files, removed)
+git diff --name-only main...HEAD | grep -c '^server/'         # 0 - dotnet test not re-run
+git status --porcelain                                        # empty (constant restored)
+```
+
+### Round 4
+
+```
+sed -i 's/streakAtRiskHour = 20;/.. = 17;/' app_constants.dart && flutter test <2 files>
+                                                              # +8 -3: finding 14 reproduced
+flutter analyze                                               # No issues found (146.6s)
+flutter test                                                  # 234 pass / 0 fail
+flutter test <the two notification files>                      # 22 pass
+sed -i '.. = 17;' && flutter test                             # 229 pass / 5 fail: all 5 are
+                                                              # hardcoded-hour tests, see above
+grep -rn "DateTime.now()" test/                               # 9 hits / 5 files, none on a
+                                                              # streak path except by design
+python scratchpad/negative_controls (4 mutations)             # clock -> 2 fail; cutoffFor -> 2;
+                                                              # 1 evening -> 3; shared id -> 1
+git status --porcelain                                        # constant restored after probes
+```
+
+### Round 5
+
+As recorded in that round's own write-up (run at 22:04 local, after the cutoff):
+
+```
+flutter test                                                  # 234 pass / 0 fail at 22:04
+flutter analyze                                               # No issues found (8.8s)
+git checkout 2473aa2 -- <3 files> && flutter test <2 files>    # 3 fail: the before/after
+sed -i 's/streakAtRiskHour = 20;/.. = 17;/' && flutter test    # 229 pass / 5 fail, reproduced
+grep -n 'DateTime.now()\|clock.now()' <4 src + 3 test files>  # no wall-clock read on the path
+probe: plan at 09:00 / evenings=2 vs 4                        # ids ...632/...633 (+634/635)
+probe: 250 event reminders + nudges                           # 252, both nudges survive the cap
+git status --porcelain                                        # empty after every probe
+```
+
+### Round 6
+
+```
+sed -n 78,95p server/src/Application/Common/StreakCalculator.cs  # isAlive: today or yesterday
+grep -rn "at most one nudge" apps/lib docs                    # 4 hits before, 0 after
+flutter test test/core/notifications/streak_nudge_planner_test.dart  # 14 pass
+sed -i 's/streakNudgeEvenings = 2;/.. = 5;/' && flutter test <planner file>
+                                                              # 2 fail - the new ceiling test
+flutter analyze                                               # No issues found (6.5s)
+flutter test                                                  # 235 pass / 0 fail
+git status --porcelain                                        # constant restored
 ```

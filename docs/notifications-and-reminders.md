@@ -161,7 +161,8 @@ Both are pure and take their clock as a parameter, like `ReminderPlanner`.
 
 **It rides in the same plan, and must.** `applyPlan` opens with `cancelAll()`, so two
 separate calls would mean whichever ran second wiped the first. `reminderSyncProvider`
-therefore builds one list — event reminders plus at most one nudge — and applies it once.
+therefore builds one list — event reminders plus up to `streakNudgeEvenings` nudges — and
+applies it once.
 This is also why the settings switch needs no teardown code: with the switch off the planner
 returns an empty list, and the next `applyPlan` simply does not re-register it.
 
@@ -176,14 +177,24 @@ many others there are, so the body can say so instead of reading as a single-hab
 `ReminderKind` on `ScheduledReminder` is what keeps the two bodies apart — a nudge has
 `minutesBefore: 0`, which without the kind would render as "Starting now".
 
-**A fixed id.** There is at most one nudge pending, so re-planning must replace it rather
-than stack a second — see the id note above for why it sits outside the hashed range.
+**Ids.** A fixed base (`streakNudgeNotificationId`) plus the evening's index, so
+re-planning replaces each evening's nudge rather than stacking a second — see the id note
+above for why the base sits outside the hashed range.
 
 **What it deliberately does not do.** A habit with nothing booked today is not flagged (that
 is 5.1), a habit already ticked today is not flagged even with another slot open (one
-completion secures the calendar day), and nothing is scheduled once the cutoff has passed —
-Home still shows the card. The cutoff is the device's local hour while the streak day is the
-server's UTC+7; roadmap 5.1 has the measured divergence.
+completion secures the calendar day), and tonight's cutoff is not scheduled once it has
+passed — Home still shows the card.
+
+**How far ahead it reaches.** `AppConstants.streakNudgeEvenings` evenings (2): the next cutoff
+and the one after. Planning only tonight meant the nudge existed only on days the app was
+opened before 20:00, so the evening after a quiet day was silent — the one that needed it most.
+Tomorrow's nudge is scheduled on the assumption that tomorrow's booked habits are not done yet,
+which they cannot be; completing one re-plans everything and drops it. Each evening gets its own
+id (`streakNudgeNotificationId + n`), or the second would overwrite the first.
+
+The cutoff is the device's local hour while the streak day is the server's UTC+7; roadmap 5.1
+has the measured divergence.
 
 **Where it lives.** `core/notifications/streak_nudge_planner.dart`,
 `features/habits/domain/streak_at_risk.dart`, the card in

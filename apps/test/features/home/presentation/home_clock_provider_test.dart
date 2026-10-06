@@ -7,8 +7,13 @@ import 'package:habit_tracker/features/habits/domain/streak_at_risk.dart';
 /// The clock exists for one reason: Home is a pure function of its providers, so without
 /// it a screen open at 19:50 never shows the streak-at-risk card when 20:00 arrives.
 void main() {
+  // fakeAsync starts at the real DateTime.now() unless told otherwise, and the test below
+  // steps back a minute from the cutoff: between 19:59:00 and 19:59:59 local that step was
+  // negative and threw out of the test body.
+  final morning = DateTime(2026, 9, 12, 9, 0);
+
   test('re-reads itself at the streak cutoff, and not before', () {
-    fakeAsync((async) {
+    fakeAsync(initialTime: morning, (async) {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
@@ -39,7 +44,7 @@ void main() {
   });
 
   test('cancels its timer on dispose', () {
-    fakeAsync((async) {
+    fakeAsync(initialTime: morning, (async) {
       final container = ProviderContainer();
 
       container.read(homeClockProvider);

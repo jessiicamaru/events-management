@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/notifications/notification_service.dart';
@@ -70,7 +71,10 @@ final reminderSyncProvider = Provider<void>((ref) {
   final nudgesOn = ref.watch(
     appSettingsProvider.select((settings) => settings.streakNudges),
   );
-  final now = DateTime.now();
+  // clock.now(), not DateTime.now(): both planners decide by comparing against the
+  // cutoff, so a test that cannot fix "now" can only assert what happens to hold at the
+  // hour it runs — and did, until a run after 20:00 made three of them fail.
+  final now = clock.now();
 
   final reminders = [
     ...ReminderPlanner.plan(events: eventsAsync.value!, now: now),

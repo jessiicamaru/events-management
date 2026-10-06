@@ -76,14 +76,35 @@ class AppConstants {
   /// the one place to change the client half.
   static const int streakAtRiskHour = 20;
 
-  /// Notification id for the evening nudge. Fixed, unlike event reminders, which derive
-  /// theirs from the occurrence: there is at most one nudge pending at a time, and
-  /// replanning must replace it rather than stack a second one.
+  /// Base notification id for the evening nudge. A fixed base, unlike event reminders,
+  /// which hash theirs from the occurrence: there is one nudge per planned evening
+  /// ([streakNudgeEvenings]), at consecutive ids from this base, so re-planning replaces
+  /// each evening's nudge rather than stacking a second one.
   ///
   /// Above [eventReminderIdMask], so it cannot be the id a hashed event reminder lands on.
   /// The two are scheduled in one `applyPlan` call with no shared dedupe between them, so
   /// an overlap would mean one silently overwriting the other.
   static const int streakNudgeNotificationId = 0x7FFFFFF0;
+
+  /// How many evenings ahead the nudge is planned, counting the next cutoff as one.
+  ///
+  /// Two, so a day the app is never opened still gets its nudge: planning only tonight
+  /// meant the feature covered exactly the days somebody already used the app, and the
+  /// evening after a quiet day is when it matters most. Tomorrow's state is unknowable —
+  /// nothing booked for tomorrow can be completed yet — so tomorrow's nudge is scheduled on
+  /// the assumption that it will not be, and dropped the moment it is: completing anything
+  /// re-plans the whole set.
+  ///
+  /// **Two is the ceiling, and the limit is the server's.** `StreakCalculator` reports a
+  /// streak as alive only while its last completion is today or yesterday, so the
+  /// `currentStreak` the client plans from stays true for today and tomorrow and no longer.
+  /// A nudge planned further out would fire about a streak that is already broken — "finish
+  /// it to keep your streak" for a streak lost two nights ago, which is how the switch gets
+  /// turned off. Raising this needs that grace period raised first.
+  ///
+  /// (Ids also run from [streakNudgeNotificationId] upwards, one per evening, but they are
+  /// not what binds: the space below the signed 32-bit ceiling allows 16.)
+  static const int streakNudgeEvenings = 2;
 
   /// Mask applied to hashed event-reminder ids (`ReminderPlanner.reminderId`), keeping
   /// them positive **and** below every fixed notification id above.

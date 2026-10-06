@@ -12,55 +12,73 @@ import 'package:habit_tracker/features/habits/domain/streak_at_risk.dart';
 /// pending alarms — `applyPlan` cancels everything it is not given, so both plans must
 /// reach it together.
 ///
-/// At most one nudge exists at a time. Several habits at risk are one notification, not
-/// one each: the point is to prompt the evening, not to fill the shade.
+/// One nudge per evening in range, never one per habit: several habits at risk share a
+/// single notification, because the point is to prompt the evening, not to fill the shade.
 abstract final class StreakNudgePlanner {
-  /// The nudge for today, or nothing.
+  /// One nudge per evening that has something at risk, for the next
+  /// [AppConstants.streakNudgeEvenings] evenings.
   ///
-  /// Returns empty when the user turned nudges off, when the cutoff has already passed
-  /// (a notification for a moment gone by is noise — Home still shows the card), or when
-  /// nothing would be at risk by the cutoff.
+  /// "At risk by the cutoff" is [StreakAtRisk.evaluate] asked about that cutoff rather
+  /// than now, which is why planning at 09:00 can schedule tonight's nudge.
   ///
-  /// "Would be at risk by the cutoff" is [StreakAtRisk.evaluate] asked about the cutoff
-  /// rather than now, which is why planning at 09:00 can schedule tonight's nudge. The
-  /// plan is rebuilt whenever events change, so finishing the habit during the day
-  /// cancels it.
+  /// It reaches past tonight on purpose. Planning only today's cutoff meant the nudge
+  /// existed only on days the app was opened before 20:00 — so the evening after a quiet
+  /// day, the one that needed it most, was silent. Tomorrow's nudge is scheduled on the
+  /// assumption that tomorrow's booked habits will not be done, because nothing tomorrow
+  /// can be complete yet; completing one re-plans the whole set and drops it.
+  ///
+  /// Returns empty when the user turned nudges off, or when no evening in range has a
+  /// habit at risk. A cutoff already past is never planned — a notification for a moment
+  /// gone by is noise, and Home still shows the card.
   static List<ScheduledReminder> plan({
     required List<EventModel> events,
     required List<HabitModel> habits,
     required DateTime now,
     required bool enabled,
     int cutoffHour = AppConstants.streakAtRiskHour,
+    int evenings = AppConstants.streakNudgeEvenings,
   }) {
     if (!enabled) return const [];
 
-    final cutoff = StreakAtRisk.cutoffFor(now, cutoffHour: cutoffHour);
-    if (!cutoff.isAfter(now.toLocal())) return const [];
+    final nudges = <ScheduledReminder>[];
+    var cutoff = StreakAtRisk.nextCutoffAfter(now, cutoffHour: cutoffHour);
 
-    final atRisk = StreakAtRisk.evaluate(
-      events: events,
-      habits: habits,
-      now: cutoff,
-      cutoffHour: cutoffHour,
-    );
-    if (atRisk.isEmpty) return const [];
+    for (var evening = 0; evening < evenings; evening++) {
+      final atRisk = StreakAtRisk.evaluate(
+        events: events,
+        habits: habits,
+        now: cutoff,
+        cutoffHour: cutoffHour,
+      );
 
+      if (atRisk.isNotEmpty) nudges.add(_nudgeFor(atRisk, cutoff, evening));
+
+      cutoff = StreakAtRisk.nextCutoffAfter(cutoff, cutoffHour: cutoffHour);
+    }
+
+    return nudges;
+  }
+
+  static ScheduledReminder _nudgeFor(
+    List<HabitAtRisk> atRisk,
+    DateTime cutoff,
+    int evening,
+  ) {
     final first = atRisk.first;
 
-    return [
-      ScheduledReminder(
-        id: AppConstants.streakNudgeNotificationId,
-        // The habit, not an event: the nudge is about the streak, and which occurrence
-        // carries it can change during the day.
-        eventId: first.habit.id,
-        title: first.habit.name,
-        fireAt: cutoff,
-        eventStart: first.occurrence.startTime.toLocal(),
-        // Unused for this kind; the body is built from the habit's name.
-        minutesBefore: 0,
-        kind: ReminderKind.streakAtRisk,
-        alsoAtRisk: atRisk.length - 1,
-      ),
-    ];
+    return ScheduledReminder(
+      // One id per evening, so tonight's nudge and tomorrow's do not overwrite each other.
+      id: AppConstants.streakNudgeNotificationId + evening,
+      // The habit, not an event: the nudge is about the streak, and which occurrence
+      // carries it can change during the day.
+      eventId: first.habit.id,
+      title: first.habit.name,
+      fireAt: cutoff,
+      eventStart: first.occurrence.startTime.toLocal(),
+      // Unused for this kind; the body is built from the habit's name.
+      minutesBefore: 0,
+      kind: ReminderKind.streakAtRisk,
+      alsoAtRisk: atRisk.length - 1,
+    );
   }
 }

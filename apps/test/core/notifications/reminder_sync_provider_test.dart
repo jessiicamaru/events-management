@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
@@ -11,6 +12,7 @@ import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/settings/presentation/providers/app_settings_provider.dart';
 import 'package:flutter/material.dart';
+import '../../test_utils.dart';
 
 /// Records what reached the plugin instead of talking to one.
 class RecordingNotificationService implements NotificationService {
@@ -58,9 +60,14 @@ class _FakeSettings extends AppSettingsNotifier {
 }
 
 void main() {
+  // A fixed morning. Read from the wall clock, these fixtures asserted "this suite runs
+  // before 20:00": after the cutoff the nudge planner returns nothing and three tests here
+  // failed — which on CI (UTC) meant every push between 20:00 and midnight.
+  final now = DateTime(2026, 9, 12, 9, 0);
+
   // Far enough before the cutoff that both a reminder and a nudge are still schedulable.
-  final soon = DateTime.now().add(const Duration(days: 1)).copyWith(hour: 9, minute: 0);
-  final today = DateTime.now();
+  final soon = now.add(const Duration(days: 1)).copyWith(hour: 9, minute: 0);
+  final today = now;
 
   EventModel event({
     required String id,
@@ -102,7 +109,7 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
-        ...commonOverridesForLocale,
+        ...commonTestOverrides,
         notificationServiceProvider.overrideWithValue(service),
         eventsProvider.overrideWith(() => _FakeEvents(events)),
         habitsProvider.overrideWith(() => _FakeHabits(habits)),
@@ -122,13 +129,17 @@ void main() {
     return container;
   }
 
-  /// Resolves both async providers, then reads the sync provider once.
-  Future<void> settle(ProviderContainer container) async {
+  /// Resolves both async providers, then reads the sync provider once, with the clock
+  /// pinned to [at] — the provider plans against `clock.now()`.
+  Future<void> settle(ProviderContainer container, {DateTime? at}) async {
     await container.read(eventsProvider.future);
     await container.read(habitsProvider.future);
-    container.read(reminderSyncProvider);
-    // The provider fires applyPlan without awaiting it.
-    await Future<void>.delayed(Duration.zero);
+
+    await withClock(Clock.fixed(at ?? now), () async {
+      container.read(reminderSyncProvider);
+      // The provider fires applyPlan without awaiting it.
+      await Future<void>.delayed(Duration.zero);
+    });
   }
 
   group('reminderSyncProvider', () {
@@ -306,8 +317,3 @@ void main() {
     });
   });
 }
-
-/// `translationsProvider` is watched by the sync provider for the notification copy.
-final commonOverridesForLocale = [
-  translationsProvider.overrideWithValue(AppTranslations(AppLocale.en)),
-];

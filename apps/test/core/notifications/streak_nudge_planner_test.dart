@@ -6,7 +6,8 @@ import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 
 void main() {
-  DateTime at(int hour, {int minute = 0}) => DateTime(2026, 9, 11, hour, minute);
+  DateTime at(int hour, {int minute = 0, int day = 11}) =>
+      DateTime(2026, 9, day, hour, minute);
 
   final habit = HabitModel(
     id: 'habit-1',
@@ -15,11 +16,17 @@ void main() {
     currentStreak: 5,
   );
 
-  EventModel event({bool completed = false, int hour = 21}) => EventModel(
-        id: 'event-1',
+  EventModel event({
+    String id = 'event-1',
+    bool completed = false,
+    int hour = 21,
+    int day = 11,
+  }) =>
+      EventModel(
+        id: id,
         title: 'Read',
-        startTime: at(hour),
-        endTime: at(hour).add(const Duration(minutes: 30)),
+        startTime: at(hour, day: day),
+        endTime: at(hour, day: day).add(const Duration(minutes: 30)),
         habitId: 'habit-1',
         isCompleted: completed,
       );
@@ -48,9 +55,87 @@ void main() {
     expect(nudge.id, AppConstants.streakNudgeNotificationId);
   });
 
-  test('schedules nothing once the cutoff has passed', () {
-    // Home still shows the card; a notification for a moment gone by is noise.
+  test('schedules nothing for an evening already gone by', () {
+    // Home still shows the card; a notification for a moment gone by is noise. Nothing is
+    // booked tomorrow in this fixture either, so the whole plan is empty.
     expect(plan(now: at(AppConstants.streakAtRiskHour, minute: 1)), isEmpty);
+  });
+
+  test('plans tomorrow evening too, so a day without the app still gets a nudge', () {
+    // Planning only tonight meant the nudge existed exactly on the days somebody already
+    // opened the app before 20:00 — and the evening after a quiet day is the one that
+    // needed it.
+    final nudges = StreakNudgePlanner.plan(
+      events: [event(), event(id: 'tomorrow', day: 12)],
+      habits: [habit],
+      now: at(9),
+      enabled: true,
+    );
+
+    expect(nudges.map((n) => n.fireAt), [
+      at(AppConstants.streakAtRiskHour),
+      at(AppConstants.streakAtRiskHour, day: 12),
+    ]);
+    expect(
+      nudges.map((n) => n.id).toSet(),
+      hasLength(2),
+      reason: 'one id each, or the second would overwrite the first',
+    );
+    expect(nudges.every((n) => n.id >= AppConstants.streakNudgeNotificationId), isTrue);
+  });
+
+  test('after tonight has passed, it still plans tomorrow', () {
+    final nudges = StreakNudgePlanner.plan(
+      events: [event(), event(id: 'tomorrow', day: 12)],
+      habits: [habit],
+      now: at(23, minute: 30),
+      enabled: true,
+    );
+
+    expect(nudges, hasLength(1));
+    expect(nudges.single.fireAt, at(AppConstants.streakAtRiskHour, day: 12));
+  });
+
+  test('an evening with nothing at risk is skipped, not padded', () {
+    // Tonight is done, tomorrow is not: the plan is tomorrow's alone.
+    final nudges = StreakNudgePlanner.plan(
+      events: [event(completed: true), event(id: 'tomorrow', day: 12)],
+      habits: [habit],
+      now: at(9),
+      enabled: true,
+    );
+
+    expect(nudges, hasLength(1));
+    expect(nudges.single.fireAt, at(AppConstants.streakAtRiskHour, day: 12));
+  });
+
+  test('never plans further ahead than the streak value stays true', () {
+    // The server reports a streak as alive only while its last completion is today or
+    // yesterday (StreakCalculator.FromStartTimes), so a currentStreak read now is true for
+    // today and tomorrow and no further. A nudge for D+2 would say "finish it to keep your
+    // streak" about a streak already broken. Nothing else fails if this constant is raised:
+    // `evenings` is a parameter, and the test below passes its own value.
+    expect(
+      AppConstants.streakNudgeEvenings,
+      lessThanOrEqualTo(2),
+      reason: "the server's streak grace is one day; raising this needs that raised first",
+    );
+  });
+
+  test('stays inside the evenings it was given', () {
+    final nudges = StreakNudgePlanner.plan(
+      events: [
+        event(),
+        event(id: 'tomorrow', day: 12),
+        event(id: 'day-after', day: 13),
+      ],
+      habits: [habit],
+      now: at(9),
+      enabled: true,
+    );
+
+    expect(nudges, hasLength(AppConstants.streakNudgeEvenings));
+    expect(nudges.last.fireAt.day, 12, reason: 'the third evening is out of range');
   });
 
   test('schedules nothing when the habit is already done', () {

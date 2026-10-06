@@ -177,7 +177,7 @@ abstract final class ReminderPlanner {
   /// range, which leaves everything above it free for fixed ids like
   /// [AppConstants.streakNudgeNotificationId] — those live outside this space rather than
   /// merely being unlikely to land in it. Losing a bit costs nothing: collisions here are
-  /// handled by `seenIds` anyway, and the space is still 40 000× the reminder cap.
+  /// handled by `seenIds` anyway, and the space is still 4 million× the reminder cap.
   static int reminderId(
     String eventId,
     DateTime occurrenceStart,

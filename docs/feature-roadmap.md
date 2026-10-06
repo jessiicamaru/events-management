@@ -55,8 +55,10 @@ No server, no FCM, works offline.
 **Done — branch `feat/streak-at-risk`.** A habit counts as at risk when its streak is
 alive, it has an unfinished occurrence today, and the local time has passed
 `AppConstants.streakAtRiskHour` (20:00). `StreakAtRisk.evaluate` decides it, Home shows a
-card above the agenda, and `StreakNudgePlanner` schedules one notification at the cutoff —
-one for the evening, not one per habit. The switch is in Settings, on by default.
+card above the agenda, and `StreakNudgePlanner` schedules one notification per evening at
+the cutoff — one for the evening, not one per habit — for the next
+`AppConstants.streakNudgeEvenings` (2) evenings, so a day the app is never opened still gets
+its nudge. The switch is in Settings, on by default.
 
 The threshold is a fixed hour, not a per-habit one: the data for the second exists, but a
 single hour is what makes the rule explainable. It is *not* the same decision as 5.1's day
@@ -69,7 +71,9 @@ slot is a plan not followed through rather than a streak about to break.
 
 Still open: a habit with **nothing booked** today is not flagged, because whether its
 streak survives an unplanned day is exactly 5.1. The Android widgets do not show it either
-— they would need the habits request, which they do not make today.
+— they would need the habits request, which they do not make today. And the nudge reaches
+two evenings, so a phone that never opens the app for longer than that stops getting one;
+extending it is a matter of raising the constant, bounded by how many alarms Android allows.
 
 ### ⚪ 1.3 Weekly review
 
@@ -201,6 +205,12 @@ Carried over from the audit; these are not features but they block or slow the a
 heatmaps are off by a day for any user outside that zone. The seam exists (every method takes
 an optional offset); the product decision does not. **Device timezone or a profile setting?**
 Either way it shifts every existing user's streak, so decide before the user base grows.
+
+The server's streak grace also caps how far 1.2 may plan ahead: `StreakCalculator` counts a
+streak as alive only while its last completion is today or yesterday, so a `currentStreak`
+read now is true for today and tomorrow and no further. That is why
+`AppConstants.streakNudgeEvenings` is 2 and cannot rise without raising the grace — a nudge
+for D+2 can fire about a streak that is already broken.
 
 There are now **two** clocks to reconcile, not one. 1.2 added a second: the streak-at-risk
 cutoff (`AppConstants.streakAtRiskHour`) is the *device's* local 20:00, while the day it is
