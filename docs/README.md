@@ -10,7 +10,7 @@ Start here. Each entry says what the document is for and whether it still descri
 | [`google-calendar-sync-architecture.md`](google-calendar-sync-architecture.md) | The outbox, the webhook and how events map to Google's | Before touching anything under `GoogleCalendar*` |
 | [`stale-while-revalidate-sync.md`](stale-while-revalidate-sync.md) | Why reading events returns local rows first and refreshes behind the scenes | Before changing `GetEventsQuery` or the events provider |
 | [`notifications-and-reminders.md`](notifications-and-reminders.md) | Local notifications: the planner, the Android permission matrix, how to test on an emulator | Working on reminders or the streak nudge |
-| [`workflow.md`](workflow.md) | The branch-to-merge routine this project follows (Vietnamese) | Starting or finishing a piece of work |
+| [`workflow.md`](workflow.md) | The branch-to-merge routine: definition of done, review rounds, PRs | Starting or finishing a piece of work |
 
 ## Code reviews
 

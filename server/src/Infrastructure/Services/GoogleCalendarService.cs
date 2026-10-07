@@ -85,7 +85,11 @@ namespace HabitTracker.Infrastructure.Services
             return DateTime.UtcNow;
         }
 
-        private async Task<CalendarService> GetCalendarServiceAsync(string userId, string refreshToken, CancellationToken cancellationToken)
+        /// <summary>
+        /// The authorised Calendar client. Virtual so tests can hand the sync a client whose HTTP
+        /// goes to a fake Google instead of the network.
+        /// </summary>
+        protected virtual async Task<CalendarService> GetCalendarServiceAsync(string userId, string refreshToken, CancellationToken cancellationToken)
         {
             var clientId = _configuration["GoogleCalendar:ClientId"];
             var clientSecret = _configuration["GoogleCalendar:ClientSecret"];
@@ -121,28 +125,57 @@ namespace HabitTracker.Infrastructure.Services
             {
                 var calendarService = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
 
-                var listRequest = calendarService.Events.List("primary");
-                listRequest.TimeMinDateTimeOffset = syncStart ?? DateTime.UtcNow.AddDays(-7);
-                listRequest.TimeMaxDateTimeOffset = syncEnd ?? DateTime.UtcNow.AddDays(14);
-                listRequest.SingleEvents = false;
-                listRequest.ShowDeleted = true;
-
-                var googleEventsList = await listRequest.ExecuteAsync(cancellationToken);
-                var googleEvents = googleEventsList.Items ?? new List<Google.Apis.Calendar.v3.Data.Event>();
+                var windowStart = syncStart ?? DateTime.UtcNow - GoogleSyncWindow.DefaultLookBack;
+                var windowEnd = syncEnd ?? DateTime.UtcNow + GoogleSyncWindow.DefaultLookAhead;
+                var googleEvents = await ListWindowAsync(calendarService, windowStart, windowEnd, cancellationToken);
 
                 var localEvents = await _eventRepository.GetEventsForUserAsync(userId);
                 var localGoogleEvents = localEvents.Where(e => !string.IsNullOrEmpty(e.GoogleEventId)).ToList();
 
-                var googleEventIds = googleEvents.Select(ge => ge.Id).ToHashSet();
-
-                // 1. Delete events locally that are no longer in Google Calendar or are marked cancelled (for non-recurring events)
+                // 1. Delete events locally that Google cancelled (non-recurring events and whole
+                // series) or no longer has. The list covers only the window, so an event missing
+                // from it is gone only if the window would have held it — and even then Google is
+                // asked, because the local copy may be out of date (see GoogleSyncWindow). What the
+                // lookup finds still on Google joins the list, so the steps below apply it.
+                var deletedIds = new HashSet<Guid>();
+                var lookupsAvailable = true;
                 foreach (var localEvent in localGoogleEvents)
                 {
+                    if (deletedIds.Contains(localEvent.Id)) continue;
+
                     var matchingGe = googleEvents.FirstOrDefault(ge => ge.Id == localEvent.GoogleEventId);
-                    if (matchingGe == null || (matchingGe.Status == "cancelled" && string.IsNullOrEmpty(matchingGe.RecurringEventId)))
+                    bool gone;
+                    if (matchingGe != null)
                     {
-                        await _eventRepository.DeleteAsync(localEvent.Id);
+                        gone = matchingGe.Status == CancelledStatus && string.IsNullOrEmpty(matchingGe.RecurringEventId);
                     }
+                    else if (!lookupsAvailable || !GoogleSyncWindow.CouldBeListed(localEvent, windowStart, windowEnd))
+                    {
+                        gone = false;
+                    }
+                    else
+                    {
+                        var lookup = await LookUpAsync(calendarService, localEvent.GoogleEventId!, cancellationToken);
+                        gone = lookup.Outcome == LookupOutcome.Gone;
+                        if (lookup.Outcome == LookupOutcome.Found) googleEvents.Add(lookup.Event!);
+                        // One failure — offline, timed out, rate limited — is likely to repeat, so
+                        // the rest are kept unasked rather than each waiting out the same error.
+                        if (lookup.Outcome == LookupOutcome.Unknown) lookupsAvailable = false;
+                    }
+
+                    if (!gone) continue;
+
+                    // A series takes its days with it, whatever their date: they cannot outlive it,
+                    // and outside the window nothing else would remove them. Children first — the
+                    // parent link is set to null, not cascaded, when the series goes.
+                    foreach (var day in localEvents.Where(e => e.ParentEventId == localEvent.Id && !deletedIds.Contains(e.Id)))
+                    {
+                        await _eventRepository.DeleteAsync(day.Id);
+                        deletedIds.Add(day.Id);
+                    }
+
+                    await _eventRepository.DeleteAsync(localEvent.Id);
+                    deletedIds.Add(localEvent.Id);
                 }
 
                 // Refresh local google events list
@@ -150,9 +183,9 @@ namespace HabitTracker.Infrastructure.Services
                 localGoogleEvents = localEvents.Where(e => !string.IsNullOrEmpty(e.GoogleEventId)).ToList();
 
                 // 2. Separate Google Events into Masters, Exceptions, and regular events
-                var masterEvents = googleEvents.Where(ge => ge.Status != "cancelled" && ge.Recurrence != null && ge.Recurrence.Any()).ToList();
+                var masterEvents = googleEvents.Where(ge => ge.Status != CancelledStatus && ge.Recurrence != null && ge.Recurrence.Any()).ToList();
                 var exceptionEvents = googleEvents.Where(ge => ge.RecurringEventId != null).ToList();
-                var regularEvents = googleEvents.Where(ge => ge.Status != "cancelled" && (ge.Recurrence == null || !ge.Recurrence.Any()) && ge.RecurringEventId == null).ToList();
+                var regularEvents = googleEvents.Where(ge => ge.Status != CancelledStatus && (ge.Recurrence == null || !ge.Recurrence.Any()) && ge.RecurringEventId == null).ToList();
 
                 // 3. Process Master Events
                 foreach (var ge in masterEvents)
@@ -207,7 +240,7 @@ namespace HabitTracker.Infrastructure.Services
                     // tells them apart (see FindLocalOnlyDay).
                     var localOnlyDay = OccurrenceMaterializer.FindLocalOnlyDay(localEvents, localMaster, originalDate);
 
-                    if (ge.Status == "cancelled")
+                    if (ge.Status == CancelledStatus)
                     {
                         // Add exception date to master EXDATE list
                         RecurrenceExceptions.Add(localMaster, originalDate);
@@ -329,6 +362,81 @@ namespace HabitTracker.Infrastructure.Services
             }
         }
 
+        private const string CancelledStatus = "cancelled";
+
+        /// <summary>
+        /// Every event Google lists for the window, across all pages. A page may hold fewer events
+        /// than asked for, or none, while more remain; reading only the first one made every event
+        /// on a later page look deleted.
+        /// </summary>
+        private static async Task<List<Google.Apis.Calendar.v3.Data.Event>> ListWindowAsync(
+            CalendarService calendarService, DateTime windowStart, DateTime windowEnd, CancellationToken cancellationToken)
+        {
+            var events = new List<Google.Apis.Calendar.v3.Data.Event>();
+            string? pageToken = null;
+
+            do
+            {
+                var listRequest = calendarService.Events.List("primary");
+                listRequest.TimeMinDateTimeOffset = windowStart;
+                listRequest.TimeMaxDateTimeOffset = windowEnd;
+                listRequest.SingleEvents = false;
+                listRequest.ShowDeleted = true;
+                listRequest.PageToken = pageToken;
+
+                var page = await listRequest.ExecuteAsync(cancellationToken);
+                if (page.Items != null) events.AddRange(page.Items);
+
+                // Google does not repeat a token, but a loop that trusts it never ends if it did.
+                if (page.NextPageToken == pageToken) break;
+                pageToken = page.NextPageToken;
+            }
+            while (!string.IsNullOrEmpty(pageToken));
+
+            return events;
+        }
+
+        private enum LookupOutcome
+        {
+            /// <summary>Cancelled, or not found at all (404, 410).</summary>
+            Gone,
+            /// <summary>Still on Google; <see cref="Lookup.Event"/> holds its current state.</summary>
+            Found,
+            /// <summary>Google could not be asked or did not answer.</summary>
+            Unknown,
+        }
+
+        private sealed record Lookup(LookupOutcome Outcome, Google.Apis.Calendar.v3.Data.Event? Event = null);
+
+        /// <summary>
+        /// Asks Google for one event the list left out. Anything but a clear "gone" keeps the local
+        /// event — a missed deletion is put right by a later sync, a wrong one loses the user's
+        /// tasks and completion for good.
+        /// </summary>
+        private static async Task<Lookup> LookUpAsync(
+            CalendarService calendarService, string googleEventId, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var googleEvent = await calendarService.Events.Get("primary", googleEventId).ExecuteAsync(cancellationToken);
+                return googleEvent.Status == CancelledStatus
+                    ? new Lookup(LookupOutcome.Gone)
+                    : new Lookup(LookupOutcome.Found, googleEvent);
+            }
+            catch (Google.GoogleApiException ex)
+                when (ex.HttpStatusCode == System.Net.HttpStatusCode.NotFound || ex.HttpStatusCode == System.Net.HttpStatusCode.Gone)
+            {
+                return new Lookup(LookupOutcome.Gone);
+            }
+            catch (Exception ex) when (ex is Google.GoogleApiException
+                                       || ex is System.Net.Http.HttpRequestException
+                                       || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                Console.WriteLine($"Google Sync: kept {googleEventId}, lookup failed: {ex.GetType().Name} {ex.Message}");
+                return new Lookup(LookupOutcome.Unknown);
+            }
+        }
+
         public async Task<string?> PushInsertAsync(string userId, string refreshToken, Guid eventId, string payload, CancellationToken cancellationToken)
         {
             var service = await GetCalendarServiceAsync(userId, refreshToken, cancellationToken);
@@ -420,9 +528,9 @@ namespace HabitTracker.Infrastructure.Services
                             var targetInstance = instances.Items?.FirstOrDefault(x => 
                                 GetGoogleDateTime(x.OriginalStartTime ?? x.Start).Date == exDate.Date);
 
-                            if (targetInstance != null && targetInstance.Status != "cancelled")
+                            if (targetInstance != null && targetInstance.Status != CancelledStatus)
                             {
-                                targetInstance.Status = "cancelled";
+                                targetInstance.Status = CancelledStatus;
                                 await service.Events.Update(targetInstance, "primary", targetInstance.Id).ExecuteAsync(cancellationToken);
                             }
                         }

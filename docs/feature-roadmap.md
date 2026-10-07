@@ -52,7 +52,7 @@ No server, no FCM, works offline.
 
 ### 🟢 1.2 Streak-at-risk nudge
 
-**Done — branch `feat/streak-at-risk`.** A habit counts as at risk when its streak is
+**Done — PR #27.** A habit counts as at risk when its streak is
 alive, it has an unfinished occurrence today, and the local time has passed
 `AppConstants.streakAtRiskHour` (20:00). `StreakAtRisk.evaluate` decides it, Home shows a
 card above the agenda, and `StreakNudgePlanner` schedules one notification per evening at
@@ -121,8 +121,8 @@ Limits worth knowing before building on it:
 
 ### 🟢 2.1 Plan vs actual time
 
-**Done — branch `feat/plan-vs-actual`.** `GET /api/v1/analytics/plan-vs-actual?days=N` →
-two `GROUP BY` queries in Postgres (one joining `Habits`, one joining `EventCategories`),
+**Done — PR #28.** `GET /api/v1/analytics/plan-vs-actual?days=N` → three aggregates in
+Postgres (one joining `Habits`, one joining `EventCategories`, and the totals with no join),
 shown on Home under the activity card: the totals as a sentence, then a bar per habit with
 how far over or under it ran, and the same sessions by category behind a tap.
 
@@ -287,7 +287,7 @@ Google Cloud console and the ngrok dashboard.
 
 ### 🟢 5.5 Squad category authorization
 
-**Done — branch `fix/squad-category-authorization`.** The untraced PUT/DELETE blast radius
+**Done — PR #29.** The untraced PUT/DELETE blast radius
 turned out to be the worst part. Measured against a running server with two throwaway
 accounts, before the fix any signed-in caller could:
 
@@ -315,6 +315,11 @@ included. Writes now go through `EventCategoryAccess.CanAssignAsync` (keeping a 
 already has is allowed, so a removed member can still edit their own events), and the one
 read-back query filters by visibility in SQL. A deleted category's replacement must share its
 scope, so a leader cannot move a squad's rows onto a private category.
+
+A third door, found while writing that rule down: the SignalR hub (`SocialHub`) checked no membership
+at all, so any signed-in user holding a squad id could join its live chat and post into it. Every hub
+method now requires approved membership of the squad it names, and pokes and reactions an approved
+target. PR #29; review report `review-squad-category-authorization.md`, rounds 3–4.
 
 ### ⚪ 5.6 Audit the never-reviewed backend
 
@@ -375,6 +380,26 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 `Task.Run`. If Google sync breaks in production there is no signal — which matches the
 "sometimes works" symptom the sync docs describe. Use `ILogger`.
 
+### 🟢 5.8 Inbound sync deleted synced events outside its window
+
+**Done — PR #32.** Found while rewriting the sync documentation, by reading
+`SyncEventsAsync`. The sync lists one window of Google's calendar (by default 7 days back to 14 days
+ahead, or the range being browsed) but its removal step treated *every* synced local event missing
+from that list as deleted. It also read only the first page of the list. So each sync deleted the
+user's synced history, everything past the window, and any event on a later page, together with
+their tasks and recorded focus time.
+
+Reproduced with tests that run the real `SyncEventsAsync` against a fake Google HTTP layer: on the
+old code 8 of 13 failed (history, next month, a finished series, an event on page two, an event
+moved on Google, and one whose lookup errored were all deleted). Now an event missing from the list
+is removed only if the window could have held it (`GoogleSyncWindow.CouldBeListed`) **and** Google,
+asked directly, says it is cancelled or gone; what the lookup finds still on Google is applied, a failed
+lookup keeps the event, a cancelled series takes its days with it, and every page is read. Not yet checked against a real
+Google account — that needs a throwaway account and a refresh token.
+
+The fix first suggested here, taking candidates from `GetEventsForUserAsync(userId, windowStart,
+windowEnd)`, would not have been enough: that query returns every split-off day whatever its date.
+
 ---
 
 ## Suggested order
@@ -382,9 +407,10 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 One loop at a time beats five disconnected features:
 
 1. ~~**1.1 reminders**~~ — done (PR #24)
-2. ~~**1.2 streak-at-risk**~~ — done (`feat/streak-at-risk`)
-3. ~~**2.1 plan vs actual**~~ — done (`feat/plan-vs-actual`)
+2. ~~**1.2 streak-at-risk**~~ — done (PR #27)
+3. ~~**2.1 plan vs actual**~~ — done (PR #28)
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own
 
-Slot **5.1** in before the user base grows, and **5.4** whenever you next have ten minutes.
+~~**5.8**~~, which deleted synced history, is fixed. Slot **5.1** in before the user base grows, and
+**5.4** whenever you next have ten minutes.

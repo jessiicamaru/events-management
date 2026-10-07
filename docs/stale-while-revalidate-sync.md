@@ -1,74 +1,108 @@
-# Cơ chế Đồng bộ Stale-While-Revalidate cho Google Calendar
+# Stale-while-revalidate event loading
 
-Tài liệu này mô tả chi tiết phương pháp tiếp cận **Stale-While-Revalidate (SWR)** được áp dụng để đồng bộ hóa dữ liệu Google Calendar về ứng dụng Habit Tracker, đảm bảo hiệu năng tối đa cho giao diện người dùng và tính nhất quán dữ liệu liên tục.
+Why opening the calendar shows local data immediately and then updates it, how the three
+refresh mechanisms fit together, and what each one does and does not guarantee.
 
----
-
-## 1. Vấn đề của phương pháp cũ
-
-Trước đây, khi người dùng mở màn hình Lịch:
-* Backend kiểm tra khoảng ngày xem trong bảng `GoogleCalendarSyncCaches`.
-* Nếu khoảng ngày đó đã được đồng bộ một lần trong quá khứ, backend sẽ chặn hoàn toàn việc gọi API Google để tối ưu tốc độ tải trang.
-* **Hạn chế:** Nếu người dùng thay đổi sự kiện trực tiếp trên Google Calendar Web/App di động và Webhook bị ngắt kết nối (hoặc không hoạt động ở môi trường local), thay đổi đó sẽ **không bao giờ** được tự động cập nhật về app khi người dùng mở lịch.
+**Status:** matches the code as of September 2026. Read `google-calendar-sync-architecture.md`
+first for the outbox and the reconciliation itself.
 
 ---
 
-## 2. Giải pháp: Stale-While-Revalidate (SWR)
+## 1. The problem it solves
 
-SWR giải quyết bài toán này bằng cách trả về kết quả local trước, sau đó xác thực lại dữ liệu ngầm (asynchronously revalidate) thông qua các bước:
+The first implementation checked `GoogleCalendarSyncCaches` and, if a date range had *ever* been
+synced, never called Google for it again. That made the calendar fast. But a change made directly
+in Google Calendar (web or phone) reached the app only through the webhook, and the webhook does not
+work without a public HTTPS tunnel — the normal state of a local development machine. So those
+changes could fail to appear, indefinitely.
+
+## 2. The approach
+
+Serve what the database has **now**, and refresh from Google **behind** the response, at most once a
+minute per range:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Flutter App
-    participant API as Backend (GetEventsQuery)
-    participant DB as Postgres Local DB
+    actor App as Flutter app
+    participant API as GetEventsQuery
+    participant DB as PostgreSQL
     participant Google as Google Calendar API
 
-    Client->>API: Gọi GET /api/v1/events (Range [A, B])
-    API->>DB: Lấy danh sách sự kiện hiện có trong DB local
-    DB-->>API: Trả về dữ liệu local (Stale Data)
-    API-->>Client: Trả về kết quả lập tức (UI hiển thị trong <0.05s)
-
-    Note over API, Google: Xử lý Xác thực ngầm (Background Revalidate)
-    API->>API: Khởi tạo IServiceScope chạy ngầm (Task.Run)
-    API->>Google: Gọi API Google Calendar Sync gia tăng
-    Google-->>API: Trả về danh sách sự kiện thay đổi/mới (Revalidated Data)
-    API->>DB: Ghi đè cập nhật vào DB Local
-    API->>Client: Gửi tín hiệu Notify (qua SignalR hoặc App tự động cập nhật)
+    App->>API: GET /api/v1/events?startTime=A&endTime=B
+    API->>DB: events for the user in [A, B]
+    DB-->>API: local rows
+    API-->>App: local rows, immediately
+    alt no cache row covers [A, B] synced in the last minute
+        API->>API: Task.Run with its own IServiceScope
+        API->>Google: list events in [A, B]
+        API->>DB: reconcile, then save the cache row
+    end
 ```
 
----
+The response never waits for Google. The price is that the rows returned can be up to one sync
+behind.
 
-## 3. Các bước triển khai chi tiết
+## 3. The three refresh mechanisms
 
-### A. Vá lỗi Webhook Scope Disposal
-Khi Webhook của Google Calendar gọi về endpoint `/api/v1/webhooks/google-calendar`, backend không được sử dụng `ISender` trực tiếp của HttpContext hiện tại trong tiến trình chạy ngầm.
-* **Giải pháp:** Sử dụng `IServiceScopeFactory` để tạo một `IServiceScope` độc lập chạy ngầm. Điều này giúp tiến trình ngầm không bị `ObjectDisposedException` khi HTTP request kết thúc.
+| Mechanism | Where | When | Effect on the screen |
+| --- | --- | --- | --- |
+| **On-read revalidation** | `GetEventsQuery` | a fetch whose range has no fresh cache row | none immediately — it does **not** publish `CalendarUpdatedEvent`, so the new rows appear on the next fetch |
+| **Client-triggered sync** | `EventsNotifier._triggerBackgroundSync` → `POST /api/v1/google-calendar/sync` | when the events provider builds, at most once a minute (`GoogleCalendarSyncTracker`, kept alive) | the client refetches when the call returns, and the server also publishes `CalendarUpdatedEvent` |
+| **Webhook** | `GoogleCalendarWebhook` → `SyncGoogleCalendarCommand` | when Google reports a change | `CalendarUpdatedEvent` → SignalR `"CalendarUpdated"` → the client refetches |
 
-### B. Tích hợp SWR vào `GetEventsQuery`
-Mỗi khi API lấy danh sách sự kiện được gọi:
-1. Truy vấn DB local để lấy các sự kiện hiện có và trả về ngay lập tức cho Client.
-2. Kiểm tra nếu người dùng đã liên kết Google Calendar:
-   * Nếu cache đồng bộ cho khoảng thời gian này cũ hơn **1 phút**, kích hoạt tiến trình đồng bộ ngầm sử dụng `IServiceScopeFactory` độc lập.
-   * Tiến trình ngầm gọi Google API, lấy dữ liệu mới lưu vào DB và cập nhật lại thời gian đồng bộ cuối cùng.
+`SyncGoogleCalendarCommand` is the only publisher of `CalendarUpdatedEvent`. That is deliberate. The
+on-read path runs *because* a fetch happened, so if it also told the client to refetch, every fetch
+could trigger another one.
 
-### C. Cơ chế Cập nhật Tức thì (Client-side SWR & SignalR)
-Do tiến trình đồng bộ ngầm chạy sau khi HTTP response kết thúc, Client (Flutter App) cần một kênh phản hồi để biết khi nào dữ liệu trong DB local thay đổi.
+## 4. Implementation notes
 
-1. **SignalR Push (Real-time)**:
-   * Sau khi Backend hoàn thành đồng bộ dữ liệu Google Calendar (cả từ Webhook hoặc SWR ngầm), nó sẽ gửi một sự kiện `CalendarUpdatedEvent` thông qua MediatR.
-   * Bộ xử lý sự kiện `CalendarUpdatedEventHandler` nhận thông tin và gửi tín hiệu `"CalendarUpdated"` đến Client được chỉ định qua SignalR Hub `/socialHub`:
-     ```csharp
-     await _hubContext.Clients.User(notification.UserId).SendAsync("CalendarUpdated", cancellationToken);
-     ```
-2. **Xác thực kết nối WebSocket**:
-   * Do client di động kết nối WebSocket qua query string `?access_token=...` và mặc định ASP.NET Core Identity Bearer Token không tự động trích xuất query string này, một Middleware tùy biến được thêm vào `Program.cs` để sao chép token vào Header `Authorization: Bearer <token>` trước khi tiến trình Authentication chạy.
-3. **Flutter Client-side SWR**:
-   * Lớp `EventsNotifier` lắng nghe tín hiệu `"CalendarUpdated"` từ SignalR toàn cục (`signalrConnectionProvider`). Khi nhận được, nó kích hoạt `ref.invalidateSelf()` để kéo dữ liệu mới vẽ lại giao diện mà không cần chuyển tab hay Hot Reload.
-   * Để tránh lặp vô hạn (Infinite Loop) do việc kéo dữ liệu làm hàm `build()` chạy lại, trạng thái `GoogleCalendarSyncTracker` được bật `@Riverpod(keepAlive: true)` để ghi nhớ thời gian đồng bộ cuối cùng và chỉ cho phép kích hoạt sync ngầm mới sau 1 phút.
-   * Kết nối SignalR được cấu hình `.withAutomaticReconnect()` để tự động phục hồi kết nối tức thì khi server bị ngắt quãng hoặc khởi động lại.
+### Background work needs its own scope
 
-### D. Định tuyến Webhook chuẩn xác
-* Class `GoogleCalendarWebhook` kế thừa từ `EndpointGroupBase` được ghi đè `GroupName => "webhooks"` để ghi đè route group mặc định của .NET.
-* Điều này giúp endpoint webhook của Google được khớp chính xác tuyệt đối với đường dẫn callback đăng ký `/api/v1/webhooks/google-calendar`, tránh lỗi `404 Not Found` khi Google Calendar gửi cập nhật.
+Both the webhook and the on-read path keep working after the HTTP response has been sent. By then
+the request's services are disposed, so each background task calls
+`IServiceScopeFactory.CreateScope()` and resolves its own `ISender` or `IGoogleCalendarService`.
+Using the request's instances instead throws `ObjectDisposedException`.
+
+### The freshness check
+
+`GoogleCalendarSyncCacheRepository.IsRangeSyncedAsync` returns true when **one** cache row covers the
+whole requested range and was synced within the last minute. `SaveSyncRangeAsync` merges overlapping
+rows, so browsing back and forth does not multiply them.
+
+The one-minute check is measured against `LastSyncedAt`. The events provider always widens its
+request to include the coming week (`eventsFetchRange` in `events_provider.dart`), and that window
+moves with the clock, so a Home screen's range rarely matches an existing cache row exactly. In
+practice most Home fetches start a revalidation (review of `feat/home-page`, finding 6, still open).
+
+### SignalR delivery
+
+- `CalendarUpdatedEventHandler` sends `"CalendarUpdated"` to `Clients.User(userId)` on `SocialHub`
+  (`/socialHub`).
+- The Flutter SignalR client passes the token in the query string. `Program.cs` copies
+  `?access_token=` into the `Authorization` header for `/socialHub` paths; this middleware must run
+  **before** `UseAuthentication()`.
+- The connection (`signalrConnectionProvider`, kept alive) uses `.withAutomaticReconnect()`.
+- `EventsNotifier` re-registers the handler on every build and removes it on dispose, so a rebuild
+  does not stack duplicate handlers.
+
+### Avoiding a refresh loop on the client
+
+The client-triggered sync invalidates the events provider when it returns, and the provider's build
+starts the client-triggered sync. `GoogleCalendarSyncTracker` breaks the cycle: it records when the
+last sync started, is kept alive across rebuilds, and suppresses another sync within a minute. The
+tracker is updated *before* the call, so concurrent builds cannot start two.
+
+### Webhook route
+
+`GoogleCalendarWebhook` overrides `GroupName => "webhooks"`, so the endpoint is served at
+`/api/v1/webhooks/google-calendar`. That is the callback URL registered with Google; the default
+group name would not match it, and Google would receive a 404.
+
+## 5. Limits
+
+- On-read revalidation is fire-and-forget. Its failures go to the console only (roadmap 5.7).
+- Freshness is per range, not per event, and the moving fetch window defeats the cache often, as
+  noted above.
+- Reconciliation can only remove what the revalidated range covers: an event deleted on Google is
+  removed locally once a sync's window includes it (see `google-calendar-sync-architecture.md` §4).
