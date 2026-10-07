@@ -26,6 +26,65 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<PlanVsActual>> GetPlanVsActualByHabitAsync(
+            string userId, DateTime fromUtc, DateTime toUtc)
+        {
+            // SQL rather than a LINQ GroupBy, for the reason spelled out on
+            // GetDailyActivityAsync: EF quietly evaluates some grouped projections on the
+            // client, which would load every event to add up two columns. Interpolated values
+            // are parameterised by SqlQuery.
+            //
+            // Only rows with an ActualDuration take part, so both sides describe the same
+            // sessions — see PlanVsActual. The join is on text because Event.HabitId is text
+            // while Habits.Id is a uuid; casting the uuid keeps the comparison off the
+            // column that has the index.
+            return await _context.Database
+                .SqlQuery<PlanVsActual>(
+                    $"""
+                    SELECT
+                        h."Id"::text AS "GroupId",
+                        h."Name" AS "GroupName",
+                        COUNT(*)::int AS "Sessions",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."TargetDuration")) / 60.0), 0)::int AS "PlannedMinutes",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."ActualDuration")) / 60.0), 0)::int AS "ActualMinutes"
+                    FROM "Events" e
+                    JOIN "Habits" h ON h."Id"::text = e."HabitId"
+                    WHERE e."UserId" = {userId}
+                      AND e."StartTime" >= {fromUtc}
+                      AND e."StartTime" < {toUtc}
+                      AND e."ActualDuration" IS NOT NULL
+                    GROUP BY h."Id", h."Name"
+                    ORDER BY SUM(EXTRACT(EPOCH FROM e."ActualDuration")) DESC, h."Name"
+                    """)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<PlanVsActual>> GetPlanVsActualByCategoryAsync(
+            string userId, DateTime fromUtc, DateTime toUtc)
+        {
+            // Events with no category drop out of the join rather than forming a row: the
+            // client decides what to call them, and usually does not show them at all.
+            return await _context.Database
+                .SqlQuery<PlanVsActual>(
+                    $"""
+                    SELECT
+                        c."Id"::text AS "GroupId",
+                        c."Name" AS "GroupName",
+                        COUNT(*)::int AS "Sessions",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."TargetDuration")) / 60.0), 0)::int AS "PlannedMinutes",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."ActualDuration")) / 60.0), 0)::int AS "ActualMinutes"
+                    FROM "Events" e
+                    JOIN "EventCategories" c ON c."Id" = e."CategoryId"
+                    WHERE e."UserId" = {userId}
+                      AND e."StartTime" >= {fromUtc}
+                      AND e."StartTime" < {toUtc}
+                      AND e."ActualDuration" IS NOT NULL
+                    GROUP BY c."Id", c."Name"
+                    ORDER BY SUM(EXTRACT(EPOCH FROM e."ActualDuration")) DESC, c."Name"
+                    """)
+                .ToListAsync();
+        }
+
         public async Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc)
         {
             var utc = occurrenceStartUtc.Kind == DateTimeKind.Utc

@@ -144,6 +144,60 @@ class AppTranslations {
       AppLocale.vi: 'Không tải được hoạt động của bạn.',
     },
     'home_activity_retry': {AppLocale.en: 'Try again', AppLocale.vi: 'Thử lại'},
+
+    // Home Screen — plan vs actual
+    'home_plan_actual_title': {
+      AppLocale.en: 'Planned vs actual',
+      AppLocale.vi: 'Dự tính và thực tế',
+    },
+    'home_plan_actual_subtitle': {
+      AppLocale.en: 'Finished sessions, last {n} days',
+      AppLocale.vi: 'Các phiên đã hoàn thành, {n} ngày qua',
+    },
+    'home_plan_actual_headline': {
+      AppLocale.en: 'You booked {planned} and spent {actual} across {n} sessions.',
+      AppLocale.vi: 'Bạn đặt {planned} và dùng {actual} trong {n} phiên.',
+    },
+    'home_plan_actual_pair': {
+      AppLocale.en: '{actual} of {planned}',
+      AppLocale.vi: '{actual} trên {planned}',
+    },
+    'home_plan_actual_sessions': {
+      AppLocale.en: '{n} sessions',
+      AppLocale.vi: '{n} phiên',
+    },
+    'home_plan_actual_over': {
+      AppLocale.en: '{d} over, across {s}',
+      AppLocale.vi: 'Quá {d}, trong {s}',
+    },
+    'home_plan_actual_under': {
+      AppLocale.en: '{d} under, across {s}',
+      AppLocale.vi: 'Thiếu {d}, trong {s}',
+    },
+    'home_plan_actual_as_booked': {
+      AppLocale.en: 'Exactly as booked, across {s}',
+      AppLocale.vi: 'Đúng như đã đặt, trong {s}',
+    },
+    'home_plan_actual_no_target': {
+      AppLocale.en: 'No time was booked for these',
+      AppLocale.vi: 'Chưa đặt thời gian cho những phiên này',
+    },
+    'home_plan_actual_show_categories': {
+      AppLocale.en: 'By category',
+      AppLocale.vi: 'Theo nhóm',
+    },
+    'home_plan_actual_hide_categories': {
+      AppLocale.en: 'Hide categories',
+      AppLocale.vi: 'Ẩn nhóm',
+    },
+    'home_plan_actual_empty': {
+      AppLocale.en: 'Finish a focus session and the comparison shows up here.',
+      AppLocale.vi: 'Hoàn thành một phiên tập trung để thấy so sánh ở đây.',
+    },
+    'home_plan_actual_error': {
+      AppLocale.en: 'Could not load the comparison.',
+      AppLocale.vi: 'Không tải được phần so sánh.',
+    },
     'duration_minutes': {AppLocale.en: '{m} min', AppLocale.vi: '{m} phút'},
     'duration_hours_minutes': {
       AppLocale.en: '{h}h {m}m',

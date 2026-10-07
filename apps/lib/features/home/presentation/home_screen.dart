@@ -8,10 +8,12 @@ import 'package:habit_tracker/features/habits/domain/streak_at_risk.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
 import 'package:habit_tracker/features/home/domain/home_agenda.dart';
 import 'package:habit_tracker/features/home/presentation/providers/activity_summary_provider.dart';
+import 'package:habit_tracker/features/home/presentation/providers/plan_vs_actual_provider.dart';
 import 'package:habit_tracker/features/home/presentation/providers/home_clock_provider.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/activity_summary_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/habits_without_slot_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/home_header.dart';
+import 'package:habit_tracker/features/home/presentation/widgets/plan_vs_actual_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/streak_at_risk_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/today_schedule_card.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/up_next_card.dart';
@@ -69,6 +71,7 @@ class HomeScreen extends ConsumerWidget {
             ref.invalidate(eventsProvider);
             ref.invalidate(habitsProvider);
             ref.invalidate(activitySummaryProvider);
+            ref.invalidate(planVsActualProvider);
             await ref.read(eventsProvider.future);
           },
           child: ListView(
@@ -120,6 +123,10 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
               ],
               const ActivitySummaryCard(),
+              const SizedBox(height: 12),
+              // Below the activity card, because it answers the next question: that card
+              // says how often, this one says how long it really takes.
+              const PlanVsActualCard(),
               const SizedBox(height: 12),
               ShadButton.ghost(
                 onPressed: () => context.go('/calendar'),
