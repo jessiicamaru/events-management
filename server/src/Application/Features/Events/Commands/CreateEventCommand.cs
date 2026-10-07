@@ -18,7 +18,11 @@ namespace HabitTracker.Application.Features.Events.Commands
         public int? EstimatedMinutes { get; set; }
     }
 
-    public class CreateEventCommand : IRequest<Guid>
+    /// <remarks>
+    /// Returns null when <c>CategoryId</c> names a category the caller may not use — see
+    /// <see cref="EventCategoryAccess.CanAssignAsync"/>.
+    /// </remarks>
+    public class CreateEventCommand : IRequest<Guid?>
     {
         public string Title { get; set; } = string.Empty;
         public DateTime StartTime { get; set; }
@@ -34,30 +38,43 @@ namespace HabitTracker.Application.Features.Events.Commands
         public List<int>? ReminderMinutesBefore { get; set; }
     }
 
-    public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid>
+    public class CreateEventCommandHandler : IRequestHandler<CreateEventCommand, Guid?>
     {
         private readonly IEventRepository _repository;
         private readonly IHabitTaskRepository _habitTaskRepository;
         private readonly IEventTaskRepository _eventTaskRepository;
         private readonly IUserRepository _userRepository;
         private readonly IGoogleCalendarOutboxRepository _outboxRepository;
+        private readonly IEventCategoryRepository _categoryRepository;
+        private readonly ISquadRepository _squadRepository;
 
         public CreateEventCommandHandler(
-            IEventRepository repository, 
-            IHabitTaskRepository habitTaskRepository, 
+            IEventRepository repository,
+            IHabitTaskRepository habitTaskRepository,
             IEventTaskRepository eventTaskRepository,
             IUserRepository userRepository,
-            IGoogleCalendarOutboxRepository outboxRepository)
+            IGoogleCalendarOutboxRepository outboxRepository,
+            IEventCategoryRepository categoryRepository,
+            ISquadRepository squadRepository)
         {
             _repository = repository;
             _habitTaskRepository = habitTaskRepository;
             _eventTaskRepository = eventTaskRepository;
             _userRepository = userRepository;
             _outboxRepository = outboxRepository;
+            _categoryRepository = categoryRepository;
+            _squadRepository = squadRepository;
         }
 
-        public async Task<Guid> Handle(CreateEventCommand request, CancellationToken cancellationToken)
+        public async Task<Guid?> Handle(CreateEventCommand request, CancellationToken cancellationToken)
         {
+            if (!await EventCategoryAccess.CanAssignAsync(
+                    request.CategoryId, currentCategoryId: null, request.UserId,
+                    _categoryRepository, _squadRepository))
+            {
+                return null;
+            }
+
             var ev = new Event
             {
                 Title = request.Title,

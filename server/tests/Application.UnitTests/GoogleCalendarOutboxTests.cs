@@ -35,7 +35,9 @@ namespace HabitTracker.Application.Tests
                 mockHabitTaskRepo.Object,
                 mockEventTaskRepo.Object,
                 mockUserRepo.Object,
-                mockOutboxRepo.Object);
+                mockOutboxRepo.Object,
+                new Mock<IEventCategoryRepository>().Object,
+                new Mock<ISquadRepository>().Object);
 
             var command = new CreateEventCommand
             {
@@ -117,7 +119,7 @@ namespace HabitTracker.Application.Tests
 
         private class GoogleCalendarSyncWorkerTestsWrapper : GoogleCalendarSyncWorker
         {
-            public GoogleCalendarSyncWorkerTestsWrapper(IServiceScopeFactory scopeFactory, ILogger<GoogleCalendarSyncWorker> logger) 
+            public GoogleCalendarSyncWorkerTestsWrapper(IServiceScopeFactory scopeFactory, ILogger<GoogleCalendarSyncWorker> logger)
                 : base(scopeFactory, logger) { }
 
             public Task TriggerProcessOutboxQueueAsync(CancellationToken token)

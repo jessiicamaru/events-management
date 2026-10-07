@@ -35,7 +35,16 @@ namespace HabitTracker.Application.Tests
             mockRepo.Setup(r => r.UpdateAsync(It.IsAny<Habit>()))
                 .Returns(Task.CompletedTask);
 
-            var handler = new UpdateHabitCommandHandler(mockRepo.Object);
+
+            // Categories are validated now; these tests are about the fields being saved, so
+            // any id they name resolves to a category the caller owns. Refusals are covered in
+            // EventCategoryAuthorizationTests.
+            var mockCategories = new Mock<IEventCategoryRepository>();
+            mockCategories.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+                .ReturnsAsync((Guid id) => new EventCategory { Id = id, UserId = userId });
+
+            var handler = new UpdateHabitCommandHandler(
+                mockRepo.Object, mockCategories.Object, new Mock<ISquadRepository>().Object);
 
             var command = new UpdateHabitCommand
             {
@@ -65,7 +74,11 @@ namespace HabitTracker.Application.Tests
             mockRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
                 .ReturnsAsync((Habit?)null);
 
-            var handler = new UpdateHabitCommandHandler(mockRepo.Object);
+            // Refused before the category is ever looked at.
+            var handler = new UpdateHabitCommandHandler(
+                mockRepo.Object,
+                new Mock<IEventCategoryRepository>().Object,
+                new Mock<ISquadRepository>().Object);
             var command = new UpdateHabitCommand
             {
                 Id = Guid.NewGuid(),
@@ -96,7 +109,11 @@ namespace HabitTracker.Application.Tests
             mockRepo.Setup(r => r.GetByIdAsync(habitId))
                 .ReturnsAsync(habit);
 
-            var handler = new UpdateHabitCommandHandler(mockRepo.Object);
+            // Refused before the category is ever looked at.
+            var handler = new UpdateHabitCommandHandler(
+                mockRepo.Object,
+                new Mock<IEventCategoryRepository>().Object,
+                new Mock<ISquadRepository>().Object);
             var command = new UpdateHabitCommand
             {
                 Id = habitId,

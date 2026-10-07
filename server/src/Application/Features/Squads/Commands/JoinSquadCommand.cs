@@ -1,3 +1,4 @@
+using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 using System.Threading;
@@ -38,7 +39,7 @@ namespace HabitTracker.Application.Features.Squads.Commands
             if (count >= squad.MaxMembers) throw new System.Exception("Squad is full");
 
             bool isApproved = !squad.RequireApproval;
-            await _repository.AddMemberAsync(request.SquadId, request.UserId, "Member", isApproved);
+            await _repository.AddMemberAsync(request.SquadId, request.UserId, SquadMember.MemberRole, isApproved);
 
             return isApproved;
         }

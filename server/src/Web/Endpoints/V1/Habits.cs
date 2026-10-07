@@ -33,14 +33,18 @@ public class Habits : EndpointGroupBase
         return TypedResults.Ok(habits);
     }
 
-    public async Task<Results<Created<Guid>, UnauthorizedHttpResult>> CreateHabit(ISender sender, CreateHabitCommand command, ClaimsPrincipal user)
+    public async Task<Results<Created<Guid>, ForbidHttpResult, UnauthorizedHttpResult>> CreateHabit(ISender sender, CreateHabitCommand command, ClaimsPrincipal user)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
         command.UserId = userId;
         var id = await sender.Send(command);
-        return TypedResults.Created($"/api/v1/habits/{id}", id);
+
+        // Null means the category is not one this caller may use.
+        if (id == null) return TypedResults.Forbid();
+
+        return TypedResults.Created($"/api/v1/habits/{id}", id.Value);
     }
 
     public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> UpdateHabit(Guid id, ISender sender, UpdateHabitCommand command, ClaimsPrincipal user)

@@ -64,6 +64,14 @@ namespace HabitTracker.Infrastructure.Repositories
         {
             // Events with no category drop out of the join rather than forming a row: the
             // client decides what to call them, and usually does not show them at all.
+            //
+            // The category must also be one the caller may still see — their own, or a squad's
+            // they are an approved member of. The event's owner is not enough: an event keeps
+            // its CategoryId after its owner leaves the squad, and rows written before category
+            // ids were validated can point anywhere, so without this a removed member kept
+            // reading the squad's category names (and any later rename) through this card.
+            // Sessions filtered out here are not lost — they fall into the client's
+            // "No category" remainder row.
             return await _context.Database
                 .SqlQuery<PlanVsActual>(
                     $"""
@@ -79,6 +87,14 @@ namespace HabitTracker.Infrastructure.Repositories
                       AND e."StartTime" >= {fromUtc}
                       AND e."StartTime" < {toUtc}
                       AND e."ActualDuration" IS NOT NULL
+                      AND (
+                          (c."SquadId" IS NULL AND c."UserId" = {userId})
+                          OR EXISTS (
+                              SELECT 1 FROM "SquadMembers" m
+                              WHERE m."SquadId" = c."SquadId"
+                                AND m."UserId" = {userId}
+                                AND m."IsApproved")
+                      )
                     GROUP BY c."Id", c."Name"
                     ORDER BY SUM(EXTRACT(EPOCH FROM e."ActualDuration")) DESC, c."Name"
                     """)

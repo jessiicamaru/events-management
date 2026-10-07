@@ -1,6 +1,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Application.Common;
+using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 
@@ -30,7 +32,7 @@ namespace HabitTracker.Application.Features.Squads.Commands
             }
 
             var callerMembership = await _repository.GetMembershipAsync(request.SquadId, request.ActionByUserId);
-            if (callerMembership == null || callerMembership.Role != "Leader" || !callerMembership.IsApproved)
+            if (!SquadAccess.CanManage(callerMembership))
             {
                 throw new Exception("Only approved Leaders can change the Leader");
             }
@@ -41,8 +43,8 @@ namespace HabitTracker.Application.Features.Squads.Commands
                 throw new Exception("Target user must be an approved member of the squad");
             }
 
-            callerMembership.Role = "Member";
-            targetMembership.Role = "Leader";
+            callerMembership.Role = SquadMember.MemberRole;
+            targetMembership.Role = SquadMember.LeaderRole;
 
             await _repository.UpdateMemberAsync(callerMembership);
             await _repository.UpdateMemberAsync(targetMembership);

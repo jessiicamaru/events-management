@@ -23,7 +23,7 @@ namespace HabitTracker.Application.Tests
             var mockOutboxRepo = new Mock<IGoogleCalendarOutboxRepository>();
 
             Event? savedEvent = null;
-            
+
             mockRepo.Setup(r => r.AddAsync(It.IsAny<Event>()))
                 .Callback<Event>(e => savedEvent = e)
                 .Returns(Task.CompletedTask);
@@ -32,11 +32,13 @@ namespace HabitTracker.Application.Tests
                 .ReturnsAsync((ApplicationUser?)null);
 
             var handler = new CreateEventCommandHandler(
-                mockRepo.Object, 
-                mockHabitTaskRepo.Object, 
+                mockRepo.Object,
+                mockHabitTaskRepo.Object,
                 mockEventTaskRepo.Object,
                 mockUserRepo.Object,
-                mockOutboxRepo.Object);
+                mockOutboxRepo.Object,
+                new Mock<IEventCategoryRepository>().Object,
+                new Mock<ISquadRepository>().Object);
 
             var command = new CreateEventCommand
             {
@@ -55,7 +57,7 @@ namespace HabitTracker.Application.Tests
             savedEvent.Should().NotBeNull();
             savedEvent!.Title.Should().Be("Morning Run");
             savedEvent.HabitId.Should().Be("habit-123");
-            
+
             mockRepo.Verify(r => r.AddAsync(It.IsAny<Event>()), Times.Once);
         }
     }

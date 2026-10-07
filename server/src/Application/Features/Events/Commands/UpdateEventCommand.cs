@@ -37,17 +37,23 @@ namespace HabitTracker.Application.Features.Events.Commands
         private readonly IUserRepository _userRepository;
         private readonly IGoogleCalendarOutboxRepository _outboxRepository;
         private readonly OccurrenceMaterializer _materializer;
+        private readonly IEventCategoryRepository _categoryRepository;
+        private readonly ISquadRepository _squadRepository;
 
         public UpdateEventCommandHandler(
             IEventRepository eventRepository,
             IUserRepository userRepository,
             IGoogleCalendarOutboxRepository outboxRepository,
-            OccurrenceMaterializer materializer)
+            OccurrenceMaterializer materializer,
+            IEventCategoryRepository categoryRepository,
+            ISquadRepository squadRepository)
         {
             _eventRepository = eventRepository;
             _userRepository = userRepository;
             _outboxRepository = outboxRepository;
             _materializer = materializer;
+            _categoryRepository = categoryRepository;
+            _squadRepository = squadRepository;
         }
 
         public async Task<bool> Handle(UpdateEventCommand request, CancellationToken cancellationToken)
@@ -60,6 +66,17 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             // Only the owner can update the event
             if (existingEvent.UserId != request.UserId)
+            {
+                return false;
+            }
+
+            // Every path below writes request.CategoryId somewhere — the day, the series, a new
+            // series — so it is checked once, here. "Keeping" a category is exempt, but only when
+            // the rows that will receive it already have it: see CategoryBeingReplacedAsync.
+            var categoryBeingReplaced = await CategoryBeingReplacedAsync(existingEvent, request);
+            if (!await EventCategoryAccess.CanAssignAsync(
+                    request.CategoryId, categoryBeingReplaced, request.UserId,
+                    _categoryRepository, _squadRepository))
             {
                 return false;
             }
@@ -90,6 +107,30 @@ namespace HabitTracker.Application.Features.Events.Commands
             var editedSlotUtc = (request.OriginalOccurrenceDate ?? existingEvent.StartTime).ToUniversalTime();
             await UpdateWholeEventAsync(existingEvent, request, editedSlotUtc, hasGoogle, cancellationToken);
             return true;
+        }
+
+        /// <summary>
+        /// The category on the row this edit will actually overwrite — what "keeping the
+        /// category" has to be measured against.
+        /// </summary>
+        /// <remarks>
+        /// Usually the event itself. Not for a split-off day edited with "all occurrences" or
+        /// "this and future": that writes the request's category onto the <b>series</b> (and,
+        /// through <see cref="FollowSeriesAsync"/>, onto every local-only day). Measured against
+        /// the day, a member who had left a squad could keep the squad's category on one day and
+        /// spread it to the whole series — rows that never had it. Review round 3, N1.
+        /// </remarks>
+        private async Task<Guid?> CategoryBeingReplacedAsync(Event existingEvent, UpdateEventCommand request)
+        {
+            var spreadsToSeries = existingEvent.ParentEventId != null
+                && (request.EditScope == AllOccurrences || request.EditScope == ThisAndFuture);
+
+            if (!spreadsToSeries) return existingEvent.CategoryId;
+
+            var parent = await _eventRepository.GetByIdAsync(existingEvent.ParentEventId!.Value);
+            return parent != null && parent.UserId == request.UserId
+                ? parent.CategoryId
+                : existingEvent.CategoryId;
         }
 
         /// <summary>

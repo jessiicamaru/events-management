@@ -285,13 +285,36 @@ The Google `ClientSecret` and ngrok token removed from the working tree in PR #2
 valid and still in git history. Removing them did not revoke them. Rotate by hand in the
 Google Cloud console and the ngrok dashboard.
 
-### ⚪ 5.5 Squad category authorization
+### 🟢 5.5 Squad category authorization
 
-`GET /api/v1/event-categories?squadId=<any>` returns any squad's categories with no
-membership check, and the create path carries a comment admitting the same gap
-("Ideally check if user is admin of squad. For now, let anyone add to squad"). Confirmed by
-reading the code; blast radius across PUT/DELETE not yet traced. Same class as audit finding
-1, one level less severe because it needs a login.
+**Done — branch `fix/squad-category-authorization`.** The untraced PUT/DELETE blast radius
+turned out to be the worst part. Measured against a running server with two throwaway
+accounts, before the fix any signed-in caller could:
+
+| Action on someone else's data | Before | After |
+| --- | --- | --- |
+| list another squad's categories | 200, leaked | **403** |
+| add a category to another squad | 201, planted | **403** |
+| rename a squad category they are not in | 200 | **404** |
+| rename another user's **personal** category | 200 | **404** |
+| delete another user's **personal** category | 200 | **404** |
+
+The personal-category holes came from the update and delete check,
+`category.UserId != request.UserId && category.SquadId != request.SquadId`, which is false
+whenever both squad ids are null — so it waved through everybody. The fix decides rights from
+the stored row and ignores any squad id in the request (`EventCategoryAccess`), with one
+place for what membership allows (`SquadAccess`): approved members read and add; only the
+leader changes or deletes shared categories, because deleting one reassigns every member's
+events. A pending join request is not membership. Update and delete answer 404 rather than
+403, so they do not confirm that someone else's category exists.
+
+The review found a second door to the same data, closed in the same branch: event and habit
+writes stored any `CategoryId` they were given, and plan-vs-actual read the category's name
+back through the event — so a removed squad member kept seeing the squad's categories, renames
+included. Writes now go through `EventCategoryAccess.CanAssignAsync` (keeping a category a row
+already has is allowed, so a removed member can still edit their own events), and the one
+read-back query filters by visibility in SQL. A deleted category's replacement must share its
+scope, so a leader cannot move a squad's rows onto a private category.
 
 ### ⚪ 5.6 Audit the never-reviewed backend
 
