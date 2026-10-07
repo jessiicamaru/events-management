@@ -1,42 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:habit_tracker/features/home/domain/models/plan_vs_actual.dart';
-
-/// The shape measured off the running server, so a rename on either side shows up here.
-Map<String, dynamic> serverResponse() => {
-      'byHabit': [
-        {
-          'id': 'b7959df8-82fa-4a88-a042-03f4b84ee790',
-          'name': 'Running',
-          'sessions': 1,
-          'plannedMinutes': 60,
-          'actualMinutes': 65,
-        },
-        {
-          'id': '32118aec-8323-44cd-85ce-a07a29249f6b',
-          'name': 'Reading',
-          'sessions': 3,
-          'plannedMinutes': 90,
-          'actualMinutes': 54,
-        },
-      ],
-      'byCategory': [
-        {
-          'id': '73a7dea1-855c-4429-b154-f755ceaa7fcd',
-          'name': 'Study',
-          'sessions': 3,
-          'plannedMinutes': 90,
-          'actualMinutes': 54,
-        },
-      ],
-      'totalSessions': 4,
-      'totalPlannedMinutes': 150,
-      'totalActualMinutes': 119,
-    };
+import '../plan_vs_actual_fixture.dart';
 
 void main() {
   group('fromJson', () {
     test('reads the shape the server sends', () {
-      final report = PlanVsActual.fromJson(serverResponse());
+      final report = PlanVsActual.fromJson(planVsActualResponse());
 
       expect(report.byHabit.map((i) => i.name), ['Running', 'Reading']);
       expect(report.byHabit.first.sessions, 1);
@@ -58,6 +27,38 @@ void main() {
       expect(report.totalSessions, 0);
       expect(report.isEmpty, isTrue);
       expect(report.ratio, isNull);
+    });
+  });
+
+  group('sessions with no habit', () {
+    test('are counted in the totals and offered as their own row', () {
+      // Measured on the dev database: the only account with sessions in the last 14 days
+      // had 15 of them, all on plain calendar events, so the habit grouping saw none.
+      final report = PlanVsActual.fromJson(sessionsWithNoHabitResponse());
+
+      expect(report.isEmpty, isFalse, reason: '15 sessions is not "nothing here yet"');
+      expect(report.totalActualMinutes, 790);
+      expect(report.unlinkedSessions, 15);
+      expect(report.unlinked, isNotNull);
+      expect(report.unlinked!.actualMinutes, 790);
+      expect(report.unlinked!.plannedMinutes, 900);
+    });
+
+    test('are whatever the habit rows do not account for', () {
+      final report = PlanVsActual.fromJson({
+        ...planVsActualResponse(),
+        'totalSessions': 6,
+        'totalPlannedMinutes': 210,
+        'totalActualMinutes': 149,
+      });
+
+      expect(report.unlinkedSessions, 2);
+      expect(report.unlinkedPlannedMinutes, 60);
+      expect(report.unlinkedActualMinutes, 30);
+    });
+
+    test('no row when every session belongs to a habit', () {
+      expect(PlanVsActual.fromJson(planVsActualResponse()).unlinked, isNull);
     });
   });
 
@@ -88,7 +89,7 @@ void main() {
     });
 
     test('the overall ratio comes from the totals', () {
-      final report = PlanVsActual.fromJson(serverResponse());
+      final report = PlanVsActual.fromJson(planVsActualResponse());
 
       expect(report.ratio, closeTo(119 / 150, 0.001));
     });

@@ -133,8 +133,14 @@ booked" — which the activity card already says.
 
 Limits worth knowing: a zero `TargetDuration` gives no ratio rather than 0% (the card says
 so instead of drawing a bar); uncategorised events are absent from the category grouping
-rather than bundled; and the totals come from the habit grouping, because an event has at
-most one habit but a category can be shared.
+rather than bundled; and **the totals are their own query, not a sum of either grouping** —
+an event need not have a habit or a category, so summing one under-counts and summing both
+double-counts. Sessions on plain calendar events get a "Not linked to a habit" row, derived
+on the client from what the habit rows leave unaccounted.
+
+Review finding worth remembering: deriving the totals from the habit grouping made the card
+say "nothing here yet" to the one account in the dev database with sessions in the window —
+15 of them, 790 minutes, every one on a plain event.
 
 ### ⚪ 2.2 Completion rate by weekday and hour
 
@@ -222,6 +228,10 @@ streak as alive only while its last completion is today or yesterday, so a `curr
 read now is true for today and tomorrow and no further. That is why
 `AppConstants.streakNudgeEvenings` is 2 and cannot rise without raising the grace — a nudge
 for D+2 can fire about a streak that is already broken.
+
+Three things now read it, not one: the streak and heatmap queries, the activity summary's
+14-day window, and 2.1's plan-vs-actual window. For a user outside UTC+7 the two dashboard
+cards cover the same 14 days as each other but not the 14 days that user lived.
 
 There are now **two** clocks to reconcile, not one. 1.2 added a second: the streak-at-risk
 cutoff (`AppConstants.streakAtRiskHour`) is the *device's* local 20:00, while the day it is

@@ -63,6 +63,32 @@ class PlanVsActual {
 
   bool get isEmpty => totalSessions == 0;
 
+  /// Sessions the habit list cannot show, because their event has no habit — a plain
+  /// calendar event that somebody ran a focus session on.
+  ///
+  /// Derived rather than sent: the totals already count every session, so whatever the
+  /// habit rows do not account for is this. Shown as its own row, because leaving it out
+  /// made the numbers in the headline disagree with the bars under it.
+  int get unlinkedSessions =>
+      totalSessions - byHabit.fold(0, (sum, i) => sum + i.sessions);
+
+  int get unlinkedPlannedMinutes =>
+      totalPlannedMinutes - byHabit.fold(0, (sum, i) => sum + i.plannedMinutes);
+
+  int get unlinkedActualMinutes =>
+      totalActualMinutes - byHabit.fold(0, (sum, i) => sum + i.actualMinutes);
+
+  /// The row for those sessions, or null when every session belongs to a habit.
+  PlanVsActualItem? get unlinked => unlinkedSessions <= 0
+      ? null
+      : PlanVsActualItem(
+          id: '',
+          name: '',
+          sessions: unlinkedSessions,
+          plannedMinutes: unlinkedPlannedMinutes,
+          actualMinutes: unlinkedActualMinutes,
+        );
+
   /// The overall share of booked time actually spent, or null when nothing was booked.
   double? get ratio =>
       totalPlannedMinutes <= 0 ? null : totalActualMinutes / totalPlannedMinutes;

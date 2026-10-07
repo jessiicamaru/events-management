@@ -88,7 +88,15 @@ class _ReportBody extends ConsumerWidget {
         ),
         const SizedBox(height: 12),
         for (final item in report.byHabit) _ItemRow(item: item),
-        if (report.byCategory.length > 1) ...[
+        // Sessions on plain calendar events. Without this row the bars could account for
+        // none of the headline — which is what a user whose sessions are all on plain
+        // events actually saw: "nothing here yet", with 15 finished sessions behind it.
+        if (report.unlinked case final unlinked?)
+          _ItemRow(
+            item: unlinked,
+            label: translations.translate('home_plan_actual_unlinked'),
+          ),
+        if (report.byCategory.isNotEmpty) ...[
           const SizedBox(height: 4),
           _CategoryBreakdown(items: report.byCategory),
         ],
@@ -107,9 +115,12 @@ class _ReportBody extends ConsumerWidget {
 
 /// One habit or category: its name, the two durations, and a bar showing the ratio.
 class _ItemRow extends ConsumerWidget {
-  const _ItemRow({required this.item});
+  const _ItemRow({required this.item, this.label});
 
   final PlanVsActualItem item;
+
+  /// Shown instead of [PlanVsActualItem.name], for the row that has no name of its own.
+  final String? label;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -126,7 +137,7 @@ class _ItemRow extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  item.name,
+                  label ?? item.name,
                   style: theme.textTheme.small,
                   overflow: TextOverflow.ellipsis,
                 ),

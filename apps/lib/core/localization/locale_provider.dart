@@ -182,6 +182,10 @@ class AppTranslations {
       AppLocale.en: 'No time was booked for these',
       AppLocale.vi: 'Chưa đặt thời gian cho những phiên này',
     },
+    'home_plan_actual_unlinked': {
+      AppLocale.en: 'Not linked to a habit',
+      AppLocale.vi: 'Không thuộc thói quen nào',
+    },
     'home_plan_actual_show_categories': {
       AppLocale.en: 'By category',
       AppLocale.vi: 'Theo nhóm',

@@ -85,6 +85,32 @@ namespace HabitTracker.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task<PlanVsActual> GetPlanVsActualTotalsAsync(
+            string userId, DateTime fromUtc, DateTime toUtc)
+        {
+            // No join: a finished session counts whether or not it has a habit or a category.
+            // The groupings above each miss some of them, so the totals cannot be derived
+            // from either without under-counting.
+            var rows = await _context.Database
+                .SqlQuery<PlanVsActual>(
+                    $"""
+                    SELECT
+                        '' AS "GroupId",
+                        '' AS "GroupName",
+                        COUNT(*)::int AS "Sessions",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."TargetDuration")) / 60.0), 0)::int AS "PlannedMinutes",
+                        COALESCE(ROUND(SUM(EXTRACT(EPOCH FROM e."ActualDuration")) / 60.0), 0)::int AS "ActualMinutes"
+                    FROM "Events" e
+                    WHERE e."UserId" = {userId}
+                      AND e."StartTime" >= {fromUtc}
+                      AND e."StartTime" < {toUtc}
+                      AND e."ActualDuration" IS NOT NULL
+                    """)
+                .ToListAsync();
+
+            return rows.FirstOrDefault() ?? new PlanVsActual();
+        }
+
         public async Task<Event?> GetOccurrenceChildAsync(Guid seriesId, DateTime occurrenceStartUtc)
         {
             var utc = occurrenceStartUtc.Kind == DateTimeKind.Utc

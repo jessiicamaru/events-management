@@ -31,8 +31,10 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetPlanVsActual
         public List<PlanVsActualItemDto> ByCategory { get; set; } = new();
 
         /// <summary>
-        /// Totals over the habit grouping, not the category one: an event has at most one
-        /// habit, so that grouping counts every session exactly once.
+        /// Every finished session in the window, however it is grouped — including sessions
+        /// on plain calendar events with no habit, and events with no category. Neither
+        /// grouping above sees all of them, so these are not a sum of either: a user whose
+        /// sessions are all on plain events would otherwise be told they have none.
         /// </summary>
         public int TotalPlannedMinutes { get; set; }
         public int TotalActualMinutes { get; set; }
@@ -92,18 +94,16 @@ namespace HabitTracker.Application.Features.Analytics.Queries.GetPlanVsActual
 
             var byHabit = await _eventRepository.GetPlanVsActualByHabitAsync(request.UserId, fromUtc, toUtc);
             var byCategory = await _eventRepository.GetPlanVsActualByCategoryAsync(request.UserId, fromUtc, toUtc);
+            var totals = await _eventRepository.GetPlanVsActualTotalsAsync(request.UserId, fromUtc, toUtc);
 
-            var result = new PlanVsActualDto
+            return new PlanVsActualDto
             {
                 ByHabit = byHabit.Select(ToDto).ToList(),
-                ByCategory = byCategory.Select(ToDto).ToList()
+                ByCategory = byCategory.Select(ToDto).ToList(),
+                TotalSessions = totals.Sessions,
+                TotalPlannedMinutes = totals.PlannedMinutes,
+                TotalActualMinutes = totals.ActualMinutes
             };
-
-            result.TotalSessions = result.ByHabit.Sum(i => i.Sessions);
-            result.TotalPlannedMinutes = result.ByHabit.Sum(i => i.PlannedMinutes);
-            result.TotalActualMinutes = result.ByHabit.Sum(i => i.ActualMinutes);
-
-            return result;
         }
 
         private static PlanVsActualItemDto ToDto(PlanVsActual row) => new()

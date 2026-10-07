@@ -6,7 +6,7 @@ import 'package:habit_tracker/features/home/domain/models/plan_vs_actual.dart';
 import 'package:habit_tracker/features/home/presentation/providers/plan_vs_actual_provider.dart';
 import 'package:habit_tracker/features/home/presentation/widgets/plan_vs_actual_card.dart';
 import '../../../test_utils.dart';
-import '../domain/plan_vs_actual_test.dart' show serverResponse;
+import '../plan_vs_actual_fixture.dart';
 
 void main() {
   Widget buildCard(Future<PlanVsActual> Function() load) => ProviderScope(
@@ -20,7 +20,7 @@ void main() {
       );
 
   testWidgets('states the totals, then each habit with its own comparison', (tester) async {
-    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(serverResponse())));
+    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(planVsActualResponse())));
     await tester.pumpAndSettle();
 
     expect(find.text('Planned vs actual'), findsOneWidget);
@@ -69,7 +69,7 @@ void main() {
   testWidgets('the category view is behind a tap, and only with several categories',
       (tester) async {
     final twoCategories = {
-      ...serverResponse(),
+      ...planVsActualResponse(),
       'byCategory': [
         {'id': 'c1', 'name': 'Study', 'sessions': 3, 'plannedMinutes': 90, 'actualMinutes': 54},
         {'id': 'c2', 'name': 'Sport', 'sessions': 1, 'plannedMinutes': 60, 'actualMinutes': 65},
@@ -87,11 +87,39 @@ void main() {
     expect(find.text('Sport'), findsOneWidget);
   });
 
-  testWidgets('a single category is not worth a toggle', (tester) async {
-    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(serverResponse())));
+  testWidgets('one category is still offered, behind the same tap', (tester) async {
+    // It was hidden below two categories, which meant the whole category view had never
+    // been seen against real data — and one category still says something the habit rows
+    // do not, since a category spans habits.
+    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(planVsActualResponse())));
     await tester.pumpAndSettle();
 
-    expect(find.text('By category'), findsNothing);
+    expect(find.text('By category'), findsOneWidget);
+    await tester.tap(find.text('By category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Study'), findsOneWidget);
+  });
+
+  testWidgets('sessions with no habit get their own row, not an empty state', (tester) async {
+    await tester.pumpWidget(
+        buildCard(() async => PlanVsActual.fromJson(sessionsWithNoHabitResponse())));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Finish a focus session and the comparison shows up here.'), findsNothing);
+    expect(find.text('Not linked to a habit'), findsOneWidget);
+    expect(find.text('13h 10m of 15h'), findsOneWidget);
+    expect(
+      find.text('You booked 15h and spent 13h 10m across 15 sessions.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('no extra row when every session belongs to a habit', (tester) async {
+    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(planVsActualResponse())));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not linked to a habit'), findsNothing);
   });
 
   testWidgets('a habit with no booked time gets no bar and says why', (tester) async {

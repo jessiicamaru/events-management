@@ -31,6 +31,9 @@ namespace HabitTracker.Application.Tests
             _events.Setup(r => r.GetPlanVsActualByCategoryAsync(
                     It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .ReturnsAsync(new List<PlanVsActual>());
+            _events.Setup(r => r.GetPlanVsActualTotalsAsync(
+                    It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new PlanVsActual());
 
             _handler = new GetPlanVsActualQueryHandler(_events.Object);
         }
@@ -53,6 +56,15 @@ namespace HabitTracker.Application.Tests
         private void HabitRows(params PlanVsActual[] rows) =>
             _events.Setup(r => r.GetPlanVsActualByHabitAsync(UserId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .ReturnsAsync(rows.ToList());
+
+        private void Totals(int sessions, int planned, int actual) =>
+            _events.Setup(r => r.GetPlanVsActualTotalsAsync(UserId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+                .ReturnsAsync(new PlanVsActual
+                {
+                    Sessions = sessions,
+                    PlannedMinutes = planned,
+                    ActualMinutes = actual
+                });
 
         private void CategoryRows(params PlanVsActual[] rows) =>
             _events.Setup(r => r.GetPlanVsActualByCategoryAsync(UserId, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
@@ -77,23 +89,42 @@ namespace HabitTracker.Application.Tests
         }
 
         [Fact]
-        public async Task TotalsComeFromTheHabitGrouping_SoNoSessionIsCountedTwice()
+        public async Task TotalsCountEverySession_NotASumOfEitherGrouping()
         {
-            // An event has one habit but its category may be shared, so adding both groupings
-            // would double-count. The category rows here deliberately disagree.
+            // Neither grouping sees every session: an event need not have a habit, and need
+            // not have a category. Summing one of them under-counts, summing both
+            // double-counts. The groupings here deliberately disagree with the totals.
             HabitRows(Row("Reading", 90, 54, 3), Row("Running", 60, 65, 2));
             CategoryRows(Row("Study", 500, 500, 50));
+            Totals(sessions: 7, planned: 210, actual: 149);
 
             var result = await Handle();
 
-            result.TotalPlannedMinutes.Should().Be(150);
-            result.TotalActualMinutes.Should().Be(119);
-            result.TotalSessions.Should().Be(5);
+            result.TotalSessions.Should().Be(7);
+            result.TotalPlannedMinutes.Should().Be(210);
+            result.TotalActualMinutes.Should().Be(149);
+        }
+
+        [Fact]
+        public async Task ReportsSessionsWithNoHabit_InsteadOfNothingAtAll()
+        {
+            // Measured on the dev database: the only account with sessions in the last
+            // 14 days had 15, all on plain calendar events, so the habit join matched none.
+            // Derived totals made that user's card say "nothing here yet".
+            Totals(sessions: 15, planned: 900, actual: 790);
+
+            var result = await Handle();
+
+            result.ByHabit.Should().BeEmpty();
+            result.TotalSessions.Should().Be(15);
+            result.TotalActualMinutes.Should().Be(790);
         }
 
         [Fact]
         public async Task ReturnsEmptyTotals_WhenNothingWasFinishedInTheWindow()
         {
+            Totals(sessions: 0, planned: 0, actual: 0);
+
             var result = await Handle();
 
             result.ByHabit.Should().BeEmpty();
