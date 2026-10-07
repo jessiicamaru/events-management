@@ -36,6 +36,37 @@ namespace HabitTracker.Domain.Interfaces
         Task<IEnumerable<DailyActivity>> GetDailyActivityAsync(string userId, DateTime fromUtc, DateTime toUtc);
 
         /// <summary>
+        /// Booked time against recorded time, grouped by habit, for sessions that were
+        /// actually finished between <paramref name="fromUtc"/> (inclusive) and
+        /// <paramref name="toUtc"/> (exclusive). Busiest first.
+        /// </summary>
+        /// <remarks>
+        /// Aggregated by the database, for the same reason as
+        /// <see cref="GetDailyActivityAsync"/>: this feeds a dashboard, and the cost must
+        /// scale with the number of habits rather than the user's whole history.
+        /// </remarks>
+        Task<IEnumerable<PlanVsActual>> GetPlanVsActualByHabitAsync(string userId, DateTime fromUtc, DateTime toUtc);
+
+        /// <summary>
+        /// The same, grouped by event category. Events with no category are absent rather
+        /// than bundled into one row: "uncategorised" is a label the client owns.
+        /// </summary>
+        Task<IEnumerable<PlanVsActual>> GetPlanVsActualByCategoryAsync(string userId, DateTime fromUtc, DateTime toUtc);
+
+        /// <summary>
+        /// Booked against recorded time for every finished session in the window, with no
+        /// grouping and no join — the totals.
+        /// </summary>
+        /// <remarks>
+        /// A third query rather than a sum of the groupings, because neither grouping sees
+        /// every session: an event need not have a habit (<see cref="Event.HabitId"/> is
+        /// empty for a plain calendar event) and need not have a category. Summing the habit
+        /// grouping reported zero sessions for a user whose 15 finished sessions were all on
+        /// plain events, which the client then showed as "nothing here yet".
+        /// </remarks>
+        Task<PlanVsActual> GetPlanVsActualTotalsAsync(string userId, DateTime fromUtc, DateTime toUtc);
+
+        /// <summary>
         /// The child event that stands in for one occurrence of a repeating series, if that
         /// day has been split off — matched to the minute on <see cref="Event.ExceptionDate"/>,
         /// the same precision the client uses to substitute it for the series' occurrence.

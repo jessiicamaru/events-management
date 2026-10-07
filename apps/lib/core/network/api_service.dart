@@ -4,6 +4,7 @@ import 'package:habit_tracker/core/network/dio_client.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
+import 'package:habit_tracker/features/home/domain/models/plan_vs_actual.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_task_model.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_task_model.dart';
 import 'package:habit_tracker/features/calendar/models/event_category.dart';
@@ -92,6 +93,16 @@ class ApiService {
       queryParameters: {'days': days},
     );
     return ActivitySummary.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  /// Booked time against recorded time for the last [days] days, grouped by habit and
+  /// by category. Aggregated by the server; see `GetPlanVsActualQuery`.
+  Future<PlanVsActual> fetchPlanVsActual({required int days}) async {
+    final response = await _dio.get(
+      '/analytics/plan-vs-actual',
+      queryParameters: {'days': days},
+    );
+    return PlanVsActual.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<List<EventModel>> fetchEvents({DateTime? startTime, DateTime? endTime}) async {
