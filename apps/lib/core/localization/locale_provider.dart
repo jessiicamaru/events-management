@@ -186,6 +186,10 @@ class AppTranslations {
       AppLocale.en: 'Not linked to a habit',
       AppLocale.vi: 'Không thuộc thói quen nào',
     },
+    'home_plan_actual_uncategorised': {
+      AppLocale.en: 'No category',
+      AppLocale.vi: 'Chưa có nhóm',
+    },
     'home_plan_actual_show_categories': {
       AppLocale.en: 'By category',
       AppLocale.vi: 'Theo nhóm',

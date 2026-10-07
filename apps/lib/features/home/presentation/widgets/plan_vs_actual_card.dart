@@ -16,8 +16,11 @@ import 'package:habit_tracker/features/home/presentation/widgets/activity_summar
 /// often do you do it".
 ///
 /// Habits lead, because that is the unit people plan in. Categories follow, collapsed by
-/// default: the same sessions, grouped more coarsely, and useful only once there are
-/// several categories.
+/// default: the same sessions, grouped more coarsely, and worth a tap once anything is
+/// categorised. Each view carries a row for the sessions its own grouping cannot show, so
+/// both add up to the headline above them — unless the groupings and the totals disagree, in
+/// which case that row is dropped rather than shown with negative durations (`_remainder`),
+/// and the view under-accounts until the next refresh.
 class PlanVsActualCard extends ConsumerWidget {
   const PlanVsActualCard({super.key});
 
@@ -98,7 +101,13 @@ class _ReportBody extends ConsumerWidget {
           ),
         if (report.byCategory.isNotEmpty) ...[
           const SizedBox(height: 4),
-          _CategoryBreakdown(items: report.byCategory),
+          // With its own remainder row, so this view accounts for the same headline the
+          // habit rows do. Without it, one category covering 30% of the window looked like
+          // the whole of it.
+          _CategoryBreakdown(
+            items: report.byCategory,
+            remainder: report.uncategorised,
+          ),
         ],
       ],
     );
@@ -226,9 +235,12 @@ class _RatioBar extends StatelessWidget {
 /// The same sessions by category, behind a tap. Off by default: it is the coarser view, and
 /// on a card already listing habits it is the second question, not the first.
 class _CategoryBreakdown extends ConsumerStatefulWidget {
-  const _CategoryBreakdown({required this.items});
+  const _CategoryBreakdown({required this.items, this.remainder});
 
   final List<PlanVsActualItem> items;
+
+  /// Sessions on events with no category, if any.
+  final PlanVsActualItem? remainder;
 
   @override
   ConsumerState<_CategoryBreakdown> createState() => _CategoryBreakdownState();
@@ -256,8 +268,14 @@ class _CategoryBreakdownState extends ConsumerState<_CategoryBreakdown> {
             ),
           ),
         ),
-        if (_open)
+        if (_open) ...[
           for (final item in widget.items) _ItemRow(item: item),
+          if (widget.remainder case final remainder?)
+            _ItemRow(
+              item: remainder,
+              label: translations.translate('home_plan_actual_uncategorised'),
+            ),
+        ],
       ],
     );
   }

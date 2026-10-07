@@ -132,11 +132,12 @@ would read as "you always overrun" when the honest answer is "you did 4 of the 9
 booked" — which the activity card already says.
 
 Limits worth knowing: a zero `TargetDuration` gives no ratio rather than 0% (the card says
-so instead of drawing a bar); uncategorised events are absent from the category grouping
-rather than bundled; and **the totals are their own query, not a sum of either grouping** —
+so instead of drawing a bar); and **the totals are their own query, not a sum of either
+grouping** —
 an event need not have a habit or a category, so summing one under-counts and summing both
-double-counts. Sessions on plain calendar events get a "Not linked to a habit" row, derived
-on the client from what the habit rows leave unaccounted.
+double-counts. Each grouping carries a row for what it cannot
+show — "Not linked to a habit" and "No category" — derived on the client from what its rows
+leave unaccounted, so either view adds up to the headline above it.
 
 Review finding worth remembering: deriving the totals from the habit grouping made the card
 say "nothing here yet" to the one account in the dev database with sessions in the window —

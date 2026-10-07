@@ -64,30 +64,50 @@ class PlanVsActual {
   bool get isEmpty => totalSessions == 0;
 
   /// Sessions the habit list cannot show, because their event has no habit — a plain
-  /// calendar event that somebody ran a focus session on.
+  /// calendar event somebody ran a focus session on. Null when there are none.
   ///
-  /// Derived rather than sent: the totals already count every session, so whatever the
-  /// habit rows do not account for is this. Shown as its own row, because leaving it out
-  /// made the numbers in the headline disagree with the bars under it.
-  int get unlinkedSessions =>
-      totalSessions - byHabit.fold(0, (sum, i) => sum + i.sessions);
+  /// Derived rather than sent: the totals already count every session, so whatever a
+  /// grouping does not account for is its remainder. Leaving it out made the bars add up to
+  /// less than the headline above them, silently.
+  PlanVsActualItem? get unlinked => _remainder(byHabit);
 
-  int get unlinkedPlannedMinutes =>
-      totalPlannedMinutes - byHabit.fold(0, (sum, i) => sum + i.plannedMinutes);
+  /// The same for categories: sessions on events with no category. Null when there are none.
+  ///
+  /// Both groupings need this, and for the same reason — neither one sees every session.
+  /// Only the habit half got it at first, which left the category view covering a fraction
+  /// of the headline with nothing saying so.
+  PlanVsActualItem? get uncategorised => _remainder(byCategory);
 
-  int get unlinkedActualMinutes =>
-      totalActualMinutes - byHabit.fold(0, (sum, i) => sum + i.actualMinutes);
+  int get unlinkedSessions => _missingSessions(byHabit);
+  int get uncategorisedSessions => _missingSessions(byCategory);
 
-  /// The row for those sessions, or null when every session belongs to a habit.
-  PlanVsActualItem? get unlinked => unlinkedSessions <= 0
-      ? null
-      : PlanVsActualItem(
-          id: '',
-          name: '',
-          sessions: unlinkedSessions,
-          plannedMinutes: unlinkedPlannedMinutes,
-          actualMinutes: unlinkedActualMinutes,
-        );
+  int _missingSessions(List<PlanVsActualItem> rows) =>
+      totalSessions - rows.fold<int>(0, (sum, i) => sum + i.sessions);
+
+  /// What [rows] leave unaccounted, as a row of its own. Null when they account for
+  /// everything, or for more than everything.
+  ///
+  /// All three numbers are checked, not just the count. The groupings and the totals come
+  /// from three separate queries with no snapshot between them, so a session finished or
+  /// deleted mid-load can leave the count positive while the minutes go negative — which
+  /// rendered as "-30 min of -20 min" under a row claiming no time was booked. Such a row is
+  /// transient (the next refresh is consistent) and better shown as nothing.
+  PlanVsActualItem? _remainder(List<PlanVsActualItem> rows) {
+    final sessions = _missingSessions(rows);
+    final planned =
+        totalPlannedMinutes - rows.fold<int>(0, (sum, i) => sum + i.plannedMinutes);
+    final actual = totalActualMinutes - rows.fold<int>(0, (sum, i) => sum + i.actualMinutes);
+
+    if (sessions <= 0 || planned < 0 || actual < 0) return null;
+
+    return PlanVsActualItem(
+      id: '',
+      name: '',
+      sessions: sessions,
+      plannedMinutes: planned,
+      actualMinutes: actual,
+    );
+  }
 
   /// The overall share of booked time actually spent, or null when nothing was booked.
   double? get ratio =>

@@ -66,8 +66,7 @@ void main() {
     expect(calls, 1, reason: 'one call per failure, not eleven');
   });
 
-  testWidgets('the category view is behind a tap, and only with several categories',
-      (tester) async {
+  testWidgets('the category view is behind a tap', (tester) async {
     final twoCategories = {
       ...planVsActualResponse(),
       'byCategory': [
@@ -99,6 +98,43 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Study'), findsOneWidget);
+  });
+
+  testWidgets('the category view adds up to the same headline as the habit rows',
+      (tester) async {
+    // One category covering a quarter of the window used to render as if it were all of it.
+    final partial = {
+      ...planVsActualResponse(),
+      'byCategory': [
+        {'id': 'c1', 'name': 'Study', 'sessions': 1, 'plannedMinutes': 30, 'actualMinutes': 20},
+      ],
+    };
+
+    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(partial)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('By category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Study'), findsOneWidget);
+    expect(find.text('No category'), findsOneWidget);
+    // 3 of the 4 sessions, 1h 39m of the 1h 59m, are in that row.
+    expect(find.text('1h 39m of 2h'), findsOneWidget);
+  });
+
+  testWidgets('no category remainder row when every session has one', (tester) async {
+    final complete = {
+      ...planVsActualResponse(),
+      'byCategory': [
+        {'id': 'c1', 'name': 'Study', 'sessions': 4, 'plannedMinutes': 150, 'actualMinutes': 119},
+      ],
+    };
+
+    await tester.pumpWidget(buildCard(() async => PlanVsActual.fromJson(complete)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('By category'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No category'), findsNothing);
   });
 
   testWidgets('sessions with no habit get their own row, not an empty state', (tester) async {
