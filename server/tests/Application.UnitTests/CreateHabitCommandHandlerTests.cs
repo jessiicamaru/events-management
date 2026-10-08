@@ -19,19 +19,29 @@ namespace HabitTracker.Application.Tests
             // Arrange
             var mockRepo = new Mock<IHabitRepository>();
             Habit? savedHabit = null;
-            
+
             mockRepo.Setup(r => r.AddAsync(It.IsAny<Habit>()))
                 .Callback<Habit>(h => savedHabit = h)
                 .Returns(Task.CompletedTask);
 
-            var handler = new CreateHabitCommandHandler(mockRepo.Object);
+
+            // Categories are validated now; these tests are about the fields being saved, so
+            // any id they name resolves to a category the caller owns. Refusals are covered in
+            // EventCategoryAuthorizationTests.
+            var mockCategories = new Mock<IEventCategoryRepository>();
+            mockCategories.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+                .ReturnsAsync((Guid id) => new EventCategory { Id = id, UserId = "user-1" });
+
+            var handler = new CreateHabitCommandHandler(
+                mockRepo.Object, mockCategories.Object, new Mock<ISquadRepository>().Object);
             var categoryId = Guid.NewGuid();
 
             var command = new CreateHabitCommand
             {
                 Name = "Daily Workout",
                 TargetDays = new List<int> { 1, 3, 5 },
-                CategoryId = categoryId
+                CategoryId = categoryId,
+                UserId = "user-1"
             };
 
             // Act
@@ -42,9 +52,9 @@ namespace HabitTracker.Application.Tests
             savedHabit.Should().NotBeNull();
             savedHabit!.Name.Should().Be("Daily Workout");
             savedHabit.TargetDays.Should().BeEquivalentTo(new[] { 1, 3, 5 });
-            
+
             savedHabit.CategoryId.Should().Be(categoryId);
-            
+
             mockRepo.Verify(r => r.AddAsync(It.IsAny<Habit>()), Times.Once);
         }
     }

@@ -62,7 +62,7 @@ namespace HabitTracker.Application.Features.EventCategories.Commands
                 // be one the caller may use — and refusing it outright beats silently deleting
                 // without reassigning, which is what returning early used to do.
                 if (replacement == null ||
-                    !await EventCategoryAccess.CanReadAsync(replacement, request.UserId, _squadRepository))
+                    !await EventCategoryAccess.CanReplaceAsync(category, replacement, request.UserId, _squadRepository))
                 {
                     return false;
                 }

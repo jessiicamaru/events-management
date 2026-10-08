@@ -92,7 +92,9 @@ namespace HabitTracker.Application.Tests.Features.Events.Commands
 
         private UpdateEventCommandHandler UpdateHandler() => new(
             _events.Object, _users.Object, _outbox.Object,
-            new OccurrenceMaterializer(_events.Object, _tasks.Object, new PassThroughUnitOfWork()));
+            new OccurrenceMaterializer(_events.Object, _tasks.Object, new PassThroughUnitOfWork()),
+            new Mock<IEventCategoryRepository>().Object,
+            new Mock<ISquadRepository>().Object);
 
         private DeleteEventCommandHandler DeleteHandler() => new(
             _events.Object, _users.Object, _outbox.Object);

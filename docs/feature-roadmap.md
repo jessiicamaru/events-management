@@ -308,6 +308,14 @@ leader changes or deletes shared categories, because deleting one reassigns ever
 events. A pending join request is not membership. Update and delete answer 404 rather than
 403, so they do not confirm that someone else's category exists.
 
+The review found a second door to the same data, closed in the same branch: event and habit
+writes stored any `CategoryId` they were given, and plan-vs-actual read the category's name
+back through the event — so a removed squad member kept seeing the squad's categories, renames
+included. Writes now go through `EventCategoryAccess.CanAssignAsync` (keeping a category a row
+already has is allowed, so a removed member can still edit their own events), and the one
+read-back query filters by visibility in SQL. A deleted category's replacement must share its
+scope, so a leader cannot move a squad's rows onto a private category.
+
 ### ⚪ 5.6 Audit the never-reviewed backend
 
 `GoogleCalendarService.cs` (517 lines), `UpdateEventCommand`/`DeleteEventCommand` (the

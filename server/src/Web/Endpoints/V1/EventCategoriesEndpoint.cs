@@ -1,5 +1,6 @@
 using HabitTracker.Application.Features.EventCategories.Commands;
 using HabitTracker.Application.Features.EventCategories.Queries;
+using HabitTracker.Domain.Entities;
 using HabitTracker.Web.Infrastructure;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
@@ -25,7 +26,7 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         groupBuilder.MapDelete("{id}", DeleteCategory);
     }
 
-    public async Task<IResult> GetCategories(ISender sender, ClaimsPrincipal user, Guid? squadId)
+    public async Task<Results<Ok<IEnumerable<EventCategory>>, ForbidHttpResult, UnauthorizedHttpResult>> GetCategories(ISender sender, ClaimsPrincipal user, Guid? squadId)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();

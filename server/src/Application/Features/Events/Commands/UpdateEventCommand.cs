@@ -37,17 +37,23 @@ namespace HabitTracker.Application.Features.Events.Commands
         private readonly IUserRepository _userRepository;
         private readonly IGoogleCalendarOutboxRepository _outboxRepository;
         private readonly OccurrenceMaterializer _materializer;
+        private readonly IEventCategoryRepository _categoryRepository;
+        private readonly ISquadRepository _squadRepository;
 
         public UpdateEventCommandHandler(
             IEventRepository eventRepository,
             IUserRepository userRepository,
             IGoogleCalendarOutboxRepository outboxRepository,
-            OccurrenceMaterializer materializer)
+            OccurrenceMaterializer materializer,
+            IEventCategoryRepository categoryRepository,
+            ISquadRepository squadRepository)
         {
             _eventRepository = eventRepository;
             _userRepository = userRepository;
             _outboxRepository = outboxRepository;
             _materializer = materializer;
+            _categoryRepository = categoryRepository;
+            _squadRepository = squadRepository;
         }
 
         public async Task<bool> Handle(UpdateEventCommand request, CancellationToken cancellationToken)
@@ -60,6 +66,15 @@ namespace HabitTracker.Application.Features.Events.Commands
 
             // Only the owner can update the event
             if (existingEvent.UserId != request.UserId)
+            {
+                return false;
+            }
+
+            // Every path below writes request.CategoryId somewhere — the day, the series, a new
+            // series — so it is checked once, here, against the category the event already has.
+            if (!await EventCategoryAccess.CanAssignAsync(
+                    request.CategoryId, existingEvent.CategoryId, request.UserId,
+                    _categoryRepository, _squadRepository))
             {
                 return false;
             }
