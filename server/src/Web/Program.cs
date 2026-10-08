@@ -39,7 +39,7 @@ app.Use(async (context, next) =>
 {
     var accessToken = context.Request.Query["access_token"];
     var path = context.Request.Path;
-    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/socialHub"))
+    if (!string.IsNullOrEmpty(accessToken) && HabitTracker.Web.Hubs.HubTokenPaths.AcceptsQueryToken(path))
     {
         context.Request.Headers["Authorization"] = $"Bearer {accessToken}";
     }
@@ -52,6 +52,7 @@ app.UseAuthorization();
 // Map Minimal APIs
 app.MapEndpoints();
 app.MapGroup("/api/v1").MapIdentityApi<HabitTracker.Domain.Entities.ApplicationUser>();
-app.MapHub<HabitTracker.Web.Hubs.SocialHub>("/socialHub");
+app.MapHub<HabitTracker.Web.Hubs.SocialHub>(HabitTracker.Web.Hubs.HubTokenPaths.SocialHub);
+app.MapHub<HabitTracker.Web.Hubs.AssistantHub>(HabitTracker.Web.Hubs.AssistantHub.Path);
 
 app.Run();

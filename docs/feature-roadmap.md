@@ -5,9 +5,11 @@ without re-deriving it. Ordered by value ÷ effort within each section, not by e
 
 **Last updated:** 2026-09-13 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
-**Deliberately excluded: AI / LLM features.** Not wanted for this product. Nothing below
-needs machine learning, a trained model, or a dataset — every "smart" item here is a SQL
-aggregate or a small heuristic over data the app already stores.
+**AI: one assistant, nothing else.** A chat assistant that reads — and, in later steps,
+changes — the user's calendar through the app's own commands is being built (see *The
+assistant* in `CLAUDE.md`). Everything below still stands on its own: each "smart" item is a
+SQL aggregate or a small heuristic over data the app already stores, and none of it waits for
+the assistant.
 
 ---
 
