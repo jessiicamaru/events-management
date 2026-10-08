@@ -7,6 +7,13 @@ class AppConstants {
   static const int connectTimeoutSeconds = 5;
   static const int receiveTimeoutSeconds = 3;
 
+  /// Key under which a request records the token it was sent with
+  /// (`RequestOptions.extra`), so a 401 can be traced back to the session that made
+  /// the request. See [AuthInterceptor].
+  static const String requestSessionTokenKey = 'sessionToken';
+
+  static const int unauthorizedStatusCode = 401;
+
   // UI Strings
   static const String appTitle = 'Smart Calendar';
   static const String habitsTitle = 'Habits';

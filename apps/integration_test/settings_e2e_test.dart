@@ -50,9 +50,12 @@ void main() {
     await tester.tap(settingsTab);
     await tester.pumpAndSettle();
 
-    // Verify Settings UI
+    // Verify Settings UI. Theme and colour moved out of this screen and onto their own
+    // Appearance screen, reached from this row.
     expect(find.text('Appearance'), findsOneWidget);
-    
+    await tester.tap(find.text('Appearance'));
+    await tester.pumpAndSettle();
+
     // Tap on Theme Mode select
     final themeSelect = find.text('SYSTEM').last;
     expect(themeSelect, findsOneWidget);

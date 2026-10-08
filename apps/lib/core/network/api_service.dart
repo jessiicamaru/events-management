@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:habit_tracker/core/network/auth_interceptor.dart';
 import 'package:habit_tracker/core/network/dio_client.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
@@ -16,22 +17,11 @@ import 'package:habit_tracker/features/auth/presentation/providers/auth_provider
 final apiServiceProvider = Provider((ref) {
   final dio = DioClient().dio;
   
-  dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) async {
-      // Read token from the provider's future — safe and correct
-      final token = await ref.read(authProvider.future);
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
-      return handler.next(options);
-    },
-    onError: (error, handler) async {
-      if (error.response?.statusCode == 401) {
-        await ref.read(authProvider.notifier).logout();
-        // Here we could implement refresh token logic later
-      }
-      return handler.next(error);
-    }
+  dio.interceptors.add(AuthInterceptor(
+    // Read the token from the provider's future — safe and correct.
+    readToken: () => ref.read(authProvider.future),
+    currentToken: () => ref.read(authProvider).value,
+    onSessionExpired: () => ref.read(authProvider.notifier).logout(),
   ));
   
   return ApiService(dio);

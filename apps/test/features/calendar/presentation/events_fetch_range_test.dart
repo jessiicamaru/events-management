@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../test_utils.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/core/utils/app_constants.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
@@ -48,7 +49,7 @@ void main() {
   setUp(() {
     api = RangeFilteringApi([tomorrow]);
     container = ProviderContainer(
-      overrides: [apiServiceProvider.overrideWithValue(api)],
+      overrides: [...signedInOverrides, apiServiceProvider.overrideWithValue(api)],
     );
 
     // The app keeps these alive from the root (reminderSyncProvider and

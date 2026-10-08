@@ -41,10 +41,12 @@ void main() {
       await tester.pumpAndSettle(const Duration(seconds: 3));
     }
 
-    // 2. Open Calendar Settings
-    // The calendar screen is the default, and it has a settings icon in the toolbar
-    final settingsButton = find.byIcon(LucideIcons.settings).first;
-    await tester.tap(settingsButton);
+    // 2. Open Calendar Settings. It is no longer a toolbar button on the calendar: the
+    // sheet opens from a row on the Settings tab, so the only settings icon is the nav one.
+    await tester.tap(find.byIcon(LucideIcons.settings).last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Calendar Settings').first);
     await tester.pumpAndSettle();
 
     // 3. Open Category Management
@@ -77,10 +79,13 @@ void main() {
     // 5. Verify the category appears in the list
     expect(find.text('E2E Test Category'), findsOneWidget);
 
-    // 6. Delete the category
-    // Assuming the trailing icon is trash2
+    // 6. Delete the category. The trash button now opens a confirmation dialog that says
+    // how many events and habits use the category, so the delete has to be confirmed.
     final deleteButton = find.byIcon(LucideIcons.trash2).first;
     await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // Verify it's gone
