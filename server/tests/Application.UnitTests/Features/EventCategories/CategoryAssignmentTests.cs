@@ -240,6 +240,90 @@ namespace HabitTracker.Application.UnitTests.Features.EventCategories
             events.Verify(r => r.UpdateAsync(It.IsAny<Event>()), Times.Never);
         }
 
+        private (Mock<IEventRepository> Events, Event Series, Event Day) SplitOffDay(Guid? seriesCategory, Guid? dayCategory)
+        {
+            var start = new DateTime(2026, 9, 11, 10, 0, 0, DateTimeKind.Utc);
+            var series = new Event
+            {
+                Id = Guid.NewGuid(), UserId = Me, CategoryId = seriesCategory, HabitId = string.Empty,
+                StartTime = start.AddDays(-10), EndTime = start.AddDays(-10).AddHours(1),
+                RecurrenceRule = "RRULE:FREQ=DAILY"
+            };
+            var day = new Event
+            {
+                Id = Guid.NewGuid(), UserId = Me, CategoryId = dayCategory, HabitId = string.Empty,
+                StartTime = start, EndTime = start.AddHours(1),
+                ParentEventId = series.Id, ExceptionDate = start
+            };
+
+            var events = new Mock<IEventRepository>();
+            events.Setup(r => r.GetByIdAsync(series.Id)).ReturnsAsync(series);
+            events.Setup(r => r.GetByIdAsync(day.Id)).ReturnsAsync(day);
+            events.Setup(r => r.GetChildrenAsync(series.Id)).ReturnsAsync(new List<Event> { day });
+            return (events, series, day);
+        }
+
+        private UpdateEventCommandHandler UpdateHandler(Mock<IEventRepository> events) => new(
+            events.Object,
+            new Mock<IUserRepository>().Object,
+            new Mock<IGoogleCalendarOutboxRepository>().Object,
+            new OccurrenceMaterializer(events.Object, new Mock<IEventTaskRepository>().Object, new PassThroughUnitOfWork()),
+            _categories.Object,
+            _squads.Object);
+
+        private static UpdateEventCommand EditDay(Event day, Guid? categoryId, string scope) => new()
+        {
+            EventId = day.Id,
+            Title = "Edited",
+            StartTime = day.StartTime,
+            EndTime = day.EndTime,
+            UserId = Me,
+            CategoryId = categoryId,
+            EditScope = scope,
+            OriginalOccurrenceDate = day.ExceptionDate
+        };
+
+        [Fact]
+        public async Task KeepingADaysCategory_CannotSpreadItOntoTheWholeSeries()
+        {
+            // Round 3, N1, measured live: a member who had left a squad kept the squad's category
+            // on one split-off day and edited it with "all occurrences". The check compared against
+            // the day, which had it — but the edit writes onto the series, which did not, and from
+            // there onto every local-only day. The category being replaced is the series'.
+            var (events, series, day) = SplitOffDay(seriesCategory: _mine.Id, dayCategory: _squadCategory.Id);
+
+            var ok = await UpdateHandler(events).Handle(EditDay(day, _squadCategory.Id, "AllOccurrences"),
+                CancellationToken.None);
+
+            ok.Should().BeFalse("Me is not a member of the squad that category belongs to");
+            series.CategoryId.Should().Be(_mine.Id, "the series never had the squad's category");
+        }
+
+        [Fact]
+        public async Task KeepingADaysCategory_ForThatDayAlone_IsStillAllowed()
+        {
+            // The exemption itself is right: an edit of just this day keeps what the day already has.
+            var (events, _, day) = SplitOffDay(seriesCategory: _mine.Id, dayCategory: _squadCategory.Id);
+
+            var ok = await UpdateHandler(events).Handle(EditDay(day, _squadCategory.Id, "ThisOccurrence"),
+                CancellationToken.None);
+
+            ok.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ASplitOffDayCannotBeMovedOntoSomeoneElsesCategory()
+        {
+            // The split-off path skipped entirely survived the mutation run: no test edited a day.
+            var (events, _, day) = SplitOffDay(seriesCategory: _mine.Id, dayCategory: _mine.Id);
+
+            var ok = await UpdateHandler(events).Handle(EditDay(day, _theirs.Id, "ThisOccurrence"),
+                CancellationToken.None);
+
+            ok.Should().BeFalse();
+            day.CategoryId.Should().Be(_mine.Id);
+        }
+
         [Fact]
         public async Task HabitsAreHeldToTheSameRule()
         {

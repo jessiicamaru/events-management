@@ -6,10 +6,163 @@ Base: `407e705` (`main`, merge of PR #28) · Reviewed by: Claude Code
 | --- | --- | --- | --- |
 | 1 | `99d7145` fix(security): stop signed-in users reading and changing other people's categories | 2026-09-13 | 0 HIGH, 1 MEDIUM (pre-existing), 1 LOW, 1 INFO — the fix itself is correct; the MEDIUM is a second path to the same data |
 | 2 | uncommitted working tree (fixes for round 1) | 2026-09-13 | All 3 closed — the MEDIUM on both its write and read side, verified live including revocation; the LOW with a scope check; the INFO by routing five commands through `SquadAccess`. One out-of-scope note closed too. No new findings. **Nothing blocking.** |
+| 3 | `5675ead` fix(security): close the second door to categories (round 2, committed) | 2026-09-13 | Round 2's closures hold on 29 live checks and 11 mutations. 4 new: 1 MEDIUM (pre-existing — the SignalR hub checks no membership), 2 LOW (the keep-exemption leaks through "all occurrences"; 3 surviving mutations), 1 INFO — **MEDIUM blocks merge** |
+| 4 | uncommitted working tree (fixes for round 3) | 2026-09-13 | All 4 closed; N1 verified live on the reviewer's own probe, every survivor now caught, the hub covered by 7 tests. No new findings. **Nothing blocking.** |
 
 > `main` = `origin/main` = `git merge-base HEAD main` = `407e705`, and `git log main..HEAD` is
 > exactly one commit. The three-dot diff is the branch's real scope: 20 files, +597 / −64,
 > server and docs only.
+
+---
+
+# Round 4 — uncommitted working tree (fixes for round 3)
+
+## Status of round 3 findings
+
+| # | Finding | Status |
+| --- | --- | --- |
+| N3 | [MEDIUM — pre-existing] The SignalR hub checks no squad membership | ✅ **Closed** — every hub method requires approved membership; 7 tests |
+| N1 | [LOW — introduced in round 2] Keeping a day's category spreads it onto the series | ✅ **Closed** — measured against the row that is overwritten; verified live |
+| N2 | [LOW] Three mutations survived the suite | ✅ **Closed** — each now caught; the fourth (SQL) documented as untestable without Postgres |
+| N4 | [INFO] The client shows a raw exception on the new 403 | ⚠️ Open by choice — see below |
+
+### N3 — closed: the hub is a squad boundary now
+
+`SocialHub` had `[Authorize]` and nothing more. `JoinSquadGroup(squadId)` added any caller to
+`Squad_{squadId}`, and `SendMessage`, `SendPoke` and `SendReaction` saved and broadcast into any squad.
+So a signed-in user holding a squad id could read that squad's live chat and post into it. The REST
+chat-history endpoint already checked membership; the hub, which carries the same messages, did not.
+
+Every hub method now starts with `RequireMembershipAsync`: the caller must be an approved member
+(`SquadAccess.CanRead`), otherwise `HubException`. Nothing is saved and nothing is broadcast. Pokes and
+reactions also require the *target* to be an approved member, since the message names them to the
+whole squad. "No such squad", an unparseable id and "not yours" all get the same message. The group
+name is built from the parsed Guid (`SocialHub.GroupName`), so one squad cannot become two groups by
+letter case.
+
+Measured with the real hub class and mocked `HubCallerContext`, `IGroupManager` and `IHubCallerClients`
+(`SquadAuthorizationSurfaceTests`): an outsider and a pending member cannot join; an outsider cannot
+post; a poke or reaction with a non-member on either end is refused. **Not verified over a live
+WebSocket connection** — there is no SignalR client in the probe tooling. The Flutter client only
+joins and posts to squads the user is in, so members see no change.
+
+### N1 — closed: "keeping" is measured against the row that is overwritten
+
+`UpdateEventCommand` compared `request.CategoryId` with the category of the event being edited. For a
+split-off day edited with "all occurrences" or "this and future", that is the wrong row: the edit
+writes the category onto the **series**, and `FollowSeriesAsync` then writes it onto every local-only
+day. `CategoryBeingReplacedAsync` now returns the parent series' category in that case.
+
+Verified live by re-running round 3's own probe against a fresh clone:
+
+| Removed member, keeping a squad category that one day still has | Round 3 (`5675ead`) | Round 4 |
+| --- | --- | --- |
+| edit that day with "all occurrences" | 200 | **404** |
+| the series' category afterwards | the squad's | **unchanged** |
+| a local-only day's category afterwards | the squad's | **unchanged** |
+| "this and future" keeping it | 200, 2 new series rows on the squad's category | **404, 0** |
+| the probe's other checks | 29 / 29 | **29 / 29** |
+
+The exemption itself is kept and still tested: an edit of just that day keeps what the day has.
+
+### N2 — closed: the survivors are caught
+
+| Round 3's surviving mutation | Round 4 |
+| --- | --- |
+| M2: the category check skipped for split-off days | **caught** (2 tests) |
+| M3: `Events.CreateEvent` null → 403 mapping removed | **caught** (3 tests) |
+| M11: `Habits.CreateHabit` null → 403 mapping removed | **caught** (3 tests) |
+| M1: the plan-vs-actual SQL visibility filter removed | still survives — raw SQL has no automated test in this project (parent reviews' MEDIUM 5). Covered by the live probes only |
+
+The endpoint tests call the real endpoint methods with a mocked `ISender`, so they also pin the happy
+path (201 with the id) and the category endpoints' 403s.
+
+### N4 — open by choice
+
+On a 403, `create_event_sheet.dart` shows its existing destructive toast with the raw exception text
+(`failed_to_create_event: DioException … 403`), under a title using the known-missing `'error'` key
+(parent review `review-home-page.md` LOW 11). It does not crash. In normal use the picker offers only
+categories the user may use, so this appears only for a member removed while the sheet is open. A
+friendly message belongs with the pre-existing toast-key cleanup, not in a security PR.
+
+## Round 4 verification
+
+| Item | Round 3 | Round 4 |
+| --- | --- | --- |
+| `dotnet build` | 0 errors | 0 errors |
+| `dotnet test` | 182 pass | **196 pass / 0 fail** (+14) |
+| Negative controls | 11 mutations, 3 survived | **6 more** — N1, the hub's two checks, and the three survivors — all caught, none a build error |
+| Live, round 3's probe | 29 / 29, with N1 leaking | **29 / 29, N1 refused** |
+| Server log during the run | — | 0 `fail:` lines |
+| `flutter test` | not run | not run — no client file changed |
+
+---
+
+# Round 3 — review `5675ead`, independent verification of round 2
+
+A single reviewer was run for this round and **was cut off by a session limit before writing it up**.
+Its probe and mutation logs survived and are the evidence below. The consolidating pass read them,
+checked the parts that mattered against the code, and added the one finding the reviewer had not
+reached: the hub.
+
+## Verifying round 2's claims
+
+| Round 2 claimed | Verified with | Result |
+| --- | --- | --- |
+| Event and habit writes refuse a category the caller may not use | live: outsider creates an event on a squad category, on a member's personal category, on a nonexistent id; creates a habit on a personal category | ✔ 403 each; the 403 is not a cookie redirect (no `Location` header) |
+| An update onto a foreign category is refused, row unchanged | live: outsider moves own event onto a member's category / a nonexistent one | ✔ 404, `CategoryId` unchanged |
+| A leader cannot replace a squad category with a personal one | live | ✔ 404, the squad category still exists |
+| Revocation revokes | live: member uses the squad category, completes a session, leaves; leader renames | ✔ listed while a member; hidden after; rename not visible; totals unchanged; `GET ?squadId` → 403 |
+| A removed member can still edit their own old event | live | ✔ 200 |
+| The unit tests catch each rule | 11 mutations over a `git archive` copy | ✔ 7 caught — ✘ **4 survived** (N2) |
+| `dotnet test` → 182 | reviewer's run | ✔ 182 pass |
+
+## New findings
+
+### N3 [MEDIUM — pre-existing] The SignalR hub checks no squad membership
+
+`SocialHub.cs` (at `5675ead`): `JoinSquadGroup` calls `Groups.AddToGroupAsync(Context.ConnectionId,
+$"Squad_{squadId}")` with the client's string and no check. `SendMessage`, `SendPoke` and
+`SendReaction` save a `SquadChatMessage` and broadcast to `Squad_{squadId}` for any caller. By reading:
+any signed-in user who knows a squad id can receive its live chat and post into it as themselves.
+`GetChatHistoryQuery` already checks `GetMembershipAsync`, so the REST read path was closed and the
+real-time path was not. Found while documenting this branch's rule, not by the reviewer. **Fix:**
+require approved membership in every hub method, and an approved target for pokes and reactions.
+
+### N1 [LOW — introduced in round 2] Keeping a day's category spreads it onto the whole series
+
+Measured live by the reviewer: a member removed from a squad, whose split-off day still carried the
+squad's category, edited that day with "all occurrences" and re-sent the category → **200**. The
+series and a local-only day then carried the squad's category ("rows of this member on SC: 4"), and a
+"this and future" edit created two new series rows with it. `CanAssignAsync` compared against the
+day's category, but the edit writes onto the series. Impact is bounded — the caller's own rows, and
+the read-side filter hides the name — but it breaks round 2's own invariant that a category cannot be
+newly attached. **Fix:** measure "keeping" against the row being overwritten.
+
+### N2 [LOW] Three authorization paths had no test that fails without them
+
+| Mutation | Result at `5675ead` |
+| --- | --- |
+| M1: plan-vs-actual SQL visibility filter removed | 182 pass |
+| M2: `UpdateEventCommand` category check skipped for split-off days | 182 pass |
+| M3: `Events.CreateEvent` null → 403 mapping removed | 182 pass |
+| M11: `Habits.CreateHabit` null → 403 mapping removed | 182 pass |
+
+M3 and M11 mean a handler could refuse and the endpoint would still answer 201. **Fix:** endpoint-level
+tests, and a test that edits a split-off day. M1 needs a real Postgres.
+
+### N4 [INFO] The client's reaction to the new 403 is a raw exception toast
+
+By reading `create_event_sheet.dart:398-406`. No crash; see round 4.
+
+## Round 3 verification
+
+| Item | Result |
+| --- | --- |
+| `dotnet test` | 182 pass / 0 fail |
+| Live probe (throwaway clone `rv3`, Google tokens nulled) | 29 / 29 as expected, with N1 recorded as observed behaviour |
+| Mutations (copy of the tree, not the repo) | 11 run, 7 caught, 4 survived, 0 build errors |
+| Cleanup | the reviewer was cut off before cleanup; the consolidating pass dropped `rv3` and confirmed no server on :5105 |
 
 ---
 
@@ -345,7 +498,14 @@ Design decisions that hold up:
 - **403 for the list and create verbs, 404 for update and delete**, so no response confirms that
   someone else's category exists.
 
-After 2 rounds: 3 findings, 3 closed. **No HIGH, no MEDIUM, nothing open. Does not block merge.**
+After 4 rounds: 7 findings, 6 closed, 1 INFO open by choice (the client's raw-exception toast,
+which belongs with the pre-existing toast-key cleanup). **No HIGH, no MEDIUM open. Does not block
+merge.**
+
+Rounds 3 and 4 added two things worth keeping. The hub finding came from writing the rule down: once
+`CLAUDE.md` said "squad permissions go through `SquadAccess`", the question "does everything that
+touches a squad?" had an obvious grep, and the real-time path failed it. And N1 is the case round 2's
+own exemption created — found by a reviewer that tried to abuse the exemption rather than confirm it.
 
 Round 1's finding 1 is the one worth remembering. The first commit fixed exactly what the roadmap
 entry described, verified it live, and marked 5.5 done — while the same data stayed reachable by a
@@ -382,4 +542,25 @@ python authz_probe_r2.py                                      # 10/10, incl. a p
 python authz_probe.py                                         # round 1's 13/13 - no regression
 grep -c "fail:" /tmp/authzweb3.log                            # 0
 DROP DATABASE "authz-check2"
+```
+
+### Round 3
+
+From the interrupted reviewer's surviving logs (`scratchpad/rv3/`):
+
+```
+dotnet test -o rv3/out                                        # 182 pass
+python probe.py        (server on :5105, clone rv3)          # 29/29 as expected; N1 observed
+python mutate.py       (git archive copy)                     # 11 mutations: 7 caught, 4 survived
+```
+
+### Round 4
+
+```
+dotnet test tests/Application.UnitTests -o /tmp/r3test         # 196 pass
+python negative_controls_r3.py                                # 6 mutations, all caught, no build errors
+CREATE DATABASE "rv3" TEMPLATE "habit-tracker" ; null tokens
+dotnet /tmp/r3web/Web.dll (:5105) ; python rv3/probe.py       # 29/29; N1 edits now 404, 0 rows spread
+grep -c "fail:" /tmp/r3web.log                                # 0
+DROP DATABASE "rv3"
 ```
