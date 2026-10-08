@@ -63,7 +63,7 @@ namespace HabitTracker.Infrastructure.Repositories
             {
                 Squad = squad,
                 UserId = adminUserId,
-                Role = "Leader",
+                Role = SquadMember.LeaderRole,
                 IsApproved = true
             });
             await _context.SaveChangesAsync();

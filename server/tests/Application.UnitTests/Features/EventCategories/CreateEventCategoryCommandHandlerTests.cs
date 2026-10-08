@@ -12,12 +12,15 @@ namespace HabitTracker.Application.UnitTests.Features.EventCategories
     public class CreateEventCategoryCommandHandlerTests
     {
         private readonly Mock<IEventCategoryRepository> _mockRepository;
+        private readonly Mock<ISquadRepository> _mockSquads;
         private readonly CreateEventCategoryCommandHandler _handler;
 
         public CreateEventCategoryCommandHandlerTests()
         {
             _mockRepository = new Mock<IEventCategoryRepository>();
-            _handler = new CreateEventCategoryCommandHandler(_mockRepository.Object);
+            _mockSquads = new Mock<ISquadRepository>();
+            _handler = new CreateEventCategoryCommandHandler(
+                _mockRepository.Object, _mockSquads.Object);
         }
 
         [Fact]
@@ -28,7 +31,9 @@ namespace HabitTracker.Application.UnitTests.Features.EventCategories
             {
                 Name = "Work",
                 ColorPreset = "Blue",
-                UserId = "user-123"
+                UserId = "user-123",
+                // Stamped by the endpoint from the token; a personal category must match it.
+                CallerUserId = "user-123"
             };
 
             _mockRepository.Setup(r => r.AddAsync(It.IsAny<EventCategory>()))

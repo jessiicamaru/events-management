@@ -10,7 +10,13 @@ namespace HabitTracker.Domain.Entities
         public string UserId { get; set; } = string.Empty;
         public ApplicationUser? User { get; set; }
 
-        public string Role { get; set; } = "Member"; // "Leader", "Member"
+        /// <summary>The member who can change the squad and its shared data.</summary>
+        public const string LeaderRole = "Leader";
+
+        /// <summary>Everyone else.</summary>
+        public const string MemberRole = "Member";
+
+        public string Role { get; set; } = MemberRole;
         public string? Nickname { get; set; }
         public bool IsMuted { get; set; } = false;
         public bool XpContributionEnabled { get; set; } = true;

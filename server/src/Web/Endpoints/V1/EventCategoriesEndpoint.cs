@@ -31,26 +31,30 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         if (userId == null) return TypedResults.Unauthorized();
 
         var categories = await sender.Send(new GetEventCategoriesQuery { UserId = userId, SquadId = squadId });
+
+        // Null means "not your squad" — distinct from an empty list, which the client shows as
+        // an empty state. Before, the squad id was used unvalidated and any caller could read
+        // any squad's categories.
+        if (categories == null) return TypedResults.Forbid();
+
         return TypedResults.Ok(categories);
     }
 
-    public async Task<Results<Created<Guid>, UnauthorizedHttpResult>> CreateCategory(ISender sender, CreateEventCategoryCommand command, ClaimsPrincipal user)
+    public async Task<Results<Created<Guid>, ForbidHttpResult, UnauthorizedHttpResult>> CreateCategory(ISender sender, CreateEventCategoryCommand command, ClaimsPrincipal user)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
-        if (command.SquadId == null)
-        {
-            command.UserId = userId; // It's a personal category
-        }
-        else
-        {
-            // Ideally check if user is admin of squad. For now, let anyone add to squad.
-            command.UserId = null; // Squad categories don't belong to a specific user
-        }
+        command.CallerUserId = userId;
+        // A squad category belongs to the squad, not to one member; a personal one belongs to
+        // whoever asked. Either way the handler checks the caller may do it — membership of the
+        // squad used to be unchecked entirely.
+        command.UserId = command.SquadId == null ? userId : null;
 
         var id = await sender.Send(command);
-        return TypedResults.Created($"/api/v1/event-categories/{id}", id);
+        if (id == null) return TypedResults.Forbid();
+
+        return TypedResults.Created($"/api/v1/event-categories/{id}", id.Value);
     }
 
     public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> UpdateCategory(ISender sender, Guid id, [Microsoft.AspNetCore.Mvc.FromBody] UpdateEventCategoryRequest request, ClaimsPrincipal user)
@@ -58,13 +62,14 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
+        // request.SquadId is deliberately not passed on: whether this category is personal
+        // or shared is a property of the stored row, and trusting the body for it was the bug.
         var command = new UpdateEventCategoryCommand
         {
             Id = id,
             Name = request.Name,
             ColorPreset = request.ColorPreset,
-            UserId = userId,
-            SquadId = request.SquadId
+            UserId = userId
         };
 
         var result = await sender.Send(command);
@@ -72,16 +77,17 @@ public class EventCategoriesEndpoint : EndpointGroupBase
         return TypedResults.Ok();
     }
 
-    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteCategory(ISender sender, Guid id, ClaimsPrincipal user, Guid? squadId, [FromQuery] Guid? replacementCategoryId)
+    public async Task<Results<Ok, NotFound, UnauthorizedHttpResult>> DeleteCategory(ISender sender, Guid id, ClaimsPrincipal user, [FromQuery] Guid? replacementCategoryId)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return TypedResults.Unauthorized();
 
+        // No squadId parameter: the row says whether this is a squad category, and the handler
+        // checks the caller against it. A client may still send one; it is ignored.
         var command = new DeleteEventCategoryCommand
         {
             Id = id,
             UserId = userId,
-            SquadId = squadId,
             ReplacementCategoryId = replacementCategoryId
         };
 

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 using System.Linq;
@@ -30,13 +31,13 @@ namespace HabitTracker.Application.Features.Squads.Commands
             var members = await _repository.GetSquadMembersAsync(request.SquadId);
             var approvedMembers = members.Where(m => m.IsApproved).ToList();
 
-            if (membership.Role == "Leader" && approvedMembers.Count(m => m.Role == "Leader") == 1)
+            if (membership.Role == SquadMember.LeaderRole && approvedMembers.Count(m => m.Role == SquadMember.LeaderRole) == 1)
             {
                 // If this is the only leader, transfer leader to another approved member if any, or delete squad
                 var nextLeader = approvedMembers.FirstOrDefault(m => m.UserId != request.UserId);
                 if (nextLeader != null)
                 {
-                    nextLeader.Role = "Leader";
+                    nextLeader.Role = SquadMember.LeaderRole;
                     await _repository.UpdateMemberAsync(nextLeader);
                 }
                 // (Optional: If no members left, Squad will just be empty or we could delete it, but removing member is fine)

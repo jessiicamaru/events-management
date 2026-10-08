@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
 
@@ -30,7 +31,7 @@ namespace HabitTracker.Application.Features.Squads.Commands
             }
 
             var callerMembership = await _repository.GetMembershipAsync(request.SquadId, request.ActionByUserId);
-            if (callerMembership == null || callerMembership.Role != "Leader" || !callerMembership.IsApproved)
+            if (callerMembership == null || callerMembership.Role != SquadMember.LeaderRole || !callerMembership.IsApproved)
             {
                 throw new Exception("Only approved Leaders can reject or kick members");
             }
