@@ -71,9 +71,10 @@ namespace HabitTracker.Application.Common
         /// </returns>
         /// <remarks>
         /// Safe to call repeatedly for the same day, and concurrently: the second call finds
-        /// the first call's child. The date is not checked against the full repeat rule — that needs a
-        /// recurrence engine the server does not have — so a caller could split off a date the
-        /// rule would never produce. Such a child is harmless: it shows as a one-off event.
+        /// the first call's child. The date is not checked against the full repeat rule
+        /// (<see cref="RecurrenceExpander"/> could, but this predates it), so a caller could split
+        /// off a date the rule would never produce. Such a child is harmless: it shows as a
+        /// one-off event.
         /// </remarks>
         public async Task<Event?> FindOrCreateAsync(
             Event series,

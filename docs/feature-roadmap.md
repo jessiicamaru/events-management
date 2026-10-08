@@ -279,6 +279,26 @@ base event would duplicate real events. **The fix is to validate the rule when i
 saved**, not when it is expanded. Both behaviours are locked by tests so a change is
 deliberate.
 
+### ⚪ 5.3b Yearly and plain monthly series show no days on the client
+
+Found while writing the server's expander (`RecurrenceExpander`, checked against the
+client by `test-fixtures/recurrence-expansion.json`). `SfCalendar.getRecurrenceDateTimeCollection`
+returns **nothing** for `FREQ=YEARLY` unless the rule also names `BYMONTH` and `BYMONTHDAY`,
+and nothing for `FREQ=MONTHLY` without `BYMONTHDAY` — measured: `FREQ=YEARLY`,
+`FREQ=YEARLY;INTERVAL=1` and `FREQ=MONTHLY` give 0; `FREQ=YEARLY;BYMONTH=10;BYMONTHDAY=5`
+gives the expected three years.
+
+The event sheet's "Yearly" option writes exactly `RRULE:FREQ=YEARLY`, and Google writes
+birthdays that way, so those series vanish from Home, the widgets, reminders and the
+activity card. The server expands them correctly; the fixture marks both cases
+`clientGap`, and the client test asserts the gap is still there, so fixing it turns that
+test red as a reminder to drop the marker.
+
+Fix on the client: have the sheet write `BYMONTH`/`BYMONTHDAY` (it already writes
+`BYMONTHDAY` for monthly), and fill them in from the series' start before calling
+Syncfusion for rules that arrive without them — a rule from Google cannot be rewritten at
+the source.
+
 ### ⚪ 5.4 Rotate the leaked credentials
 
 The Google `ClientSecret` and ngrok token removed from the working tree in PR #23 are still

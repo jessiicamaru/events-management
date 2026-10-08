@@ -20,6 +20,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Shared with the Flutter tests, so both sides expand repeating events the same way. -->
+    <None Include="..\..\..\test-fixtures\recurrence-expansion.json"
+          Link="Fixtures\recurrence-expansion.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 

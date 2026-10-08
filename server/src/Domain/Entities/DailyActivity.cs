@@ -22,7 +22,7 @@ namespace HabitTracker.Domain.Entities
 
         /// <summary>
         /// One-off events starting on this day, completed or not. Days of repeating events are
-        /// not in here — the server has no recurrence engine, so the client counts them.
+        /// not in here — a <c>GROUP BY</c> cannot expand a repeat rule, so the client counts them.
         /// </summary>
         public int OneOffScheduled { get; set; }
 
