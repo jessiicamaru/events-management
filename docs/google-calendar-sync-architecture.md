@@ -141,10 +141,24 @@ only through `RecurrenceExceptions`.
 
 It lists the primary calendar over the window, with `ShowDeleted = true` and
 `SingleEvents = false` (so recurring masters and their modified instances come back as separate
-items), then reconciles in this order:
+items), following `nextPageToken` until the last page — Google may return a short or even empty
+page while more events remain. The window is the range asked for, or by default 7 days back to 14
+days ahead (`GoogleSyncWindow.DefaultLookBack` / `DefaultLookAhead`). It then reconciles in this
+order:
 
-1. **Removals.** A local Google-linked event is deleted when its id is missing from the list, or
-   when it is a cancelled non-recurring event.
+1. **Removals.** A local Google-linked event is deleted when the list reports it as a cancelled
+   non-recurring event or series. An event **missing** from the list is deleted only when both
+   hold:
+   - the window could have listed it, going by its stored times (`GoogleSyncWindow.CouldBeListed`:
+     end after the window's start and start before its end, both exclusive; a series counts until
+     its `UNTIL`, or for ever when it has none or has a `COUNT`), and
+   - Google, asked for that one event (`Events: get`), answers that it is cancelled, 404 or 410.
+     Any other answer, including an error, keeps the event.
+
+   Events outside the window are left alone: the list says nothing about them. They are reconciled
+   when a sync covers them, for instance when the calendar shows their month. The lookup is there
+   because the local copy's time can be stale (the event was moved on Google) and Google does not
+   document how it filters a recurring series by time.
 2. **Recurring masters.** Updated in place, or created.
 3. **Instances of a series** (items with `RecurringEventId`):
    - **cancelled:** the date is added to the master's exception list, and the matching local day is
@@ -159,11 +173,11 @@ items), then reconciles in this order:
 
 ## 5. Known limits
 
-- **Removals are not limited to the window (by reading, not reproduced).** Step 1 compares *every*
-  local Google-linked event of the user against a list fetched for one window. A synced event
-  outside that window — by default anything older than 7 days — is missing from the list, and so is
-  deleted locally, together with its recorded focus time. This is recorded as roadmap item 5.8 and
-  in the project report. Fix: take the removal candidates from the same window as the list.
+- **A deletion on Google outside every synced window is not noticed** until a sync covers that
+  time. Until roadmap 5.8 was fixed, the opposite was true, and worse: every synced event outside
+  the window was deleted locally on each sync, with its tasks and recorded focus time.
+- **Each missing candidate costs one API call.** Normally there are none, because Google lists
+  deleted events as cancelled; the lookups happen only when the list and the local copy disagree.
 - **Background failures are console-only.** The webhook and on-read paths catch exceptions and write
   them with `Console.WriteLine` inside fire-and-forget tasks (roadmap 5.7). A broken sync leaves no
   structured trace.

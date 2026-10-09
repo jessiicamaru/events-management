@@ -104,5 +104,5 @@ group name would not match it, and Google would receive a 404.
 - On-read revalidation is fire-and-forget. Its failures go to the console only (roadmap 5.7).
 - Freshness is per range, not per event, and the moving fetch window defeats the cache often, as
   noted above.
-- Reconciliation removes local events missing from a windowed list without restricting removals to
-  that window (see `google-calendar-sync-architecture.md` §5, roadmap 5.8).
+- Reconciliation can only remove what the revalidated range covers: an event deleted on Google is
+  removed locally once a sync's window includes it (see `google-calendar-sync-architecture.md` §4).

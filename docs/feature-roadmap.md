@@ -380,21 +380,24 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 `Task.Run`. If Google sync breaks in production there is no signal — which matches the
 "sometimes works" symptom the sync docs describe. Use `ILogger`.
 
-### ⚪ 5.8 Inbound sync deletes synced events outside its window — high priority
+### 🟢 5.8 Inbound sync deleted synced events outside its window
 
-Found while rewriting the sync documentation in English, by reading `SyncEventsAsync`; **not
-reproduced**, because it needs a connected Google account. The sync asks Google for one time window
-(by default 7 days back to 14 days ahead, or the range being browsed), but its removal step compares
-*every* Google-linked local event of the user against that list. A synced one-off event outside the
-window is absent from the list, so it is deleted locally, together with its tasks and recorded focus
-time. The webhook and the app's once-a-minute sync both use the default window, so for a user with
-Google connected, the history of synced events older than a week is at risk on every sync.
+**Done — `fix/sync-window-deletion`.** Found while rewriting the sync documentation, by reading
+`SyncEventsAsync`. The sync lists one window of Google's calendar (by default 7 days back to 14 days
+ahead, or the range being browsed) but its removal step treated *every* synced local event missing
+from that list as deleted. It also read only the first page of the list. So each sync deleted the
+user's synced history, everything past the window, and any event on a later page, together with
+their tasks and recorded focus time.
 
-Fix: take the removal candidates from the same window as the list —
-`GetEventsForUserAsync(userId, windowStart, windowEnd)` already has the right overlap semantics,
-and keeps recurring masters that started before the window. A test needs a fake
-`CalendarService`, or the reconciliation moved behind an interface; that is the harder part. See
-`docs/google-calendar-sync-architecture.md` §5.
+Reproduced with tests that run the real `SyncEventsAsync` against a fake Google HTTP layer: on the
+old code 8 of 13 failed (history, next month, a finished series, an event on page two, an event
+moved on Google, and one whose lookup errored were all deleted). Now an event missing from the list
+is removed only if the window could have held it (`GoogleSyncWindow.CouldBeListed`) **and** Google,
+asked directly, says it is cancelled or gone; every page is read. Not yet checked against a real
+Google account — that needs a throwaway account and a refresh token.
+
+The fix first suggested here, taking candidates from `GetEventsForUserAsync(userId, windowStart,
+windowEnd)`, would not have been enough: that query returns every split-off day whatever its date.
 
 ---
 
@@ -408,5 +411,5 @@ One loop at a time beats five disconnected features:
 4. **2.2 weekday/hour rates** — unlocks 1.2's threshold and 3.1
 5. **1.3 weekly review** — wraps 2.1 and 2.2 into a habit of its own
 
-Before any of those, if Google sync is in use: **5.8**, which can delete synced history. Slot **5.1**
-in before the user base grows, and **5.4** whenever you next have ten minutes.
+~~**5.8**~~, which deleted synced history, is fixed. Slot **5.1** in before the user base grows, and
+**5.4** whenever you next have ten minutes.
