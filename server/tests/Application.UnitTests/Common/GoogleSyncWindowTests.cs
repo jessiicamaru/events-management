@@ -45,7 +45,9 @@ namespace HabitTracker.Application.Tests.Common
 
         [Theory]
         [InlineData("RRULE:FREQ=DAILY;UNTIL=20260820T235959Z", false)] // Google's form, ended in August
-        [InlineData("FREQ=DAILY;INTERVAL=1;UNTIL=20260820T235959Z", false)] // the client's form
+        [InlineData("FREQ=DAILY;INTERVAL=1;UNTIL=20260820T235959Z", false)] // no RRULE: prefix
+        [InlineData("RRULE:FREQ=DAILY;UNTIL=20260820 165959Z", false)] // what the app's recurrence dialog writes
+        [InlineData("RRULE:FREQ=DAILY;UNTIL=20260831T200000", true)] // floating local time: a day's grace
         [InlineData("RRULE:FREQ=DAILY;UNTIL=20260905T000000Z", true)] // runs into the window
         [InlineData("RRULE:FREQ=DAILY;UNTIL=20260820", false)] // date only
         [InlineData("RRULE:FREQ=DAILY;COUNT=10", true)] // unknown end without expanding: ask
@@ -60,6 +62,15 @@ namespace HabitTracker.Application.Tests.Common
             var series = At(new DateTime(2026, 8, 1, 23, 30, 0, DateTimeKind.Utc), "RRULE:FREQ=DAILY;UNTIL=20260831");
 
             CouldBeListed(series).Should().BeTrue();
+        }
+
+        [Fact]
+        public void AUtcUntil_GetsNoGrace()
+        {
+            // Last day 31 August 22:00-23:00 UTC, an hour before the window: not listable.
+            var series = At(new DateTime(2026, 8, 1, 22, 0, 0, DateTimeKind.Utc), "RRULE:FREQ=DAILY;UNTIL=20260831T220000Z");
+
+            CouldBeListed(series).Should().BeFalse();
         }
 
         [Fact]

@@ -33,7 +33,16 @@ namespace HabitTracker.Application.Common
 
         private const string UntilPart = "UNTIL=";
         private const string RulePrefix = "RRULE:";
-        private static readonly string[] UntilFormats = { "yyyyMMdd'T'HHmmss'Z'", "yyyyMMdd'T'HHmmss", "yyyyMMdd" };
+        private const string UtcSuffix = "Z";
+
+        /// <summary>
+        /// RFC 5545's forms, plus the one the app's recurrence dialog writes — a space where the
+        /// standard has <c>T</c> (<c>UNTIL=20260820 165959Z</c>).
+        /// </summary>
+        private static readonly string[] UntilFormats =
+        {
+            "yyyyMMdd'T'HHmmss'Z'", "yyyyMMdd' 'HHmmss'Z'", "yyyyMMdd'T'HHmmss", "yyyyMMdd",
+        };
 
         /// <summary>
         /// Whether Google's list for [<paramref name="windowStart"/>, <paramref name="windowEnd"/>)
@@ -55,7 +64,9 @@ namespace HabitTracker.Application.Common
         /// <summary>
         /// When a series' last day ends: its UNTIL plus one day's length, or never. A COUNT, or an
         /// UNTIL that cannot be read, counts as never — a wrong "never" costs one lookup, a wrong
-        /// end date would hide a deletion.
+        /// end date would hide a deletion. For the same reason an UNTIL that is not in UTC — a
+        /// date, or a floating local time — is given a day's grace, the widest a time zone can
+        /// move it.
         /// </summary>
         private static DateTime SeriesLastEnd(Event series)
         {
@@ -69,15 +80,15 @@ namespace HabitTracker.Application.Common
             {
                 if (!part.StartsWith(UntilPart, StringComparison.OrdinalIgnoreCase)) continue;
 
+                var value = part[UntilPart.Length..];
                 if (DateTime.TryParseExact(
-                        part[UntilPart.Length..],
+                        value,
                         UntilFormats,
                         CultureInfo.InvariantCulture,
                         DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
                         out var until))
                 {
-                    // A date-only UNTIL includes that whole day.
-                    var lastStart = part.Length - UntilPart.Length == UntilFormats[2].Length ? until.AddDays(1) : until;
+                    var lastStart = value.EndsWith(UtcSuffix, StringComparison.OrdinalIgnoreCase) ? until : until.AddDays(1);
                     return lastStart + (series.EndTime - series.StartTime);
                 }
 

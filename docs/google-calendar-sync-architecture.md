@@ -151,9 +151,21 @@ order:
    hold:
    - the window could have listed it, going by its stored times (`GoogleSyncWindow.CouldBeListed`:
      end after the window's start and start before its end, both exclusive; a series counts until
-     its `UNTIL`, or for ever when it has none or has a `COUNT`), and
+     its `UNTIL` — with a day's grace when the `UNTIL` is not in UTC — or for ever when it has none,
+     has a `COUNT`, or cannot be read), and
    - Google, asked for that one event (`Events: get`), answers that it is cancelled, 404 or 410.
-     Any other answer, including an error, keeps the event.
+
+   What else the lookup can answer:
+   - **Still there** (confirmed or tentative): the event is added to the list, so the steps below
+     update the local copy — typically with the new time of an event moved out of the window, which
+     then stops being a candidate.
+   - **An error** (a Google error, a dropped connection, a timeout): the event is kept, and the
+     remaining candidates are kept without asking, since the same failure would repeat. The rest of
+     the sync goes on.
+
+   Deleting a series deletes its days first, whatever their date, including local-only days: the
+   parent link is set to null rather than cascaded, so a day left behind would stay on the calendar
+   as a one-off event.
 
    Events outside the window are left alone: the list says nothing about them. They are reconciled
    when a sync covers them, for instance when the calendar shows their month. The lookup is there
@@ -177,7 +189,8 @@ order:
   time. Until roadmap 5.8 was fixed, the opposite was true, and worse: every synced event outside
   the window was deleted locally on each sync, with its tasks and recorded focus time.
 - **Each missing candidate costs one API call.** Normally there are none, because Google lists
-  deleted events as cancelled; the lookups happen only when the list and the local copy disagree.
+  deleted events as cancelled. They happen when the list and the local copy disagree — an event
+  moved out of the window is looked up once, then carries its new time.
 - **Background failures are console-only.** The webhook and on-read paths catch exceptions and write
   them with `Console.WriteLine` inside fire-and-forget tasks (roadmap 5.7). A broken sync leaves no
   structured trace.

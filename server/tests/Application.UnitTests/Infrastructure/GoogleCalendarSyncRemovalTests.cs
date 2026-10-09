@@ -52,16 +52,18 @@ namespace HabitTracker.Application.Tests.Infrastructure
         }
 
         private async Task<Event> SeedLinkedAsync(
-            string googleId, DateTime start, TimeSpan? length = null, string? recurrenceRule = null)
+            string? googleId, DateTime start, TimeSpan? length = null, string? recurrenceRule = null, Guid? parentId = null)
         {
             var ev = new Event
             {
-                Title = googleId,
+                Title = googleId ?? "local only",
                 StartTime = start,
                 EndTime = start + (length ?? TimeSpan.FromHours(1)),
                 UserId = UserId,
                 GoogleEventId = googleId,
                 RecurrenceRule = recurrenceRule,
+                ParentEventId = parentId,
+                ExceptionDate = parentId == null ? null : start,
             };
             _context.Events.Add(ev);
             await _context.SaveChangesAsync();
@@ -177,29 +179,98 @@ namespace HabitTracker.Application.Tests.Infrastructure
         }
 
         [Fact]
-        public async Task AnEventStillOnGoogle_IsKept_EvenIfTheListLeftItOut()
+        public async Task AnEventMovedOutOfTheWindowOnGoogle_IsKept_AtItsNewTime()
         {
-            // Moved out of the window on Google, for instance: the local copy still has the old time.
+            // Review round 1, R1: the lookup's answer was used for its status only, so the local copy
+            // stayed at the old time, reminder included, and was looked up again on every sync.
             var ev = await SeedLinkedAsync("moved", WindowStart.AddDays(2));
+            var newStart = WindowEnd.AddDays(20);
+            _google.Found["moved"] = FakeGoogle.Item("moved", newStart, "Moved on Google");
+
+            (await SyncAsync()).Should().BeTrue();
+
+            var stored = await _context.Events.AsNoTracking().SingleAsync(e => e.Id == ev.Id);
+            stored.StartTime.Should().Be(newStart);
+            stored.Title.Should().Be("Moved on Google");
+
+            _google.LookedUp.Clear();
+            (await SyncAsync()).Should().BeTrue();
+            _google.LookedUp.Should().BeEmpty("its stored time is outside the window now");
+        }
+
+        [Fact]
+        public async Task ATentativeEvent_IsKept()
+        {
+            var ev = await SeedLinkedAsync("tentative", WindowStart.AddDays(2));
+            _google.Found["tentative"] = FakeGoogle.Item("tentative", WindowStart.AddDays(2), status: "tentative");
 
             (await SyncAsync()).Should().BeTrue();
 
             (await Exists(ev.Id)).Should().BeTrue();
-            _google.LookedUp.Should().Equal("moved");
         }
 
         [Fact]
         public async Task AGoogleErrorWhileChecking_KeepsTheEvent_AndTheSyncCarriesOn()
         {
             var unsure = await SeedLinkedAsync("unsure", WindowStart.AddDays(2));
-            var gone = await SeedLinkedAsync("gone", WindowStart.AddDays(4));
+            var listed = await SeedLinkedAsync("listed", WindowStart.AddDays(4));
             _google.Lookups["unsure"] = HttpStatusCode.InternalServerError;
-            _google.Lookups["gone"] = HttpStatusCode.NotFound;
+            _google.Pages[0].Add(FakeGoogle.Item("listed", WindowStart.AddDays(4), "Renamed on Google"));
 
             (await SyncAsync()).Should().BeTrue();
 
             (await Exists(unsure.Id)).Should().BeTrue("deleting on an error is how history was lost");
-            (await Exists(gone.Id)).Should().BeFalse();
+            (await _context.Events.AsNoTracking().SingleAsync(e => e.Id == listed.Id)).Title.Should().Be("Renamed on Google");
+        }
+
+        [Fact]
+        public async Task ANetworkErrorWhileChecking_KeepsTheEvent_AndTheSyncCarriesOn()
+        {
+            // Review round 1, R2: only Google's own errors were caught, so a dropped connection
+            // ended the sync before any listed change was applied.
+            var unsure = await SeedLinkedAsync("offline", WindowStart.AddDays(2));
+            var listed = await SeedLinkedAsync("listed", WindowStart.AddDays(4));
+            _google.Unreachable.Add("offline");
+            _google.Pages[0].Add(FakeGoogle.Item("listed", WindowStart.AddDays(4), "Renamed on Google"));
+
+            (await SyncAsync()).Should().BeTrue();
+
+            (await Exists(unsure.Id)).Should().BeTrue();
+            (await _context.Events.AsNoTracking().SingleAsync(e => e.Id == listed.Id)).Title.Should().Be("Renamed on Google");
+        }
+
+        [Fact]
+        public async Task AfterALookupFails_TheRestAreKeptWithoutAsking()
+        {
+            // The same failure would repeat for each, a timeout at a time.
+            var first = await SeedLinkedAsync("first", WindowStart.AddDays(2));
+            var second = await SeedLinkedAsync("second", WindowStart.AddDays(4));
+            _google.Unreachable.Add("first");
+            _google.Unreachable.Add("second");
+
+            (await SyncAsync()).Should().BeTrue();
+
+            _google.LookedUp.Should().HaveCount(1);
+            (await Exists(first.Id)).Should().BeTrue();
+            (await Exists(second.Id)).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task ASeriesCancelledOnGoogle_TakesItsDaysWithIt_WhateverTheirDate()
+        {
+            // Review round 1, R3: the parent link is not cascaded, so a day outside the window lost
+            // its series and stayed on the calendar as a one-off event.
+            var series = await SeedLinkedAsync("series", WindowStart.AddDays(-60), recurrenceRule: "RRULE:FREQ=DAILY");
+            var editedDay = await SeedLinkedAsync("series_20260710T000000Z", WindowStart.AddDays(-50), parentId: series.Id);
+            var localOnlyDay = await SeedLinkedAsync(null, WindowStart.AddDays(-40), parentId: series.Id);
+            _google.Pages[0].Add(FakeGoogle.Item("series", WindowStart.AddDays(-60), status: "cancelled"));
+
+            (await SyncAsync()).Should().BeTrue();
+
+            (await Exists(series.Id)).Should().BeFalse();
+            (await Exists(editedDay.Id)).Should().BeFalse();
+            (await Exists(localOnlyDay.Id)).Should().BeFalse();
+            _google.LookedUp.Should().BeEmpty();
         }
 
         [Fact]
@@ -233,10 +304,40 @@ namespace HabitTracker.Application.Tests.Infrastructure
             // The webhook and the manual sync pass no window: -7 to +14 days from now.
             var history = await SeedLinkedAsync("last-month", DateTime.UtcNow.AddDays(-30));
 
+            var before = DateTime.UtcNow;
             (await _service.SyncEventsAsync(UserId, "refresh-token", null, null, CancellationToken.None))
                 .Should().BeTrue();
 
             (await Exists(history.Id)).Should().BeTrue();
+            _google.LookedUp.Should().BeEmpty();
+            var list = _google.ListQueries.Single();
+            DateTimeOffset.Parse(list["timeMin"]!).UtcDateTime.Should().BeCloseTo(before.AddDays(-7), TimeSpan.FromMinutes(1));
+            DateTimeOffset.Parse(list["timeMax"]!).UtcDateTime.Should().BeCloseTo(before.AddDays(14), TimeSpan.FromMinutes(1));
+        }
+
+        [Fact]
+        public async Task TheListAsksForTheWindow_WithDeletedEvents_AndSeriesUnexpanded()
+        {
+            // Deleted events are what step 1 and step 4 act on, and an expanded list would have no
+            // series to match the local ones against.
+            (await SyncAsync()).Should().BeTrue();
+
+            var list = _google.ListQueries.Single();
+            DateTimeOffset.Parse(list["timeMin"]!).UtcDateTime.Should().Be(WindowStart);
+            DateTimeOffset.Parse(list["timeMax"]!).UtcDateTime.Should().Be(WindowEnd);
+            list["showDeleted"].Should().Be("true");
+            list["singleEvents"].Should().Be("false");
+        }
+
+        [Fact]
+        public async Task ARepeatedPageToken_EndsTheListing()
+        {
+            // Review round 1, R6: nothing stopped the loop, and the real callers cannot cancel it.
+            _google.RepeatToken = true;
+
+            (await SyncAsync()).Should().BeTrue();
+
+            _google.ListQueries.Should().HaveCount(2);
         }
 
         // --- Test doubles ------------------------------------------------------------------------
@@ -282,8 +383,19 @@ namespace HabitTracker.Application.Tests.Infrastructure
             public Dictionary<string, HttpStatusCode> Lookups { get; } = new();
 
             public HashSet<string> CancelledOnLookup { get; } = new();
+
+            /// <summary>What a lookup returns for an id, instead of a confirmed event in the window.</summary>
+            public Dictionary<string, object> Found { get; } = new();
+
+            /// <summary>Ids whose lookup fails before Google answers, as a dropped connection does.</summary>
+            public HashSet<string> Unreachable { get; } = new();
+
+            /// <summary>Answer every list page with the same token.</summary>
+            public bool RepeatToken { get; set; }
+
             public List<string> LookedUp { get; } = new();
             public List<string?> ListPageTokens { get; } = new();
+            public List<System.Collections.Specialized.NameValueCollection> ListQueries { get; } = new();
 
             public static object Item(string id, DateTime start, string? summary = null, string status = "confirmed") => new
             {
@@ -299,8 +411,15 @@ namespace HabitTracker.Application.Tests.Infrastructure
                 var uri = request.RequestUri!;
                 if (uri.AbsolutePath == EventsPath)
                 {
-                    var token = System.Web.HttpUtility.ParseQueryString(uri.Query)["pageToken"];
+                    var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+                    var token = query["pageToken"];
                     ListPageTokens.Add(token);
+                    ListQueries.Add(query);
+                    if (RepeatToken)
+                    {
+                        return Json(HttpStatusCode.OK, new { kind = "calendar#events", items = new List<object>(), nextPageToken = "page-0" });
+                    }
+
                     var index = token == null ? 0 : int.Parse(token["page-".Length..]);
                     var next = index + 1 < Pages.Count ? $"page-{index + 1}" : null;
                     return Json(HttpStatusCode.OK, new { kind = "calendar#events", items = Pages[index], nextPageToken = next });
@@ -310,6 +429,16 @@ namespace HabitTracker.Application.Tests.Infrastructure
                 {
                     var id = Uri.UnescapeDataString(uri.AbsolutePath[(EventsPath.Length + 1)..]);
                     LookedUp.Add(id);
+                    if (Unreachable.Contains(id))
+                    {
+                        throw new HttpRequestException("No connection.");
+                    }
+
+                    if (Found.TryGetValue(id, out var item))
+                    {
+                        return Json(HttpStatusCode.OK, item);
+                    }
+
                     if (Lookups.TryGetValue(id, out var status))
                     {
                         return Json(status, new { error = new { code = (int)status, message = status.ToString() } });

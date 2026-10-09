@@ -135,19 +135,47 @@ namespace HabitTracker.Infrastructure.Services
                 // 1. Delete events locally that Google cancelled (non-recurring events and whole
                 // series) or no longer has. The list covers only the window, so an event missing
                 // from it is gone only if the window would have held it — and even then Google is
-                // asked, because the local copy may be out of date (see GoogleSyncWindow).
+                // asked, because the local copy may be out of date (see GoogleSyncWindow). What the
+                // lookup finds still on Google joins the list, so the steps below apply it.
+                var deletedIds = new HashSet<Guid>();
+                var lookupsAvailable = true;
                 foreach (var localEvent in localGoogleEvents)
                 {
-                    var matchingGe = googleEvents.FirstOrDefault(ge => ge.Id == localEvent.GoogleEventId);
-                    var gone = matchingGe != null
-                        ? matchingGe.Status == CancelledStatus && string.IsNullOrEmpty(matchingGe.RecurringEventId)
-                        : GoogleSyncWindow.CouldBeListed(localEvent, windowStart, windowEnd)
-                          && await IsGoneFromGoogleAsync(calendarService, localEvent.GoogleEventId!, cancellationToken);
+                    if (deletedIds.Contains(localEvent.Id)) continue;
 
-                    if (gone)
+                    var matchingGe = googleEvents.FirstOrDefault(ge => ge.Id == localEvent.GoogleEventId);
+                    bool gone;
+                    if (matchingGe != null)
                     {
-                        await _eventRepository.DeleteAsync(localEvent.Id);
+                        gone = matchingGe.Status == CancelledStatus && string.IsNullOrEmpty(matchingGe.RecurringEventId);
                     }
+                    else if (!lookupsAvailable || !GoogleSyncWindow.CouldBeListed(localEvent, windowStart, windowEnd))
+                    {
+                        gone = false;
+                    }
+                    else
+                    {
+                        var lookup = await LookUpAsync(calendarService, localEvent.GoogleEventId!, cancellationToken);
+                        gone = lookup.Outcome == LookupOutcome.Gone;
+                        if (lookup.Outcome == LookupOutcome.Found) googleEvents.Add(lookup.Event!);
+                        // One failure — offline, timed out, rate limited — is likely to repeat, so
+                        // the rest are kept unasked rather than each waiting out the same error.
+                        if (lookup.Outcome == LookupOutcome.Unknown) lookupsAvailable = false;
+                    }
+
+                    if (!gone) continue;
+
+                    // A series takes its days with it, whatever their date: they cannot outlive it,
+                    // and outside the window nothing else would remove them. Children first — the
+                    // parent link is set to null, not cascaded, when the series goes.
+                    foreach (var day in localEvents.Where(e => e.ParentEventId == localEvent.Id && !deletedIds.Contains(e.Id)))
+                    {
+                        await _eventRepository.DeleteAsync(day.Id);
+                        deletedIds.Add(day.Id);
+                    }
+
+                    await _eventRepository.DeleteAsync(localEvent.Id);
+                    deletedIds.Add(localEvent.Id);
                 }
 
                 // Refresh local google events list
@@ -358,6 +386,9 @@ namespace HabitTracker.Infrastructure.Services
 
                 var page = await listRequest.ExecuteAsync(cancellationToken);
                 if (page.Items != null) events.AddRange(page.Items);
+
+                // Google does not repeat a token, but a loop that trusts it never ends if it did.
+                if (page.NextPageToken == pageToken) break;
                 pageToken = page.NextPageToken;
             }
             while (!string.IsNullOrEmpty(pageToken));
@@ -365,28 +396,44 @@ namespace HabitTracker.Infrastructure.Services
             return events;
         }
 
+        private enum LookupOutcome
+        {
+            /// <summary>Cancelled, or not found at all (404, 410).</summary>
+            Gone,
+            /// <summary>Still on Google; <see cref="Lookup.Event"/> holds its current state.</summary>
+            Found,
+            /// <summary>Google could not be asked or did not answer.</summary>
+            Unknown,
+        }
+
+        private sealed record Lookup(LookupOutcome Outcome, Google.Apis.Calendar.v3.Data.Event? Event = null);
+
         /// <summary>
-        /// Asks Google for one event the list left out. Gone means cancelled, or not found at all;
-        /// any other answer, including an error, keeps the local event — a missed deletion is put
-        /// right by a later sync, a wrong one loses the user's tasks and completion for good.
+        /// Asks Google for one event the list left out. Anything but a clear "gone" keeps the local
+        /// event — a missed deletion is put right by a later sync, a wrong one loses the user's
+        /// tasks and completion for good.
         /// </summary>
-        private static async Task<bool> IsGoneFromGoogleAsync(
+        private static async Task<Lookup> LookUpAsync(
             CalendarService calendarService, string googleEventId, CancellationToken cancellationToken)
         {
             try
             {
                 var googleEvent = await calendarService.Events.Get("primary", googleEventId).ExecuteAsync(cancellationToken);
-                return googleEvent.Status == CancelledStatus;
+                return googleEvent.Status == CancelledStatus
+                    ? new Lookup(LookupOutcome.Gone)
+                    : new Lookup(LookupOutcome.Found, googleEvent);
             }
             catch (Google.GoogleApiException ex)
                 when (ex.HttpStatusCode == System.Net.HttpStatusCode.NotFound || ex.HttpStatusCode == System.Net.HttpStatusCode.Gone)
             {
-                return true;
+                return new Lookup(LookupOutcome.Gone);
             }
-            catch (Google.GoogleApiException ex)
+            catch (Exception ex) when (ex is Google.GoogleApiException
+                                       || ex is System.Net.Http.HttpRequestException
+                                       || (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
             {
-                Console.WriteLine($"Google Sync: kept {googleEventId}, lookup failed: {ex.HttpStatusCode}");
-                return false;
+                Console.WriteLine($"Google Sync: kept {googleEventId}, lookup failed: {ex.GetType().Name} {ex.Message}");
+                return new Lookup(LookupOutcome.Unknown);
             }
         }
 
