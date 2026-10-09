@@ -299,6 +299,38 @@ namespace HabitTracker.Application.Tests.Infrastructure
         }
 
         [Fact]
+        public async Task ADayCancelledOnGoogle_IsRemoved_AndItsDateExcludedFromTheSeries()
+        {
+            // Step 1 leaves a listed cancelled day to step 4, which removes it and records the date
+            // on the series (review round 1, N6).
+            var day = WindowStart.AddDays(3);
+            var series = await SeedLinkedAsync("weekly", WindowStart.AddDays(-4), recurrenceRule: "RRULE:FREQ=DAILY");
+            var editedDay = await SeedLinkedAsync("weekly_20260904T000000Z", day, parentId: series.Id);
+            _google.Pages[0].Add(new
+            {
+                id = "weekly",
+                status = "confirmed",
+                recurrence = new[] { "RRULE:FREQ=DAILY" },
+                start = new { dateTime = WindowStart.AddDays(-4).ToString("yyyy-MM-ddTHH:mm:ssZ") },
+                end = new { dateTime = WindowStart.AddDays(-4).AddHours(1).ToString("yyyy-MM-ddTHH:mm:ssZ") },
+            });
+            _google.Pages[0].Add(new
+            {
+                id = "weekly_20260904T000000Z",
+                status = "cancelled",
+                recurringEventId = "weekly",
+                originalStartTime = new { dateTime = day.ToString("yyyy-MM-ddTHH:mm:ssZ") },
+            });
+
+            (await SyncAsync()).Should().BeTrue();
+
+            (await Exists(editedDay.Id)).Should().BeFalse();
+            var stored = await _context.Events.AsNoTracking().SingleAsync(e => e.Id == series.Id);
+            HabitTracker.Application.Common.RecurrenceExceptions.Contains(stored, day).Should().BeTrue();
+            _google.LookedUp.Should().BeEmpty();
+        }
+
+        [Fact]
         public async Task TheDefaultWindow_KeepsLastMonthsHistory()
         {
             // The webhook and the manual sync pass no window: -7 to +14 days from now.
@@ -375,6 +407,7 @@ namespace HabitTracker.Application.Tests.Infrastructure
         private sealed class FakeGoogle : HttpMessageHandler
         {
             private const string EventsPath = "/calendar/v3/calendars/primary/events";
+            private const int MaxListCalls = 10;
 
             /// <summary>One entry per list page; the default is a single empty page.</summary>
             public List<List<object>> Pages { get; } = new() { new List<object>() };
@@ -415,6 +448,12 @@ namespace HabitTracker.Application.Tests.Infrastructure
                     var token = query["pageToken"];
                     ListPageTokens.Add(token);
                     ListQueries.Add(query);
+                    if (ListQueries.Count > MaxListCalls)
+                    {
+                        // Fail the sync instead of hanging the test run when paging never ends.
+                        throw new InvalidOperationException("The listing never ended.");
+                    }
+
                     if (RepeatToken)
                     {
                         return Json(HttpStatusCode.OK, new { kind = "calendar#events", items = new List<object>(), nextPageToken = "page-0" });
