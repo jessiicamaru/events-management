@@ -11,6 +11,7 @@ import 'package:habit_tracker/features/calendar/presentation/widgets/habit_dock.
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_source_filters.dart';
 import 'package:habit_tracker/features/calendar/presentation/widgets/calendar_workspace.dart';
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
+import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_fab.dart';
 
 // Helper enum for custom view selection
 enum AppCalendarView { day, threeDay, month }
@@ -152,29 +153,38 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       // Always shown. It used to disappear whenever the command centre panel was
       // open — which was the default — so creating an event meant collapsing the
       // panel first. With the panel moved to the home screen there is nothing left
-      // for it to overlap.
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: theme.colorScheme.primary,
-        foregroundColor: theme.colorScheme.primaryForeground,
-        shape: const CircleBorder(),
-        elevation: 4,
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.transparent,
-            isScrollControlled: true,
-            builder: (bottomSheetContext) => Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
-              ),
-              child: CreateEventSheet(
-                habitsAsync: habitsAsync,
-                initialDate: _displayDate,
-              ),
-            ),
-          );
-        },
-        child: const Icon(LucideIcons.plus, size: 24),
+      // for it to overlap. The assistant's button sits above it, small: the tab
+      // shell leaves its own out on this tab so the two do not overlap.
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const AssistantFab(mini: true),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            backgroundColor: theme.colorScheme.primary,
+            foregroundColor: theme.colorScheme.primaryForeground,
+            shape: const CircleBorder(),
+            elevation: 4,
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (bottomSheetContext) => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom,
+                  ),
+                  child: CreateEventSheet(
+                    habitsAsync: habitsAsync,
+                    initialDate: _displayDate,
+                  ),
+                ),
+              );
+            },
+            child: const Icon(LucideIcons.plus, size: 24),
+          ),
+        ],
       ),
     );
   }

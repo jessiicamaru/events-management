@@ -1257,6 +1257,122 @@ class AppTranslations {
       AppLocale.en: 'Sunday',
       AppLocale.vi: 'Chủ Nhật',
     },
+
+    // Assistant
+    'assistant_title': {AppLocale.en: 'Assistant', AppLocale.vi: 'Trợ lý'},
+    'assistant_open': {AppLocale.en: 'Open the assistant', AppLocale.vi: 'Mở trợ lý'},
+    'assistant_input_placeholder': {
+      AppLocale.en: 'Ask about your schedule…',
+      AppLocale.vi: 'Hỏi về lịch của bạn…',
+    },
+    'assistant_send': {AppLocale.en: 'Send', AppLocale.vi: 'Gửi'},
+    'assistant_new_chat': {AppLocale.en: 'New conversation', AppLocale.vi: 'Cuộc trò chuyện mới'},
+    'assistant_turn_off': {AppLocale.en: 'Turn off the assistant', AppLocale.vi: 'Tắt trợ lý'},
+    'assistant_retry': {AppLocale.en: 'Try again', AppLocale.vi: 'Thử lại'},
+    'assistant_thinking': {AppLocale.en: 'Thinking…', AppLocale.vi: 'Đang suy nghĩ…'},
+    'assistant_tool_running_get_events': {
+      AppLocale.en: 'Looking at your calendar…',
+      AppLocale.vi: 'Đang xem lịch của bạn…',
+    },
+    'assistant_tool_running_get_habits': {
+      AppLocale.en: 'Looking at your habits…',
+      AppLocale.vi: 'Đang xem thói quen…',
+    },
+    'assistant_tool_running_get_categories': {
+      AppLocale.en: 'Looking at your categories…',
+      AppLocale.vi: 'Đang xem danh mục…',
+    },
+    'assistant_tool_running_get_stats': {
+      AppLocale.en: 'Checking your stats…',
+      AppLocale.vi: 'Đang xem số liệu…',
+    },
+    'assistant_tool_running_other': {AppLocale.en: 'Working on it…', AppLocale.vi: 'Đang xử lý…'},
+    'assistant_tool_done_get_events': {AppLocale.en: 'Checked your calendar', AppLocale.vi: 'Đã xem lịch'},
+    'assistant_tool_done_get_habits': {AppLocale.en: 'Checked your habits', AppLocale.vi: 'Đã xem thói quen'},
+    'assistant_tool_done_get_categories': {
+      AppLocale.en: 'Checked your categories',
+      AppLocale.vi: 'Đã xem danh mục',
+    },
+    'assistant_tool_done_get_stats': {AppLocale.en: 'Checked your stats', AppLocale.vi: 'Đã xem số liệu'},
+    'assistant_tool_done_other': {AppLocale.en: 'Used {tool}', AppLocale.vi: 'Đã dùng {tool}'},
+    'assistant_empty_title': {
+      AppLocale.en: 'Ask me about your schedule',
+      AppLocale.vi: 'Hỏi mình về lịch của bạn',
+    },
+    'assistant_empty_body': {
+      AppLocale.en: 'I can read your calendar, habits and statistics. I can\'t change anything yet.',
+      AppLocale.vi: 'Mình đọc được lịch, thói quen và số liệu của bạn. Hiện mình chưa thay đổi được gì trên lịch.',
+    },
+    'assistant_suggestion_tomorrow': {
+      AppLocale.en: 'What\'s on tomorrow?',
+      AppLocale.vi: 'Mai mình có lịch gì?',
+    },
+    'assistant_suggestion_week': {
+      AppLocale.en: 'What does my week look like?',
+      AppLocale.vi: 'Tuần này của mình thế nào?',
+    },
+    'assistant_suggestion_focus': {
+      AppLocale.en: 'How much did I focus in the last 7 days?',
+      AppLocale.vi: '7 ngày qua mình tập trung được bao lâu?',
+    },
+    'assistant_suggestion_skipped': {
+      AppLocale.en: 'Which habit do I skip most, and on which days?',
+      AppLocale.vi: 'Mình hay bỏ thói quen nào nhất, vào ngày nào?',
+    },
+    'assistant_consent_title': {AppLocale.en: 'Turn on the assistant?', AppLocale.vi: 'Bật trợ lý?'},
+    'assistant_consent_body': {
+      AppLocale.en:
+          'The assistant answers from your own data. To do that, what you ask, and the parts of your calendar, habits and statistics it looks up, are sent to an external AI service.',
+      AppLocale.vi:
+          'Trợ lý trả lời dựa trên dữ liệu của chính bạn. Để làm vậy, câu hỏi của bạn và phần lịch, thói quen, số liệu mà trợ lý cần xem sẽ được gửi tới một dịch vụ AI bên ngoài.',
+    },
+    'assistant_consent_point_read': {
+      AppLocale.en: 'It reads your calendar; it does not change it.',
+      AppLocale.vi: 'Trợ lý chỉ đọc, không thay đổi lịch của bạn.',
+    },
+    'assistant_consent_point_off': {
+      AppLocale.en: 'You can turn it off at any time from this screen.',
+      AppLocale.vi: 'Bạn có thể tắt bất cứ lúc nào ngay tại màn hình này.',
+    },
+    'assistant_consent_accept': {AppLocale.en: 'Turn on', AppLocale.vi: 'Bật trợ lý'},
+    'assistant_not_configured': {
+      AppLocale.en: 'The assistant is not set up on this server yet.',
+      AppLocale.vi: 'Máy chủ chưa được cấu hình trợ lý.',
+    },
+    'assistant_load_error': {
+      AppLocale.en: 'Could not load the assistant.',
+      AppLocale.vi: 'Không tải được trợ lý.',
+    },
+    'assistant_error_disabled': {AppLocale.en: 'The assistant is turned off.', AppLocale.vi: 'Trợ lý đang tắt.'},
+    'assistant_error_daily_limit': {
+      AppLocale.en: 'You have reached today\'s message limit. Try again tomorrow.',
+      AppLocale.vi: 'Bạn đã dùng hết lượt nhắn hôm nay. Mai thử lại nhé.',
+    },
+    'assistant_error_model': {
+      AppLocale.en: 'The assistant could not answer just now. Try again in a moment.',
+      AppLocale.vi: 'Trợ lý chưa trả lời được lúc này. Thử lại sau giây lát nhé.',
+    },
+    'assistant_error_network': {
+      AppLocale.en: 'Could not reach the server. Check your connection.',
+      AppLocale.vi: 'Không kết nối được máy chủ. Kiểm tra mạng nhé.',
+    },
+    'assistant_error_not_found': {
+      AppLocale.en: 'That conversation is gone. Your next message starts a new one.',
+      AppLocale.vi: 'Cuộc trò chuyện này không còn. Tin nhắn tiếp theo sẽ bắt đầu cuộc mới.',
+    },
+    'assistant_error_unknown': {AppLocale.en: 'Something went wrong.', AppLocale.vi: 'Đã có lỗi xảy ra.'},
+    'assistant_notice_truncated': {
+      AppLocale.en: 'The answer was cut off. Ask me to continue.',
+      AppLocale.vi: 'Câu trả lời bị cắt ngang. Hãy nhắn "tiếp tục".',
+    },
+    'assistant_notice_refused': {
+      AppLocale.en: 'The assistant cannot help with that.',
+      AppLocale.vi: 'Trợ lý không hỗ trợ yêu cầu này.',
+    },
+    'assistant_notice_step_limit': {
+      AppLocale.en: 'That took too many steps. Try asking more simply.',
+      AppLocale.vi: 'Yêu cầu cần quá nhiều bước. Thử hỏi đơn giản hơn nhé.',
+    },
   };
 
   final AppLocale locale;

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:habit_tracker/core/network/auth_interceptor.dart';
 import 'package:habit_tracker/core/network/dio_client.dart';
+import 'package:habit_tracker/core/utils/app_constants.dart';
+import 'package:habit_tracker/features/assistant/domain/assistant_models.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/home/domain/models/activity_summary.dart';
@@ -386,4 +388,83 @@ class ApiService {
   Future<void> disconnectGoogleCalendar() async {
     await _dio.post('/google-calendar/disconnect');
   }
+
+  // --- Assistant ---
+  // Failures come back as [AssistantException], so the chat can word each one; see
+  // [assistantFailureOf].
+
+  Future<AssistantSettings> fetchAssistantSettings() => _assistant(() async {
+        final response = await _dio.get('/assistant/settings');
+        return AssistantSettings.fromJson(response.data as Map<String, dynamic>);
+      });
+
+  Future<AssistantSettings> updateAssistantSettings({required bool enabled, required bool alwaysConfirm}) =>
+      _assistant(() async {
+        final response = await _dio.put('/assistant/settings', data: {
+          'assistantEnabled': enabled,
+          'alwaysConfirm': alwaysConfirm,
+        });
+        return AssistantSettings.fromJson(response.data as Map<String, dynamic>);
+      });
+
+  /// The id of the user's most recently used conversation, or null if there is none.
+  Future<String?> fetchLatestAssistantConversationId() => _assistant(() async {
+        final response = await _dio.get('/assistant/conversations');
+        final list = response.data as List;
+        return list.isEmpty ? null : (list.first as Map<String, dynamic>)['id'] as String;
+      });
+
+  Future<String> createAssistantConversation() => _assistant(() async {
+        final response = await _dio.post('/assistant/conversations');
+        return response.data as String;
+      });
+
+  Future<List<AssistantMessage>> fetchAssistantMessages(String conversationId) => _assistant(() async {
+        final response = await _dio.get('/assistant/conversations/$conversationId/messages');
+        return (response.data as List)
+            .map((json) => AssistantMessage.fromJson(json as Map<String, dynamic>))
+            .toList();
+      });
+
+  /// Runs one turn on the server and returns its reply. Slow by nature — the model and its
+  /// tools run inside this request — hence its own timeout.
+  Future<AssistantReply> sendAssistantMessage(String conversationId, String text) => _assistant(() async {
+        final response = await _dio.post(
+          '/assistant/conversations/$conversationId/messages',
+          data: {'text': text},
+          options: Options(receiveTimeout: const Duration(seconds: AppConstants.assistantReceiveTimeoutSeconds)),
+        );
+        return AssistantReply.fromJson(response.data as Map<String, dynamic>);
+      });
+
+  Future<T> _assistant<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on DioException catch (e) {
+      throw AssistantException(assistantFailureOf(e));
+    }
+  }
+}
+
+/// What a failed assistant request means. The server answers a refusal with a problem
+/// response whose status says why (`AssistantTurnStatus` on the server).
+AssistantFailure assistantFailureOf(DioException e) {
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.receiveTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.connectionError:
+      return AssistantFailure.network;
+    default:
+      break;
+  }
+
+  return switch (e.response?.statusCode) {
+    503 => AssistantFailure.notConfigured,
+    403 => AssistantFailure.disabled,
+    429 => AssistantFailure.dailyLimit,
+    502 => AssistantFailure.modelUnavailable,
+    404 => AssistantFailure.conversationNotFound,
+    _ => AssistantFailure.unknown,
+  };
 }

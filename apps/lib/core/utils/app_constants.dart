@@ -146,6 +146,23 @@ class AppConstants {
   /// Days of history in the home screen's activity summary.
   static const int analyticsSummaryDays = 14;
 
+  // Assistant
+  /// The assistant's chat, opened over the tabs rather than as a sixth one.
+  static const String assistantRoute = '/assistant';
+
+  /// SignalR hub the server pushes a turn's progress on ("looking at your calendar…").
+  static const String assistantHubPath = '/assistantHub';
+  static const String assistantToolStartedEvent = 'assistant.toolStarted';
+  static const String assistantToolFinishedEvent = 'assistant.toolFinished';
+
+  /// How long to wait for a reply. A turn runs the model and its tools inside one
+  /// request — several seconds is normal — so the app-wide [receiveTimeoutSeconds]
+  /// would fail every turn.
+  static const int assistantReceiveTimeoutSeconds = 120;
+
+  /// Longest message the server accepts (`SendAssistantMessageCommandHandler.MaxTextLength`).
+  static const int assistantMaxMessageLength = 2000;
+
   // Magic Numbers
   static const int defaultPomodoroDurationMinutes = 30;
   static const List<int> defaultTargetDays = [1, 2, 3, 4, 5];
