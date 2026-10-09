@@ -4,7 +4,7 @@ How events move between the app and a user's primary Google Calendar: the data s
 three flows, and the known limits. Read this, and `stale-while-revalidate-sync.md`, before
 changing anything under `GoogleCalendar*`, `SyncEventsAsync` or the event commands.
 
-**Status:** matches the code as of September 2026 (`main` after PR #28). Where behaviour is
+**Status:** matches the code as of September 2026 (`main` after PR #32). Where behaviour is
 documented here but only verified by reading the code, it says so.
 
 ---

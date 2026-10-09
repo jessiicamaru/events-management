@@ -382,7 +382,7 @@ The webhook and SWR paths swallow exceptions into `Console.WriteLine` inside fir
 
 ### 🟢 5.8 Inbound sync deleted synced events outside its window
 
-**Done — `fix/sync-window-deletion`.** Found while rewriting the sync documentation, by reading
+**Done — PR #32.** Found while rewriting the sync documentation, by reading
 `SyncEventsAsync`. The sync lists one window of Google's calendar (by default 7 days back to 14 days
 ahead, or the range being browsed) but its removal step treated *every* synced local event missing
 from that list as deleted. It also read only the first page of the list. So each sync deleted the
@@ -393,7 +393,8 @@ Reproduced with tests that run the real `SyncEventsAsync` against a fake Google 
 old code 8 of 13 failed (history, next month, a finished series, an event on page two, an event
 moved on Google, and one whose lookup errored were all deleted). Now an event missing from the list
 is removed only if the window could have held it (`GoogleSyncWindow.CouldBeListed`) **and** Google,
-asked directly, says it is cancelled or gone; every page is read. Not yet checked against a real
+asked directly, says it is cancelled or gone; what the lookup finds still on Google is applied, a failed
+lookup keeps the event, a cancelled series takes its days with it, and every page is read. Not yet checked against a real
 Google account — that needs a throwaway account and a refresh token.
 
 The fix first suggested here, taking candidates from `GetEventsForUserAsync(userId, windowStart,
