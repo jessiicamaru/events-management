@@ -1,118 +1,195 @@
-# Kiến trúc Đồng bộ Google Calendar Hai chiều
+# Google Calendar two-way sync — architecture
 
-Tài liệu này mô tả phương pháp tiếp cận kiến trúc, cấu trúc dữ liệu và luồng đồng bộ hóa được triển khai cho tích hợp Google Calendar hai chiều.
+How events move between the app and a user's primary Google Calendar: the data structures, the
+three flows, and the known limits. Read this, and `stale-while-revalidate-sync.md`, before
+changing anything under `GoogleCalendar*`, `SyncEventsAsync` or the event commands.
+
+**Status:** matches the code as of September 2026 (`main` after PR #28). Where behaviour is
+documented here but only verified by reading the code, it says so.
 
 ---
 
-## 1. Tổng quan Kiến trúc
+## 1. Design in one paragraph
 
-Để đảm bảo tính toàn vẹn dữ liệu, khả năng hoạt động ngoại tuyến (offline) và phản hồi giao diện người dùng tức thì, tích hợp được thiết kế theo mô hình **Ghi dựa trên sự kiện / Outbox ở Local** kết hợp với **Kéo dữ liệu gia tăng dựa trên Webhook**.
+Writes are **optimistic and local-first**. Changing an event commits the event and an *outbox*
+row in the same database transaction, the API answers immediately, and a background worker
+pushes the outbox to Google afterwards. Reads from Google are **reconciliation over a time
+window**. A sync lists the user's Google events in a window and brings the local rows in line
+with the list. A sync can be started by three triggers: a Google webhook, the app itself, or a
+read of the events endpoint. When a sync that the client did not start finishes, the server
+tells the client over SignalR so it can refetch.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Client (App)
-    participant DB as Database Local (Postgres)
-    participant Worker as Sync Background Worker
+    actor App as Flutter app
+    participant API as Backend (MediatR commands)
+    participant DB as PostgreSQL
+    participant Worker as GoogleCalendarSyncWorker
     participant Google as Google Calendar API
-    participant Webhook as Webhook Controller
+    participant Hook as Webhook endpoint
 
-    Note over User, DB: Luồng Ghi (App -> Google)
-    User->>DB: Tạo/Cập nhật/Xóa Sự kiện
-    User->>DB: Đưa tác vụ vào Outbox (Giao dịch nguyên tử - Atomic)
-    DB-->>User: Thành công tức thì (Optimistic UI)
-    loop Mỗi 5 giây
-        Worker->>DB: Quét các mục Outbox chưa xử lý
-        Worker->>Google: Đẩy thay đổi (API call)
-        Google-->>Worker: Trả về thành công (GoogleEventId)
-        Worker->>DB: Cập nhật Sự kiện Local & Đánh dấu Outbox đã xử lý
+    Note over App,DB: App → Google (outbox)
+    App->>API: create / update / delete / complete-session
+    API->>DB: event row + GoogleCalendarOutbox row (one transaction)
+    API-->>App: 2xx immediately (optimistic)
+    loop every 5 s, 20 rows per batch
+        Worker->>DB: unprocessed rows with RetryCount < MaxRetries
+        Worker->>Google: Insert / Update / Delete
+        Google-->>Worker: GoogleEventId
+        Worker->>DB: store GoogleEventId, mark processed (or RetryCount++)
     end
 
-    Note over Webhook, DB: Luồng Đọc (Google -> App)
-    Google->>Webhook: Gửi thông báo Webhook (POST)
-    Webhook-->>Google: Trả về 200 OK (Phản hồi tức thì)
-    Webhook->>User: Đồng bộ gia tăng chạy ngầm qua SyncToken
+    Note over Google,App: Google → App (webhook)
+    Google->>Hook: POST /api/v1/webhooks/google-calendar
+    Hook-->>Google: 200 OK at once
+    Hook->>API: SyncGoogleCalendarCommand, in its own DI scope
+    API->>Google: list events in the window
+    API->>DB: reconcile
+    API-->>App: SignalR "CalendarUpdated"
 ```
 
 ---
 
-## 2. Các Thực thể & Cấu trúc Dữ liệu Cốt lõi
+## 2. Data structures
 
-### GoogleCalendarOutbox
+### `GoogleCalendarOutbox` — the app's pending changes
 
-Đóng vai trò là nhật ký giao dịch (transaction log) cho các thay đổi được bắt đầu từ ứng dụng.
+| Column | Meaning |
+| --- | --- |
+| `EventId` | the local event the change is about |
+| `GoogleEventId` | Google's id, once known; may be filled in by the worker at send time |
+| `Action` | `Insert`, `Update` or `Delete` |
+| `Payload` | JSON: title, start/end, recurrence rule, exception dates, and for a split-off day its `ParentEventId` and `ExceptionDate` |
+| `ProcessedAt` | set when the change reached Google, or when it can never be sent (no refresh token) |
+| `RetryCount` | failed attempts; the worker stops at `GoogleCalendarOutbox.MaxRetries` (5) |
+| `Error` | the last failure message |
 
-```json
-{
-  "Id": "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6",
-  "UserId": "user-uuid-12345",
-  "EventId": "event-uuid-67890",
-  "GoogleEventId": "google-calendar-event-id",
-  "Action": "Insert | Update | Delete",
-  "Payload": {
-    "Title": "Morning Jog",
-    "StartTime": "2026-07-31T06:00:00Z",
-    "EndTime": "2026-07-31T07:00:00Z",
-    "RecurrenceRule": "FREQ=DAILY;INTERVAL=1"
-  },
-  "CreatedAt": "2026-07-30T19:30:00Z",
-  "ProcessedAt": null,
-  "Error": null,
-  "RetryCount": 0
-}
-```
+A row the worker has given up on keeps `ProcessedAt = null`. That row is **not** "pending": code
+that asks "does Google know, or is it about to know, this event?" must also check
+`RetryCount < MaxRetries` (`HasPendingInsertAsync`, `GoogleSyncGuard.GoogleKnowsAsync`).
 
-### GoogleCalendarChannel
+### `GoogleCalendarChannel` — the webhook subscription
 
-Theo dõi các đăng ký webhook hoạt động (Google Calendar Watch).
+| Column | Meaning |
+| --- | --- |
+| `Id` | the channel id Google echoes back in `X-Goog-Channel-ID` |
+| `ResourceId` | Google's resource id, needed to stop the channel |
+| `UserId` | whose calendar it watches |
+| `Expiration` | when Google stops delivering; renewed when under 24 hours remain |
 
-```json
-{
-  "Id": "channel-uuid-guid",
-  "ResourceId": "google-resource-id-string",
-  "UserId": "user-uuid-12345",
-  "Expiration": "2026-08-06T19:30:00Z"
-}
-```
+### `GoogleCalendarSyncCache` — which windows were recently reconciled
+
+`SyncedFrom`, `SyncedTo` and `LastSyncedAt` per user. A window counts as fresh when a single cache
+row covers it and was synced within the last minute. Overlapping rows are merged on save.
 
 ---
 
-## 3. Luồng Dữ liệu Chi tiết
+## 3. App → Google: the outbox
 
-### A. Từ App đến Google (Đẩy / Xử lý Outbox)
+1. **Enqueue.** `CreateEventCommand`, `UpdateEventCommand`, `DeleteEventCommand` and
+   `CompleteEventSessionCommand` enqueue a row when the user has a Google refresh token.
+2. **Worker.** `GoogleCalendarSyncWorker` (a `BackgroundService`) runs every 5 seconds. Each pass
+   uses a fresh DI scope and takes up to 20 unprocessed rows, oldest first.
+   - **Insert** creates the event. For a split-off day it instead updates the matching instance of
+     the parent series. It writes the returned `GoogleEventId` back to the local event.
+   - **Update** needs a `GoogleEventId`. If the row has none, the worker reads it from the local
+     event, and fails the attempt if Google has never seen that event. For a series it also sends
+     the exception dates, so Google cancels those instances.
+   - **Delete** removes the event on Google, when an id is known.
+3. **Failure.** Any exception increments `RetryCount` and records `Error`. After `MaxRetries` the
+   row is left unprocessed and is no longer picked up.
 
-1. **Kích hoạt**: Bất kỳ lệnh MediatR nào sửa đổi sự kiện (`CreateEvent`, `UpdateEvent`, `DeleteEvent`, `CompleteEventSession`) đều ghi nhận thay đổi vào `GoogleCalendarOutbox` nếu người dùng đã bật đồng bộ Google Calendar.
-2. **Thực thi Worker**: `GoogleCalendarSyncWorker` chạy như một dịch vụ nền được lưu trữ (`IHostedService`).
-3. **Logic thực thi**:
-   - **Insert**: Tải sự kiện lên. Khi thành công, Google trả về `GoogleEventId`, mã này sẽ được ghi ngược lại vào bản ghi `Event` local.
-   - **Update**: Cập nhật Google Calendar bằng `GoogleEventId` đã đăng ký. Hỗ trợ ghi đè phiên bản sự kiện lặp lại (exception dates).
-   - **Delete**: Xóa sự kiện khỏi Google Calendar.
+**Guarding against impossible sends.** Queueing an `Update` for an event Google has never seen can
+only fail five times. Commands check `GoogleSyncGuard.GoogleKnowsAsync` first, which is true when
+the event has a `GoogleEventId` or an Insert is still pending. When neither holds, they queue an
+Insert (or nothing) instead.
 
-### B. Từ Google đến App (Nhận thông báo / Xử lý Webhook)
+### Repeating events and per-day state
 
-1. **Xác minh**: Khi đăng ký Webhook qua `Events.Watch`, Google gửi một ping xác minh với tiêu đề `X-Goog-Resource-State: sync`. Endpoint Webhook phản hồi `200 OK` ngay lập tức.
-2. **Cập nhật**: Khi có bất kỳ thay đổi nào trực tiếp trên Google Calendar (web hoặc app chính chủ):
-   - Google gọi `POST /api/v1/webhooks/google-calendar`.
-   - Webhook tìm người dùng liên kết qua `ChannelId` trong bảng `GoogleCalendarChannels`.
-   - Nó kích hoạt một tiến trình **Đồng bộ hóa gia tăng** (`SyncEventsAsync`) trong một luồng nền để tránh chặn webhook của Google (ngăn lỗi timeout).
-   - Tiến trình đồng bộ sẽ cập nhật DB local và làm mới các widget trên màn hình chính Android trong thời gian thực.
+A series is one row. A day of it becomes its own row only when something happens to that day
+(`OccurrenceMaterializer`, see `CLAUDE.md`). Such a **local-only day** is deliberately *not* pushed,
+and *not* added to the series' exception dates: the next push of the series would carry that
+date and Google would cancel the day. It is pushed only when the user actually edits it. The
+series' exception list is what tells a local-only day from an edited one, so it is read and written
+only through `RecurrenceExceptions`.
 
 ---
 
-## 4. Cấu hình Đường truyền Local (Local Tunneling) cho Webhook
+## 4. Google → App: reconciliation
 
-Trong quá trình phát triển ở local, Google phải có thể tiếp cận backend localhost của bạn qua giao thức HTTPS.
+### Triggers
 
-1. **Phơi bày Port API Local**:
+| Trigger | Path | Window | Notifies the client? |
+| --- | --- | --- | --- |
+| Google webhook | `GoogleCalendarWebhook` → `SyncGoogleCalendarCommand` | default: 7 days back, 14 days ahead | yes — `CalendarUpdatedEvent` → SignalR |
+| The app, at most once a minute | `POST /api/v1/google-calendar/sync` from `EventsNotifier` → `SyncGoogleCalendarCommand` | default | yes, and the app also refetches itself |
+| Reading events | `GetEventsQuery`, when the requested range has no fresh cache row | the requested range | **no** — the rows change silently; see `stale-while-revalidate-sync.md` |
+
+### The webhook
+
+- Google's first request carries `X-Goog-Resource-State: sync`. The endpoint answers `200 OK` and
+  does nothing else.
+- For a change notification, the endpoint finds the channel by `X-Goog-Channel-ID` (404 if unknown)
+  and answers `200 OK` at once, so Google's delivery does not time out.
+- The sync itself then runs in `Task.Run`. It **must create its own `IServiceScope`**: using the
+  request's `ISender` after the response has completed throws `ObjectDisposedException`.
+- After a successful sync, `SyncGoogleCalendarCommand` renews the watch channel when fewer than 24
+  hours remain. It registers the new channel before stopping the old one.
+
+### `GoogleCalendarService.SyncEventsAsync`
+
+It lists the primary calendar over the window, with `ShowDeleted = true` and
+`SingleEvents = false` (so recurring masters and their modified instances come back as separate
+items), then reconciles in this order:
+
+1. **Removals.** A local Google-linked event is deleted when its id is missing from the list, or
+   when it is a cancelled non-recurring event.
+2. **Recurring masters.** Updated in place, or created.
+3. **Instances of a series** (items with `RecurringEventId`):
+   - **cancelled:** the date is added to the master's exception list, and the matching local day is
+     removed if it was a local-only day;
+   - **modified:** the existing linked day is updated, or a local-only day for that date is adopted
+     (it keeps its tasks and completion), or a new child row is created. A new child is **not**
+     created when an edited day for that date is still waiting for its Insert, because the
+     database allows one event per day of a series.
+4. **One-off events.** Updated in place, or created.
+
+---
+
+## 5. Known limits
+
+- **Removals are not limited to the window (by reading, not reproduced).** Step 1 compares *every*
+  local Google-linked event of the user against a list fetched for one window. A synced event
+  outside that window — by default anything older than 7 days — is missing from the list, and so is
+  deleted locally, together with its recorded focus time. This is recorded as roadmap item 5.8 and
+  in the project report. Fix: take the removal candidates from the same window as the list.
+- **Background failures are console-only.** The webhook and on-read paths catch exceptions and write
+  them with `Console.WriteLine` inside fire-and-forget tasks (roadmap 5.7). A broken sync leaves no
+  structured trace.
+- **The on-read path does not notify.** The rows update, but the client learns about it only on its
+  next fetch.
+- **Webhooks need a public HTTPS URL.** Without one, sync still happens through the app's
+  once-a-minute trigger and the on-read path. This is why it can look like it works "sometimes".
+
+---
+
+## 6. Running webhooks locally
+
+Google must reach the backend over HTTPS.
+
+1. Put `NGROK_AUTHTOKEN` and `NGROK_DOMAIN` in the git-ignored `.env` (see `.env.example`), then
+   start the tunnel, which exposes `localhost:5000`:
    ```bash
-   devtunnel host -p 5000 --allow-anonymous
-   # Hoặc sử dụng ngrok:
-   ngrok http 5000
+   docker compose up -d tunnel
    ```
-2. **Cập nhật `appsettings.Development.json`** (file này được gitignore, copy từ `appsettings.Development.example.json`):
+2. In the git-ignored `server/src/Web/appsettings.Development.json`:
    ```json
    "GoogleCalendar": {
-     "WebhookBaseUrl": "https://xyz.ngrok-free.app"
+     "WebhookBaseUrl": "https://<your-domain>.ngrok-free.app"
    }
    ```
-   _Lưu ý: Đảm bảo WebhookBaseUrl không kết thúc bằng dấu gạch chéo (/)._
+   The callback is built as `{WebhookBaseUrl}/api/v1/webhooks/google-calendar`; a trailing slash on
+   the base URL is trimmed.
+3. Connect Google Calendar from the app's settings. The first successful sync registers the watch
+   channel.

@@ -1,6 +1,7 @@
-# Event reminders (local notifications)
+# Local notifications: event reminders and the streak nudge
 
-Roadmap item 1.1. Branch `feat/event-reminders`.
+Roadmap items 1.1 (event reminders, PR #24) and 1.2 (the evening streak nudge, PR #27). Both are
+planned on the device; the streak nudge has its own section below.
 
 Schedules on-device notifications before an event starts. **No server, no Firebase, no
 FCM** — see *Why local, not push* below.
@@ -66,8 +67,8 @@ risks a policy rejection. `SCHEDULE_EXACT_ALARM` is the honest choice, and the c
 degrades gracefully when the user declines it.
 
 Permission is requested the first time the user adds a reminder to an event, not at first
-launch — an unexplained prompt on startup gets denied. With no settings screen, that is the
-only moment with enough context. If notifications are blocked, a destructive toast says so;
+launch — an unexplained prompt on startup gets denied. Event reminders have no switch in
+Settings (only the streak nudge does), so that is the only moment with enough context. If notifications are blocked, a destructive toast says so;
 if exact alarms are unavailable, a softer toast warns that reminders may arrive late.
 
 ---

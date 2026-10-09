@@ -1,36 +1,64 @@
-# Quy trình làm việc (workflow)
+# Contribution workflow
 
-> Ghi chú quy trình của tác giả, giữ nguyên bản. Trước đây nằm cuối `README.md`, chuyển
-> vào đây để README chỉ còn phần cài đặt và giới thiệu.
+How a change goes from an idea to `main` in this repository.
 
-## Git
+## 1. Start from an up-to-date `main`
 
-- git fetch: kéo graph tree và commit của toàn bộ nhánh đang có trên remote
+```bash
+git checkout main
+git pull
+git checkout -b <type>/<short-name>      # e.g. feat/plan-vs-actual, fix/squad-category-authorization
+```
 
-- git pull: kéo code ở nhánh đang đứng về
+`git fetch` updates your view of every remote branch without changing your working tree;
+`git pull` brings the current branch up to date.
 
-- git checkout -b <ten nhanh>: tạo nhánh mới
+One branch does one thing. A branch that grows a second concern should be split, or the second
+concern recorded in `docs/feature-roadmap.md` for later.
 
-- git checkout <ten nhanh>: chuyen qua nhánh đó
+## 2. Pick the work
 
-## Flow
+Take the item from `docs/feature-roadmap.md`. Each entry carries enough context to start without
+re-deriving it, and the "Suggested order" section says what comes next.
 
-- Đứng từ develop sử dụng [git checkout -b <ten nhanh>] để qua nhánh mới
+## 3. Definition of done
 
-- Đứng ở nhánh mới, kiểm tra file backlog ở trong thư mục /docs/feature-roadmap.md
+A change is done when all of these hold, and the evidence is in the PR:
 
-- Chọn 1 task trong ý project-plan, sau đó rồi code.
+- **Tests are part of the change.** New handlers, repositories and widgets get tests in the same
+  step; changed code gets its tests updated in the same step.
+- **The checks pass:** `dotnet build`, `dotnet test`, `flutter analyze`, `flutter test`. If an
+  annotated Riverpod provider or a freezed model changed, run
+  `dart run build_runner build --delete-conflicting-outputs` too — CI fails on stale generated code
+  even when everything else passes.
+- **It has been run for real.** Try the UI change on a device or emulator. Exercise a server change
+  against a running backend. Run the E2E suite (`integration_test/`) for frontend work.
+- **Tests fail without the fix.** Break the fix on purpose (a *negative control*) and confirm a test
+  goes red. A test that passes both before and after proves nothing.
 
-- Code done khi: có unit test, đã tự test tay và UI chạy được, server chạy được, và có chạy E2E test
+## 4. Review
 
-- Sau khi done code, push code lên remote. Chạy /compact để AI compact lại code và quản lý tiến trình
+Every branch is reviewed in rounds, following `docs/review-code-convention/CODE_REVIEW_TEMPLATE_EN.md`.
+The report goes in `docs/review-code-reports/review-<branch>.md`. Each round verifies the previous
+round's claims itself instead of trusting them, fixes are committed, and the next round reviews those
+fixes. A branch is ready when a round finds nothing blocking.
 
-- Tạo Pull request trên github -> nếu không có conflict thì fix, nếu có conflict thì fix hoặc báo lên nếu k thể fix
+## 5. Pull request and merge
 
-- Sau khi merge, về lại IDE, gõ git checkout main để về nhánh main, gõ git pull để kéo code vừa merge về
+- Push the branch and open a PR against `main` (the `gh-pr-create` skill fills in the template, the
+  labels and the evidence).
+- CI must be green. If a conflict appears, resolve it on the branch; if it cannot be resolved safely,
+  say so in the PR rather than forcing it.
+- After the merge:
+  ```bash
+  git checkout main
+  git pull
+  ```
+- A branch stacked on an unmerged one is rebased onto `main` once its parent has merged, and its
+  checks are run again before it is pushed.
 
-## Lưu ý
+## 6. Keep the documentation true
 
-- Update walkthrough sau mỗi lần làm xong 1 task
-
-- Mỗi nhánh chỉ làm 1 task
+When behaviour changes, update the documents that describe it in the same branch: `CLAUDE.md` for
+conventions and architecture, `docs/feature-roadmap.md` for status, and the relevant design document
+in `docs/`. `docs/README.md` indexes them and says which ones are current.
