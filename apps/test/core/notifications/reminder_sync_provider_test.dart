@@ -268,9 +268,10 @@ void main() {
       );
 
       await container.read(eventsProvider.future);
+
       // Pinned like settle(), but without awaiting habits — that is what this test is about.
       // Read from the wall clock, the fixtures would age into the past and the reminder would
-      // be dropped as overdue.
+      // be dropped as overdue: this failed on CI three days after it was written.
       await withClock(Clock.fixed(now), () async {
         container.read(reminderSyncProvider);
         await Future<void>.delayed(Duration.zero);
