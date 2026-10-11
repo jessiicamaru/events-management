@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../test_utils.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,6 +44,7 @@ void main() {
   Widget buildTestableWidget(Widget child) {
     return ProviderScope(
       overrides: [
+        ...signedInOverrides,
         apiServiceProvider.overrideWithValue(mockApiService),
         sharedPreferencesProvider.overrideWithValue(prefs),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../test_utils.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/habits/domain/models/habit_model.dart';
 import 'package:habit_tracker/features/habits/presentation/habits_provider.dart';
@@ -40,6 +41,7 @@ void main() {
     mockApiService = MockApiService();
     container = ProviderContainer(
       overrides: [
+        ...signedInOverrides,
         apiServiceProvider.overrideWithValue(mockApiService),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../../test_utils.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/calendar/domain/models/event_model.dart';
 import 'package:habit_tracker/features/calendar/presentation/events_provider.dart';
@@ -53,9 +54,14 @@ void main() {
     mockApiService = MockApiService();
     container = ProviderContainer(
       overrides: [
+        ...signedInOverrides,
         apiServiceProvider.overrideWithValue(mockApiService),
       ],
     );
+    // Hold the provider open for the whole test. `container.read(...future)` opens a
+    // subscription and closes it again straight away, and the build now waits for the
+    // auth token before fetching — long enough for the auto-dispose to land first.
+    container.listen(eventsProvider, (_, _) {});
   });
 
   tearDown(() {

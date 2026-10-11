@@ -9,6 +9,7 @@ import 'package:habit_tracker/features/habits/presentation/providers/heatmap_pro
 import 'package:habit_tracker/features/profile/presentation/providers/user_profile_provider.dart';
 import 'package:habit_tracker/features/squads/presentation/providers/squad_provider.dart';
 import 'package:habit_tracker/core/network/signalr_provider.dart';
+import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 part 'events_provider.g.dart';
 
@@ -80,6 +81,12 @@ class GoogleCalendarSyncTracker extends _$GoogleCalendarSyncTracker {
 class EventsNotifier extends _$EventsNotifier {
   @override
   Future<List<EventModel>> build() async {
+    // Nothing to fetch while signed out, and this provider is alive from app start:
+    // main.dart watches reminderSyncProvider and homeWidgetSyncProvider, which watch
+    // this. See HabitsNotifier.build for what the tokenless fetch used to cost.
+    final token = await ref.watch(authProvider.future);
+    if (token == null) return const [];
+
     final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
     
@@ -107,6 +114,12 @@ class EventsNotifier extends _$EventsNotifier {
   }
 
   Future<void> _triggerBackgroundSync() async {
+    // Scheduled from build() and run a microtask later, by which time this build may
+    // already have been replaced — a rebuild, or the provider disposed. Touching ref
+    // then throws "Cannot use the Ref of eventsProvider after it has been disposed",
+    // out of a background sync nobody is waiting for.
+    if (!ref.mounted) return;
+
     final lastSync = ref.read(googleCalendarSyncTrackerProvider);
     final now = DateTime.now();
     
@@ -121,7 +134,10 @@ class EventsNotifier extends _$EventsNotifier {
     try {
       final apiService = ref.read(apiServiceProvider);
       await apiService.syncGoogleCalendar();
-      
+
+      // The request outlives the build just as easily as the microtask above did.
+      if (!ref.mounted) return;
+
       // Sau khi backend đồng bộ xong và cập nhật DB, invalidate để kéo dữ liệu mới
       ref.invalidateSelf();
     } catch (e) {
