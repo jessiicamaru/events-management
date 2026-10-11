@@ -46,6 +46,11 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 4)); // Wait for API and splash redirect
 
     // --- 2. CALENDAR FLOW ---
+    // Login lands on the home page, so the calendar is a tab away. Before the home page
+    // existed this test went straight from login into the calendar assertions below.
+    await tester.tap(find.text('Calendar').last);
+    await tester.pumpAndSettle();
+
     // Verify Calendar Filter Pills
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Personal'), findsOneWidget);
@@ -58,16 +63,20 @@ void main() {
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
 
-    // Verify Calendar Settings
-    final settingsButton = find.byIcon(LucideIcons.settings).first; 
-    await tester.tap(settingsButton);
+    // Verify Calendar Settings. These moved out of the calendar toolbar and onto the
+    // Settings tab, which opens the same sheet from a row.
+    await tester.tap(find.byIcon(LucideIcons.settings).last);
     await tester.pumpAndSettle();
-    
+
     expect(find.text('Calendar Settings'), findsWidgets);
+    await tester.tap(find.text('Calendar Settings').first);
+    await tester.pumpAndSettle();
+
     expect(find.text('Start Hour'), findsOneWidget);
-    
-    // Close the bottom sheet
-    await tester.drag(find.text('Calendar Settings').first, const Offset(0, 500));
+
+    // Close the bottom sheet by tapping the scrim above it. Dragging it down trips
+    // '_pendingFrame == null' in the test binding.
+    await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
 
     // --- 3. HABITS FLOW ---
@@ -91,8 +100,9 @@ void main() {
     await tester.tap(find.text('Add'));
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
-    // Verify habit was added successfully
-    expect(find.byType(ShadCard), findsWidgets);
+    // Verify habit was added successfully. Habits render through HabitCard now, not
+    // ShadCard, so assert on what the user sees instead of the widget type.
+    expect(find.text(habitName), findsWidgets);
 
     // Edit the habit to verify it doesn't crash (404 tasks error)
     await tester.tap(find.byIcon(LucideIcons.pencil).first);

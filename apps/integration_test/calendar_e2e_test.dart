@@ -49,9 +49,21 @@ void main() {
     
     // Tap Login
     await tester.tap(find.text('Login'));
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await tester.pumpAndSettle(const Duration(seconds: 4));
 
-    // 4. Verify we are on Calendar Screen
+    // Then wait for the app shell rather than trusting a fixed delay: login, the splash
+    // redirect and the first home fetch took longer than the three seconds this used to
+    // sleep for.
+    for (var i = 0; i < 30 && find.text('Calendar').evaluate().isEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+    await tester.pumpAndSettle();
+
+    // 4. Go to the calendar. Login lands on the home page, which did not exist when this
+    // test was written.
+    await tester.tap(find.text('Calendar').last);
+    await tester.pumpAndSettle();
+
     // The calendar toolbar should have filter pills "All", "Personal", "Squads"
     expect(find.text('All'), findsOneWidget);
     expect(find.text('Personal'), findsOneWidget);
@@ -67,22 +79,26 @@ void main() {
     await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
 
-    // 6. Test Calendar Settings
-    final settingsButton = find.byIcon(LucideIcons.settings).first; // Note: there are two settings icons (one in toolbar, one in bottom nav)
-    await tester.tap(settingsButton);
+    // 6. Test Calendar Settings. The toolbar no longer has a settings button: the sheet
+    // is opened from a row on the Settings tab, so the only settings icon is the nav one.
+    await tester.tap(find.byIcon(LucideIcons.settings).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Calendar Settings'), findsWidgets);
+    await tester.tap(find.text('Calendar Settings').first);
     await tester.pumpAndSettle();
 
     // Verify settings sheet appears
-    expect(find.text('Calendar Settings'), findsWidgets);
     expect(find.text('Start Hour'), findsOneWidget);
-    
-    // Test sliders/input (we can just verify they exist for now)
-    
-    // Close the bottom sheet by dragging it down
-    await tester.drag(find.text('Calendar Settings').first, const Offset(0, 500));
+
+    // Close the bottom sheet by tapping the scrim above it; dragging it down trips
+    // '_pendingFrame == null' in the test binding.
+    await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
 
-    // Verify we are back to Calendar
+    // Back to the calendar
+    await tester.tap(find.text('Calendar').last);
+    await tester.pumpAndSettle();
     expect(find.text('Personal'), findsOneWidget);
   });
 }
