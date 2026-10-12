@@ -1,0 +1,145 @@
+{
+  "about": "Shared by apps/test/features/calendar/domain/recurrence_expansion_parity_test.dart (the client's EventOccurrenceExpander) and server/tests/Application.UnitTests/Common/RecurrenceExpanderTests.cs (the server's RecurrenceExpander). Both must produce `expected` for every case, so the calendar and the server agree on which days a series has. All times are local wall-clock (yyyy-MM-ddTHH:mm): the client evaluates rules on the device's clock, the server on UTC+7, and comparing wall-clock values keeps the check independent of the machine's time zone. Occurrences sit well inside the range and away from any UNTIL, because the two engines may treat the edges of a window differently; edge behaviour is pinned by the server's own tests. A case with `clientGap` is a valid rule the client cannot expand yet: the server must still produce `expected`, and the client test asserts it still produces nothing — so fixing the client turns that test red, as a reminder to delete `clientGap`.",
+  "cases": [
+    {
+      "name": "daily",
+      "rule": "FREQ=DAILY",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "expected": ["2026-10-05T06:00", "2026-10-06T06:00", "2026-10-07T06:00", "2026-10-08T06:00"]
+    },
+    {
+      "name": "daily with the RRULE: prefix and INTERVAL=1, as the event sheet writes it",
+      "rule": "RRULE:FREQ=DAILY;INTERVAL=1",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "expected": ["2026-10-05T06:00", "2026-10-06T06:00", "2026-10-07T06:00", "2026-10-08T06:00"]
+    },
+    {
+      "name": "weekdays",
+      "rule": "RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+      "start": "2026-10-05T07:30",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-11T23:59",
+      "expected": ["2026-10-05T07:30", "2026-10-06T07:30", "2026-10-07T07:30", "2026-10-08T07:30", "2026-10-09T07:30"]
+    },
+    {
+      "name": "weekly on one day",
+      "rule": "RRULE:FREQ=WEEKLY;INTERVAL=1;BYDAY=WE",
+      "start": "2026-10-07T18:30",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2026-10-28T23:59",
+      "expected": ["2026-10-07T18:30", "2026-10-14T18:30", "2026-10-21T18:30", "2026-10-28T18:30"]
+    },
+    {
+      "name": "every other week",
+      "rule": "RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO",
+      "start": "2026-10-05T07:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2026-11-02T23:59",
+      "expected": ["2026-10-05T07:00", "2026-10-19T07:00", "2026-11-02T07:00"]
+    },
+    {
+      "name": "early morning on a weekday: BYDAY is the local day, not the UTC one",
+      "rule": "FREQ=WEEKLY;BYDAY=MO",
+      "start": "2026-10-05T05:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2026-10-14T23:59",
+      "expected": ["2026-10-05T05:00", "2026-10-12T05:00"]
+    },
+    {
+      "name": "monthly on a day of the month",
+      "rule": "RRULE:FREQ=MONTHLY;BYMONTHDAY=15",
+      "start": "2026-10-15T20:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2026-12-31T23:59",
+      "expected": ["2026-10-15T20:00", "2026-11-15T20:00", "2026-12-15T20:00"]
+    },
+    {
+      "name": "yearly with its month and day spelled out",
+      "rule": "RRULE:FREQ=YEARLY;BYMONTH=10;BYMONTHDAY=5",
+      "start": "2026-10-05T09:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2028-10-31T23:59",
+      "expected": ["2026-10-05T09:00", "2027-10-05T09:00", "2028-10-05T09:00"]
+    },
+    {
+      "name": "yearly with no month or day, as the event sheet writes it and Google writes birthdays",
+      "rule": "RRULE:FREQ=YEARLY",
+      "start": "2026-10-05T09:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2028-10-31T23:59",
+      "expected": ["2026-10-05T09:00", "2027-10-05T09:00", "2028-10-05T09:00"],
+      "clientGap": "Syncfusion's getRecurrenceDateTimeCollection returns nothing for YEARLY without BYMONTH and BYMONTHDAY, so the client shows no days. Roadmap 5.3b."
+    },
+    {
+      "name": "monthly with no day of the month",
+      "rule": "FREQ=MONTHLY",
+      "start": "2026-10-15T20:00",
+      "rangeStart": "2026-10-01T00:00",
+      "rangeEnd": "2026-12-31T23:59",
+      "expected": ["2026-10-15T20:00", "2026-11-15T20:00", "2026-12-15T20:00"],
+      "clientGap": "Syncfusion's getRecurrenceDateTimeCollection returns nothing for MONTHLY without BYMONTHDAY, so the client shows no days. Roadmap 5.3b."
+    },
+    {
+      "name": "COUNT is counted from the series' start, not from the window",
+      "rule": "FREQ=DAILY;COUNT=3",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-06T00:00",
+      "rangeEnd": "2026-10-10T23:59",
+      "expected": ["2026-10-06T06:00", "2026-10-07T06:00"]
+    },
+    {
+      "name": "UNTIL in UTC, as Google writes it",
+      "rule": "FREQ=DAILY;UNTIL=20261007T120000Z",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-10T23:59",
+      "expected": ["2026-10-05T06:00", "2026-10-06T06:00", "2026-10-07T06:00"]
+    },
+    {
+      "name": "a window long after the series started",
+      "rule": "FREQ=DAILY",
+      "start": "2026-09-01T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-06T23:59",
+      "expected": ["2026-10-05T06:00", "2026-10-06T06:00"]
+    },
+    {
+      "name": "a day in the exception list is dropped",
+      "rule": "FREQ=DAILY",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "exceptions": ["2026-10-06T06:00"],
+      "expected": ["2026-10-05T06:00", "2026-10-07T06:00", "2026-10-08T06:00"]
+    },
+    {
+      "name": "a day with its own event is dropped from the series",
+      "rule": "FREQ=DAILY",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "children": ["2026-10-07T06:00"],
+      "expected": ["2026-10-05T06:00", "2026-10-06T06:00", "2026-10-08T06:00"]
+    },
+    {
+      "name": "an unknown frequency produces no days",
+      "rule": "FREQ=BOGUS",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "expected": []
+    },
+    {
+      "name": "text that is not a rule produces no days",
+      "rule": "not an rrule",
+      "start": "2026-10-05T06:00",
+      "rangeStart": "2026-10-05T00:00",
+      "rangeEnd": "2026-10-08T23:59",
+      "expected": []
+    }
+  ]
+}
