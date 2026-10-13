@@ -10,6 +10,9 @@ public static class DependencyInjection
         services.AddSwaggerGen();
         services.AddAuthorization();
         services.AddSignalR();
+        // Replaces the Application's silent default, so the app sees the assistant's progress.
+        services.AddScoped<HabitTracker.Application.Features.Assistant.Harness.IAssistantProgress,
+            HabitTracker.Web.Hubs.AssistantHubProgress>();
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         
         services.AddCors(options =>

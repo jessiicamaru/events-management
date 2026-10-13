@@ -30,6 +30,10 @@ namespace HabitTracker.Infrastructure.Data
         public DbSet<SquadMember> SquadMembers { get; set; } = null!;
         public DbSet<SquadChatMessage> SquadChatMessages { get; set; } = null!;
 
+        public DbSet<AssistantConversation> AssistantConversations { get; set; } = null!;
+        public DbSet<AssistantMessage> AssistantMessages { get; set; } = null!;
+        public DbSet<UserAiSettings> UserAiSettings { get; set; } = null!;
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -125,6 +129,41 @@ namespace HabitTracker.Infrastructure.Data
             modelBuilder.Entity<GoogleCalendarChannel>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AssistantConversation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired();
+                entity.HasOne(e => e.User)
+                      .WithMany()
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                // "My recent conversations".
+                entity.HasIndex(e => new { e.UserId, e.UpdatedAt });
+            });
+
+            modelBuilder.Entity<AssistantMessage>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Role).IsRequired().HasMaxLength(16);
+                entity.Property(e => e.ToolCallId).HasMaxLength(128);
+                entity.Property(e => e.ToolName).HasMaxLength(64);
+                entity.HasOne(e => e.Conversation)
+                      .WithMany(c => c.Messages)
+                      .HasForeignKey(e => e.ConversationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                // Order within a conversation, and a guard against two writers numbering the same slot.
+                entity.HasIndex(e => new { e.ConversationId, e.Sequence }).IsUnique();
+            });
+
+            modelBuilder.Entity<UserAiSettings>(entity =>
+            {
+                entity.HasKey(e => e.UserId);
                 entity.HasOne(e => e.User)
                       .WithMany()
                       .HasForeignKey(e => e.UserId)

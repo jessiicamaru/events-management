@@ -1,4 +1,6 @@
+using HabitTracker.Application.Features.Assistant;
 using HabitTracker.Domain.Interfaces;
+using HabitTracker.Infrastructure.Ai;
 using HabitTracker.Infrastructure.Data;
 using HabitTracker.Infrastructure.Repositories;
 using HabitTracker.Infrastructure.Services;
@@ -47,6 +49,35 @@ public static class DependencyInjection
 
         services.AddHostedService<GoogleCalendarSyncWorker>();
 
+        AddAssistant(services, configuration);
+
         return services;
+    }
+
+    /// <summary>
+    /// The assistant's repository and language model. A missing key is not an error — the
+    /// assistant is optional and answers 503 without one — but a key with an unknown provider
+    /// is, because it would otherwise fail on the first message instead of at startup.
+    /// </summary>
+    private static void AddAssistant(IServiceCollection services, IConfiguration configuration)
+    {
+        var options = configuration.GetSection(AssistantOptions.SectionName).Get<AssistantOptions>() ?? new AssistantOptions();
+        services.AddSingleton(options);
+        services.AddScoped<IAssistantRepository, AssistantRepository>();
+
+        if (options.IsConfigured
+            && !string.Equals(options.Provider, AssistantOptions.Providers.DeepSeek, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Assistant:Provider '{options.Provider}' is not supported. Use '{AssistantOptions.Providers.DeepSeek}'.");
+        }
+
+        // One long-lived client; the pooled-connection lifetime keeps DNS changes from sticking.
+        var http = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })
+        {
+            // The adapter applies RequestTimeoutSeconds per call; this is only a backstop.
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
+        services.AddSingleton<ILanguageModel>(new DeepSeekLanguageModel(http, options));
     }
 }
