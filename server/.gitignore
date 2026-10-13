@@ -17,7 +17,9 @@
 mono_crash.*
 
 # Build results
-tools/
+# Anchored to server/: unanchored, and with Windows' case-insensitive matching, this also hid
+# src/Application/Features/Assistant/Tools/ — the files never reached a commit and CI failed.
+/tools/
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
