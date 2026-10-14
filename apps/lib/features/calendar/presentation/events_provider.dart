@@ -81,17 +81,26 @@ class GoogleCalendarSyncTracker extends _$GoogleCalendarSyncTracker {
 class EventsNotifier extends _$EventsNotifier {
   @override
   Future<List<EventModel>> build() async {
+    // Every watch comes before the first await. A rebuild drops this provider's old
+    // subscriptions and makes them again as it runs, so anything watched only *after*
+    // an await has no listener during it. calendarViewRangeProvider is auto-disposed:
+    // watched after the auth await, it was disposed in that gap and came back null,
+    // so the calendar's next report of its visible range looked like a change, which
+    // rebuilt this, which disposed the range again — a GET /events every few hundred
+    // milliseconds on the calendar tab, each for the default window.
+    final range = ref.watch(calendarViewRangeProvider);
+    final connectionAsync = ref.watch(signalrConnectionProvider);
+    final tokenFuture = ref.watch(authProvider.future);
+
     // Nothing to fetch while signed out, and this provider is alive from app start:
     // main.dart watches reminderSyncProvider and homeWidgetSyncProvider, which watch
     // this. See HabitsNotifier.build for what the tokenless fetch used to cost.
-    final token = await ref.watch(authProvider.future);
+    final token = await tokenFuture;
     if (token == null) return const [];
 
-    final range = ref.watch(calendarViewRangeProvider);
     final apiService = ref.read(apiServiceProvider);
-    
+
     // Lắng nghe sự kiện đồng bộ thời gian thực từ SignalR
-    final connectionAsync = ref.watch(signalrConnectionProvider);
     final connection = connectionAsync.value;
     if (connection != null) {
       connection.off("CalendarUpdated");
