@@ -12,6 +12,8 @@ import 'package:habit_tracker/features/auth/presentation/screens/register_screen
 import 'package:habit_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 import 'package:habit_tracker/features/squads/presentation/screens/squads_list_screen.dart';
+import 'package:habit_tracker/features/assistant/presentation/screens/assistant_screen.dart';
+import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_fab.dart';
 import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/utils/app_constants.dart';
 
@@ -54,6 +56,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      // Over the tabs, not inside them: the chat takes the whole screen and has a back button.
+      GoRoute(
+        path: AppConstants.assistantRoute,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AssistantScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -106,6 +114,10 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     
     return Scaffold(
       body: child,
+      // The calendar stacks its own, smaller one above its create-event button instead.
+      floatingActionButton: GoRouterState.of(context).uri.path.startsWith(_calendarPath)
+          ? null
+          : const AssistantFab(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: theme.colorScheme.border)),
@@ -131,12 +143,14 @@ class ScaffoldWithNavBar extends ConsumerWidget {
     );
   }
 
+  static const String _calendarPath = '/calendar';
+
   /// The one place a tab is defined. The index into this list *is* the bar's
   /// index, so the icons, the labels and the destinations cannot drift apart —
   /// which they previously could, being three separate hardcoded lists.
   static const List<_NavTab> _tabs = [
     _NavTab('/home', LucideIcons.house, 'nav_home'),
-    _NavTab('/calendar', LucideIcons.calendarDays, 'nav_calendar'),
+    _NavTab(_calendarPath, LucideIcons.calendarDays, 'nav_calendar'),
     _NavTab('/habits', LucideIcons.listTodo, 'nav_habits'),
     _NavTab('/squad', LucideIcons.users, 'nav_squad'),
     _NavTab('/settings', LucideIcons.settings, 'nav_settings'),
