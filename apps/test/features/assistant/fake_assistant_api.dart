@@ -34,8 +34,60 @@ class FakeAssistantApi implements ApiService {
   int conversationsCreated = 0;
   final List<bool> settingsUpdates = [];
 
-  void reply(String text, {List<String> tools = const [], String status = 'Completed'}) {
-    final reply = AssistantReply(status: status, reply: text, toolsUsed: tools);
+  /// Proposal actions the chat asked for, as "apply:id", "dismiss:id", "undo:id".
+  final List<String> proposalActions = [];
+
+  /// Thrown by the next proposal action instead of answering.
+  AssistantFailure? failNextProposalAction;
+
+  Future<AssistantProposal> _act(String action, String id, AssistantProposalStatus next) async {
+    proposalActions.add('$action:$id');
+    final failure = failNextProposalAction;
+    if (failure != null) {
+      failNextProposalAction = null;
+      throw AssistantException(failure);
+    }
+    return proposal(id: id, status: next);
+  }
+
+  @override
+  Future<AssistantProposal> applyAssistantProposal(String proposalId) =>
+      _act('apply', proposalId, AssistantProposalStatus.applied);
+
+  @override
+  Future<AssistantProposal> dismissAssistantProposal(String proposalId) =>
+      _act('dismiss', proposalId, AssistantProposalStatus.dismissed);
+
+  @override
+  Future<AssistantProposal> undoAssistantProposal(String proposalId) =>
+      _act('undo', proposalId, AssistantProposalStatus.undone);
+
+  /// A daily 05:00–05:45 run from Tue 29 Sep, as the server proposes it.
+  static AssistantProposal proposal({
+    String id = 'p1',
+    AssistantProposalStatus status = AssistantProposalStatus.pending,
+    List<AssistantProposalConflict> conflicts = const [],
+    String start = '05:00',
+    String end = '05:45',
+  }) =>
+      AssistantProposal(
+        id: id,
+        status: status,
+        title: 'Chạy bộ',
+        start: start,
+        end: end,
+        days: const [1, 2, 3, 4, 5, 6, 7],
+        firstDate: DateTime(2026, 9, 29),
+        conflicts: conflicts,
+      );
+
+  void reply(
+    String text, {
+    List<String> tools = const [],
+    String status = 'Completed',
+    List<AssistantProposal> proposals = const [],
+  }) {
+    final reply = AssistantReply(status: status, reply: text, toolsUsed: tools, proposals: proposals);
     final waiting = _waiting;
     if (waiting == null) {
       _queued = reply;

@@ -11,6 +11,7 @@ import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_
 import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_consent_view.dart';
 import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_empty_state.dart';
 import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_message_bubble.dart';
+import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_proposal_card.dart';
 import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_tool_step.dart';
 import 'package:habit_tracker/features/assistant/presentation/widgets/assistant_typing_indicator.dart';
 
@@ -123,7 +124,7 @@ class _ChatViewState extends ConsumerState<_ChatView> {
     } else {
       // Newest at the bottom: the list is reversed, so index 0 is the latest entry.
       final entries = [
-        ...chat.messages.map((m) => _entry(t, m)),
+        ...chat.messages.map((m) => _entry(t, m, chat.busyProposals)),
         if (chat.sending) AssistantTypingIndicator(label: AssistantLabels.running(t, chat.activeTool)),
       ].reversed.toList();
       body = ListView.builder(
@@ -162,11 +163,24 @@ class _ChatViewState extends ConsumerState<_ChatView> {
     );
   }
 
-  Widget _entry(AppTranslations t, AssistantMessage m) => switch (m.role) {
+  Widget _entry(AppTranslations t, AssistantMessage m, Set<String> busyProposals) => switch (m.role) {
         AssistantRole.tool => AssistantToolStep(label: AssistantLabels.done(t, m.toolName ?? '')),
         AssistantRole.user => AssistantMessageBubble(text: m.content ?? '', fromUser: true),
         AssistantRole.assistant => AssistantMessageBubble(text: m.content ?? '', fromUser: false),
+        AssistantRole.proposal => _proposalCard(m.proposals.single, busyProposals),
       };
+
+  Widget _proposalCard(AssistantProposal proposal, Set<String> busyProposals) {
+    final chat = ref.read(assistantChatProvider.notifier);
+    return AssistantProposalCard(
+      key: ValueKey(proposal.id),
+      proposal: proposal,
+      busy: busyProposals.contains(proposal.id),
+      onAdd: () => chat.applyProposal(proposal.id),
+      onDismiss: () => chat.dismissProposal(proposal.id),
+      onUndo: () => chat.undoProposal(proposal.id),
+    );
+  }
 }
 
 /// A centred line of text, with an optional button under it.

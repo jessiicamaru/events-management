@@ -121,7 +121,7 @@ namespace HabitTracker.Application.Common
             // Floating (zone-less) times: the rule runs on the wall clock, and UNTIL was moved
             // onto the same clock by ParseRule.
             var calendarEvent = new CalendarEvent { DtStart = new CalDateTime(localStart) };
-            calendarEvent.RecurrenceRules.Add(pattern);
+            calendarEvent.RecurrenceRule = pattern;
 
             try
             {

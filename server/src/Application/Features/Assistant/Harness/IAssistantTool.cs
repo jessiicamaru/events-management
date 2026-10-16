@@ -31,7 +31,14 @@ namespace HabitTracker.Application.Features.Assistant.Harness
     /// <param name="UserId">The signed-in user, from the token.</param>
     /// <param name="NowUtc">The turn's clock, so every tool in a turn agrees on "now".</param>
     /// <param name="LocalOffset">The offset "local time" means — the app-wide UTC+7 for now.</param>
-    public sealed record ToolContext(string UserId, DateTime NowUtc, TimeSpan LocalOffset);
+    /// <param name="ConversationId">The conversation the turn belongs to.</param>
+    /// <param name="ToolCallId">The call being answered — what a proposal is filed under.</param>
+    public sealed record ToolContext(
+        string UserId,
+        DateTime NowUtc,
+        TimeSpan LocalOffset,
+        Guid ConversationId = default,
+        string ToolCallId = "");
 
     /// <summary>What a tool returns to the model: a JSON document.</summary>
     public sealed record ToolResult(string Json, bool IsError)

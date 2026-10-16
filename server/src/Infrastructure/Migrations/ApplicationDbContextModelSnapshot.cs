@@ -190,6 +190,52 @@ namespace Infrastructure.Migrations
                     b.ToTable("AssistantMessages");
                 });
 
+            modelBuilder.Entity("HabitTracker.Domain.Entities.AssistantProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedEventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedHabitId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("ToolCallId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("AssistantProposals");
+                });
+
             modelBuilder.Entity("HabitTracker.Domain.Entities.Event", b =>
                 {
                     b.Property<Guid>("Id")
@@ -767,6 +813,17 @@ namespace Infrastructure.Migrations
                 {
                     b.HasOne("HabitTracker.Domain.Entities.AssistantConversation", "Conversation")
                         .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("HabitTracker.Domain.Entities.AssistantProposal", b =>
+                {
+                    b.HasOne("HabitTracker.Domain.Entities.AssistantConversation", "Conversation")
+                        .WithMany()
                         .HasForeignKey("ConversationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

@@ -16,7 +16,9 @@ public record SendAssistantMessageRequest(string Text);
 public record UpdateAiSettingsRequest(bool AssistantEnabled, bool AlwaysConfirm);
 
 /// <param name="Status">An <see cref="AssistantTurnStatus"/> name; the app words it for the user.</param>
-public record AssistantReplyDto(string Status, string? Reply, IReadOnlyList<string> ToolsUsed);
+/// <param name="Proposals">What the assistant proposed this turn, shown as cards with an "Add to calendar" button.</param>
+public record AssistantReplyDto(
+    string Status, string? Reply, IReadOnlyList<string> ToolsUsed, IReadOnlyList<AssistantProposalDto> Proposals);
 
 /// <summary>
 /// The assistant. A turn runs inside the POST that sends the message and returns the reply;
@@ -35,6 +37,9 @@ public class Assistant : EndpointGroupBase
         groupBuilder.MapPost("conversations", CreateConversation);
         groupBuilder.MapGet("conversations/{id:guid}/messages", GetMessages);
         groupBuilder.MapPost("conversations/{id:guid}/messages", SendMessage);
+        groupBuilder.MapPost("proposals/{id:guid}/apply", ApplyProposal);
+        groupBuilder.MapPost("proposals/{id:guid}/dismiss", DismissProposal);
+        groupBuilder.MapPost("proposals/{id:guid}/undo", UndoProposal);
     }
 
     public async Task<Results<Ok<AiSettingsDto>, UnauthorizedHttpResult>> GetSettings(ISender sender, ClaimsPrincipal user)
@@ -105,7 +110,45 @@ public class Assistant : EndpointGroupBase
             AssistantTurnStatus.DailyLimitReached => Problem(StatusCodes.Status429TooManyRequests, result.Status),
             AssistantTurnStatus.ModelUnavailable => Problem(StatusCodes.Status502BadGateway, result.Status),
             _ => TypedResults.Ok(new AssistantReplyDto(
-                result.Status.ToString(), result.Reply, result.ToolsUsed ?? Array.Empty<string>())),
+                result.Status.ToString(),
+                result.Reply,
+                result.ToolsUsed ?? Array.Empty<string>(),
+                (result.Proposals ?? Array.Empty<Domain.Entities.AssistantProposal>()).Select(AssistantProposalDto.From).ToList())),
+        };
+    }
+
+    /// <summary>The user tapped "Add to calendar" on a proposal: creates it. Only this ever writes what the assistant suggested.</summary>
+    public Task<Results<Ok<AssistantProposalDto>, NotFound, Conflict<AssistantProposalDto>, ProblemHttpResult, UnauthorizedHttpResult>> ApplyProposal(
+        Guid id, ISender sender, ClaimsPrincipal user) =>
+        RunProposalAction(user, userId => sender.Send(new ApplyAssistantProposalCommand(userId, id)));
+
+    public Task<Results<Ok<AssistantProposalDto>, NotFound, Conflict<AssistantProposalDto>, ProblemHttpResult, UnauthorizedHttpResult>> DismissProposal(
+        Guid id, ISender sender, ClaimsPrincipal user) =>
+        RunProposalAction(user, userId => sender.Send(new DismissAssistantProposalCommand(userId, id)));
+
+    public Task<Results<Ok<AssistantProposalDto>, NotFound, Conflict<AssistantProposalDto>, ProblemHttpResult, UnauthorizedHttpResult>> UndoProposal(
+        Guid id, ISender sender, ClaimsPrincipal user) =>
+        RunProposalAction(user, userId => sender.Send(new UndoAssistantProposalCommand(userId, id)));
+
+    /// <summary>
+    /// 409 when the card is out of date (already added, dismissed or undone), with the proposal
+    /// as it now stands so the app can redraw it; 409 titled HasActivity when undo would delete
+    /// days the user has already worked on; 422 when the event could not be created.
+    /// </summary>
+    private static async Task<Results<Ok<AssistantProposalDto>, NotFound, Conflict<AssistantProposalDto>, ProblemHttpResult, UnauthorizedHttpResult>> RunProposalAction(
+        ClaimsPrincipal user, Func<string, Task<ProposalActionResult>> action)
+    {
+        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return TypedResults.Unauthorized();
+
+        var result = await action(userId);
+        return result.Outcome switch
+        {
+            ProposalActionOutcome.Done => TypedResults.Ok(result.Proposal!),
+            ProposalActionOutcome.NotFound => TypedResults.NotFound(),
+            ProposalActionOutcome.AlreadyResolved => TypedResults.Conflict(result.Proposal!),
+            ProposalActionOutcome.HasActivity => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: result.Outcome.ToString()),
+            _ => TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: result.Outcome.ToString()),
         };
     }
 

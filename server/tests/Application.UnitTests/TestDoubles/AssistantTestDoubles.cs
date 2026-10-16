@@ -131,6 +131,23 @@ namespace HabitTracker.Application.Tests.TestDoubles
             Settings.Add(settings);
             return Task.CompletedTask;
         }
+
+        public List<AssistantProposal> Proposals { get; } = new();
+
+        public Task AddProposalAsync(AssistantProposal proposal)
+        {
+            Proposals.Add(proposal);
+            return Task.CompletedTask;
+        }
+
+        public Task<AssistantProposal?> GetProposalAsync(Guid proposalId, string userId) =>
+            Task.FromResult(Proposals.FirstOrDefault(p => p.Id == proposalId && p.UserId == userId));
+
+        public Task UpdateProposalAsync(AssistantProposal proposal) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<AssistantProposal>> GetProposalsAsync(Guid conversationId) =>
+            Task.FromResult<IReadOnlyList<AssistantProposal>>(
+                Proposals.Where(p => p.ConversationId == conversationId).OrderBy(p => p.CreatedAt).ToList());
     }
 
     /// <summary>A clock that says what the test tells it to.</summary>

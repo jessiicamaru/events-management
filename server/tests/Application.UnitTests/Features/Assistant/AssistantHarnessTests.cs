@@ -181,6 +181,29 @@ namespace HabitTracker.Application.Tests.Features.Assistant
         }
 
         [Fact]
+        public async Task RunTurn_ShouldReturnOnlyTheProposalsThisTurnsCallsMade_AndTellEachToolItsCall()
+        {
+            var earlier = new AssistantProposal { ConversationId = _conversation.Id, ToolCallId = "old-call", UserId = UserId };
+            _repository.Proposals.Add(earlier);
+            var proposer = new RecordingTool("propose_schedule", (context, _) =>
+            {
+                _repository.Proposals.Add(new AssistantProposal
+                {
+                    ConversationId = context.ConversationId, ToolCallId = context.ToolCallId, UserId = context.UserId,
+                });
+                return ToolResult.Ok(new { ok = true });
+            });
+            var harness = new AssistantHarness(_model, _repository, new IAssistantTool[] { proposer }, new NoAssistantProgress(), _options, _clock);
+            _model.CallsTools(Call("propose_schedule", id: "new-call")).Replies("Sáng 5h trống cả tuần.");
+
+            var result = await harness.RunTurnAsync(UserId, _conversation.Id, "chạy bộ 45p", CancellationToken.None);
+
+            proposer.Calls.Single().Context.ToolCallId.Should().Be("new-call");
+            proposer.Calls.Single().Context.ConversationId.Should().Be(_conversation.Id);
+            result.Proposals.Should().ContainSingle().Which.ToolCallId.Should().Be("new-call");
+        }
+
+        [Fact]
         public async Task RunTurn_ShouldReportProgressForEachTool()
         {
             var progress = new RecordingProgress();

@@ -28,8 +28,20 @@ abstract final class AssistantLabels {
         AssistantFailure.modelUnavailable => 'assistant_error_model',
         AssistantFailure.conversationNotFound => 'assistant_error_not_found',
         AssistantFailure.network => 'assistant_error_network',
+        AssistantFailure.proposalHasActivity => 'assistant_error_proposal_has_activity',
+        AssistantFailure.proposalRefused => 'assistant_error_proposal_refused',
         AssistantFailure.unknown => 'assistant_error_unknown',
       });
+
+  /// "Every day", or the weekdays in order: "Mon, Wed, Fri".
+  static String days(AppTranslations t, List<int> days) => days.length == DateTime.daysPerWeek
+      ? t.translate('assistant_proposal_every_day')
+      : ([...days]..sort()).map((d) => t.translate('assistant_day_$d')).join(', ');
+
+  /// "Tue 29/09".
+  static String date(AppTranslations t, DateTime date) =>
+      '${t.translate('assistant_day_${date.weekday}')} '
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
 
   static String notice(AppTranslations t, AssistantNotice notice) => t.translate(switch (notice) {
         AssistantNotice.truncated => 'assistant_notice_truncated',

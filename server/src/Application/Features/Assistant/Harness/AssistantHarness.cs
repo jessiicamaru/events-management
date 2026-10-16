@@ -35,10 +35,12 @@ namespace HabitTracker.Application.Features.Assistant.Harness
 
     /// <param name="Reply">The assistant's text for this turn, if it wrote any.</param>
     /// <param name="ToolsUsed">The tools that ran this turn, in order.</param>
+    /// <param name="Proposals">What the assistant proposed adding this turn, for the app to show as cards.</param>
     public sealed record AssistantTurnResult(
         AssistantTurnStatus Status,
         string? Reply = null,
-        IReadOnlyList<string>? ToolsUsed = null);
+        IReadOnlyList<string>? ToolsUsed = null,
+        IReadOnlyList<AssistantProposal>? Proposals = null);
 
     /// <summary>
     /// The assistant's loop: send the conversation to the model, run the tools it asks for,
@@ -58,8 +60,9 @@ namespace HabitTracker.Application.Features.Assistant.Harness
     /// <item>The history is append-only, and each message is saved as soon as it exists.</item>
     /// </list>
     /// <para>
-    /// This version has read tools only. Writing tools, and the confirmation and undo they
-    /// need, come on top of this loop.
+    /// No tool writes to the calendar. A tool may record a proposal
+    /// (<see cref="AssistantProposal"/>); the turn returns it, the app shows it with an
+    /// "Add to calendar" button, and only the user's tap applies it.
     /// </para>
     /// </remarks>
     public class AssistantHarness
@@ -115,11 +118,12 @@ namespace HabitTracker.Application.Features.Assistant.Harness
             await _repository.AppendMessagesAsync(conversationId, new[] { userMessage });
             history.Add(userMessage);
 
-            var context = new ToolContext(userId, nowUtc, offset);
+            var context = new ToolContext(userId, nowUtc, offset, conversationId);
             var definitions = _tools
                 .Select(t => new ModelToolDefinition(t.Name, t.Description, t.ParametersSchemaJson))
                 .ToList();
             var toolsUsed = new List<string>();
+            var callIds = new HashSet<string>();
 
             while (true)
             {
@@ -132,7 +136,8 @@ namespace HabitTracker.Application.Features.Assistant.Harness
                 }
                 catch (LanguageModelException)
                 {
-                    return new(AssistantTurnStatus.ModelUnavailable, ToolsUsed: toolsUsed);
+                    return new(AssistantTurnStatus.ModelUnavailable, ToolsUsed: toolsUsed,
+                        Proposals: await ProposalsFromAsync(conversationId, callIds));
                 }
 
                 var calls = response.Message.ToolCalls ?? Array.Empty<ModelToolCall>();
@@ -148,21 +153,24 @@ namespace HabitTracker.Application.Features.Assistant.Harness
                 if (response.StopReason != ModelStopReason.ToolUse || calls.Count == 0)
                 {
                     await _repository.AppendMessagesAsync(conversationId, new[] { assistantMessage });
-                    return new(StatusFor(response.StopReason), response.Message.Content, toolsUsed);
+                    return new(StatusFor(response.StopReason), response.Message.Content, toolsUsed,
+                        await ProposalsFromAsync(conversationId, callIds));
                 }
 
                 if (toolsUsed.Count + calls.Count > _options.MaxToolCallsPerTurn)
                 {
                     // Not saved: an assistant message whose calls go unanswered would make every
                     // later request in this conversation invalid.
-                    return new(AssistantTurnStatus.StepLimitReached, ToolsUsed: toolsUsed);
+                    return new(AssistantTurnStatus.StepLimitReached, ToolsUsed: toolsUsed,
+                        Proposals: await ProposalsFromAsync(conversationId, callIds));
                 }
 
                 var results = new List<AssistantMessage>(calls.Count);
                 foreach (var call in calls)
                 {
                     await _progress.ToolStartedAsync(userId, conversationId, call.Name);
-                    var result = await RunToolAsync(call, context, cancellationToken);
+                    callIds.Add(call.Id);
+                    var result = await RunToolAsync(call, context with { ToolCallId = call.Id }, cancellationToken);
                     await _progress.ToolFinishedAsync(userId, conversationId, call.Name, result.IsError);
 
                     toolsUsed.Add(call.Name);
@@ -182,6 +190,14 @@ namespace HabitTracker.Application.Features.Assistant.Harness
                 history.Add(assistantMessage);
                 history.AddRange(results);
             }
+        }
+
+        /// <summary>The proposals this turn's tool calls recorded.</summary>
+        private async Task<IReadOnlyList<AssistantProposal>> ProposalsFromAsync(Guid conversationId, IReadOnlySet<string> callIds)
+        {
+            if (callIds.Count == 0) return Array.Empty<AssistantProposal>();
+            var all = await _repository.GetProposalsAsync(conversationId);
+            return all.Where(p => callIds.Contains(p.ToolCallId)).ToList();
         }
 
         private async Task<ToolResult> RunToolAsync(ModelToolCall call, ToolContext context, CancellationToken cancellationToken)
