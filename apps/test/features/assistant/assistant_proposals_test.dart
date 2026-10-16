@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:habit_tracker/core/localization/locale_provider.dart';
 import 'package:habit_tracker/core/network/api_service.dart';
 import 'package:habit_tracker/features/assistant/domain/assistant_models.dart';
+import 'package:habit_tracker/features/assistant/presentation/assistant_labels.dart';
 import 'package:habit_tracker/features/assistant/presentation/providers/assistant_chat_provider.dart';
 import 'package:habit_tracker/features/assistant/presentation/providers/assistant_progress_provider.dart';
 import 'package:habit_tracker/features/assistant/presentation/screens/assistant_screen.dart';
@@ -14,6 +16,17 @@ import 'fake_assistant_api.dart';
 
 void main() {
   final at = DateTime(2026, 9, 28, 14);
+
+  test('every tool with its own wording has it in both languages, not its raw name', () {
+    for (final locale in AppLocale.values) {
+      final t = AppTranslations(locale);
+      for (final tool in AssistantLabels.knownTools) {
+        expect(AssistantLabels.running(t, tool), isNot(contains(tool)), reason: '$locale running $tool');
+        expect(AssistantLabels.done(t, tool), isNot(contains(tool)), reason: '$locale done $tool');
+      }
+    }
+    expect(AssistantLabels.knownTools, contains('propose_schedule'));
+  });
 
   group('placeProposals', () {
     test('puts each proposal after the reply that explains it, as a live turn shows it', () {

@@ -6,7 +6,13 @@ import 'package:habit_tracker/features/assistant/presentation/providers/assistan
 /// one place so a new tool or failure has exactly one spot to be given a label.
 abstract final class AssistantLabels {
   /// Tools that have their own wording; any other falls back to a generic label.
-  static const Set<String> knownTools = {'get_events', 'get_habits', 'get_categories', 'get_stats'};
+  static const Set<String> knownTools = {
+    'get_events',
+    'get_habits',
+    'get_categories',
+    'get_stats',
+    'propose_schedule',
+  };
 
   /// While [tool] runs: "Looking at your calendar…". Null [tool] means the model itself.
   static String running(AppTranslations t, String? tool) {

@@ -46,8 +46,8 @@ namespace HabitTracker.Application.Features.Assistant.Tools
         public string Description =>
             "Propose a repeating session for the user to add to their calendar, e.g. 45 minutes of running every day " +
             "between 05:00 and 06:00 or 18:00 and 19:00. Finds the start time in each window that clashes with the fewest " +
-            "existing events over the next 14 days. This does NOT add anything: the app shows each proposal with an " +
-            "'Add to calendar' button, and only the user's tap adds it. If similarHabits comes back and the user did not " +
+            "existing events over the next 14 days. This does NOT add anything: the app shows each proposal as a card with an " +
+            "add button, and only the user's tap adds it. If similarHabits comes back and the user did not " +
             "say, ask whether to use that habit (call again with its habitId) or keep a new one.";
 
         public string ParametersSchemaJson => """
@@ -170,8 +170,8 @@ namespace HabitTracker.Application.Features.Assistant.Tools
                     : habits.Where(h => Similar(h.Name, request.Title))
                         .Select(h => new { id = h.Id, name = h.Name, days = h.TargetDays.Order().Select(d => DayNames[d - 1]) })
                         .ToList(),
-                note = "Nothing is added yet. The app shows each proposal as a card with an 'Add to calendar' button; " +
-                       "tell the user to tap it. Never say it has been added.",
+                note = "Nothing is added yet. The app shows each proposal as a card with an add button; tell the " +
+                       "user to tap it, without quoting its label (the app's language may differ). Never say it has been added.",
             });
         }
 

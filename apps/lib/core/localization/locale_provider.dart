@@ -1286,6 +1286,10 @@ class AppTranslations {
       AppLocale.en: 'Checking your stats…',
       AppLocale.vi: 'Đang xem số liệu…',
     },
+    'assistant_tool_running_propose_schedule': {
+      AppLocale.en: 'Looking for free time…',
+      AppLocale.vi: 'Đang tìm giờ trống…',
+    },
     'assistant_tool_running_other': {AppLocale.en: 'Working on it…', AppLocale.vi: 'Đang xử lý…'},
     'assistant_tool_done_get_events': {AppLocale.en: 'Checked your calendar', AppLocale.vi: 'Đã xem lịch'},
     'assistant_tool_done_get_habits': {AppLocale.en: 'Checked your habits', AppLocale.vi: 'Đã xem thói quen'},
@@ -1294,6 +1298,10 @@ class AppTranslations {
       AppLocale.vi: 'Đã xem danh mục',
     },
     'assistant_tool_done_get_stats': {AppLocale.en: 'Checked your stats', AppLocale.vi: 'Đã xem số liệu'},
+    'assistant_tool_done_propose_schedule': {
+      AppLocale.en: 'Found times for you',
+      AppLocale.vi: 'Đã tìm giờ phù hợp',
+    },
     'assistant_tool_done_other': {AppLocale.en: 'Used {tool}', AppLocale.vi: 'Đã dùng {tool}'},
     'assistant_empty_title': {
       AppLocale.en: 'Ask me about your schedule',
