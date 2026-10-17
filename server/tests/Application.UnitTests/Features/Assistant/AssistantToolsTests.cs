@@ -183,5 +183,109 @@ namespace HabitTracker.Application.Tests.Features.Assistant
             result.IsError.Should().BeTrue();
             result.Json.Should().Contain("from 1 to 90");
         }
+
+        // ── get_habit_stats ──────────────────────────────────────────────────────────────
+
+        /// <summary>A habit run at 06:00 local every Monday from 28 September, done that first day.</summary>
+        private Habit AddMondayRunDoneOnce()
+        {
+            var run = new Habit { Name = "Chạy bộ" };
+            _habits.Add(run);
+            var series = new Event
+            {
+                Title = "Chạy bộ",
+                HabitId = run.Id.ToString(),
+                StartTime = new DateTime(2026, 9, 27, 23, 0, 0, DateTimeKind.Utc),
+                EndTime = new DateTime(2026, 9, 27, 23, 45, 0, DateTimeKind.Utc),
+                RecurrenceRule = "RRULE:FREQ=WEEKLY;BYDAY=MO",
+            };
+            _events.Add(series);
+            _events.Add(new Event
+            {
+                Title = "Chạy bộ",
+                HabitId = run.Id.ToString(),
+                ParentEventId = series.Id,
+                ExceptionDate = series.StartTime,
+                StartTime = series.StartTime,
+                EndTime = series.EndTime,
+                IsCompleted = true,
+            });
+            return run;
+        }
+
+        [Fact]
+        public async Task GetHabitStats_ShouldDefaultTo28Days_FromLocalMidnight_ThroughTheEndOfToday()
+        {
+            await new GetHabitStatsTool(_sender.Object).ExecuteAsync(Context, Args(new { }), CancellationToken.None);
+
+            // Now is 10:00 on Monday 5 October, local: 28 days back is 8 September, 00:00 local.
+            _eventsQuery!.UserId.Should().Be(UserId);
+            _eventsQuery.StartTime.Should().Be(new DateTime(2026, 9, 7, 17, 0, 0, DateTimeKind.Utc));
+            _eventsQuery.EndTime.Should().Be(new DateTime(2026, 10, 5, 17, 0, 0, DateTimeKind.Utc));
+        }
+
+        [Fact]
+        public async Task GetHabitStats_ShouldGiveTheCountsTheModelQuotes_WithNamedDaysAndHours()
+        {
+            AddMondayRunDoneOnce();
+
+            var result = Json(await new GetHabitStatsTool(_sender.Object).ExecuteAsync(
+                Context, Args(new { days = 8 }), CancellationToken.None));
+
+            // 28 September (done) and 5 October (06:00 today, over by 10:00, not done).
+            var habit = result.GetProperty("habits")[0];
+            habit.GetProperty("name").GetString().Should().Be("Chạy bộ");
+            habit.GetProperty("planned").GetInt32().Should().Be(2);
+            habit.GetProperty("done").GetInt32().Should().Be(1);
+            habit.GetProperty("missed").GetInt32().Should().Be(1);
+            habit.GetProperty("ratePercent").GetInt32().Should().Be(50);
+            habit.GetProperty("lastDone").GetString().Should().Be("2026-09-28");
+            var monday = habit.GetProperty("byWeekday")[0];
+            monday.GetProperty("day").GetString().Should().Be("Mon");
+            monday.GetProperty("planned").GetInt32().Should().Be(2);
+            habit.GetProperty("recentMissed").EnumerateArray().Select(d => d.GetString()).Should().Equal("2026-10-05");
+            // A range, so a 06:50 session is not read back as "at 06:00".
+            habit.GetProperty("byHour")[0].GetProperty("hour").GetString().Should().Be("06:00-07:00");
+            result.GetProperty("total").GetProperty("done").GetInt32().Should().Be(1);
+            result.GetProperty("from").GetString().Should().Be("2026-09-28T00:00+07:00");
+        }
+
+        [Fact]
+        public async Task GetHabitStats_ShouldKeepToOneHabit_WhenGivenItsId()
+        {
+            var run = AddMondayRunDoneOnce();
+            _habits.Add(new Habit { Name = "Đọc sách" });
+
+            var result = Json(await new GetHabitStatsTool(_sender.Object).ExecuteAsync(
+                Context, Args(new { habitId = run.Id.ToString() }), CancellationToken.None));
+
+            result.GetProperty("habits").EnumerateArray().Select(h => h.GetProperty("name").GetString())
+                .Should().Equal("Chạy bộ");
+        }
+
+        [Theory]
+        [InlineData("not-an-id", "is not an id")]
+        [InlineData("5eed0000-0000-0000-0000-000000000000", "no habit with that habitId")]
+        public async Task GetHabitStats_ShouldRefuseAHabitIdItCannotUse(string habitId, string message)
+        {
+            AddMondayRunDoneOnce();
+
+            var result = await new GetHabitStatsTool(_sender.Object).ExecuteAsync(
+                Context, Args(new { habitId }), CancellationToken.None);
+
+            result.IsError.Should().BeTrue();
+            result.Json.Should().Contain(message);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(91)]
+        public async Task GetHabitStats_ShouldRefuseADayCountOutsideItsRange(int days)
+        {
+            var result = await new GetHabitStatsTool(_sender.Object).ExecuteAsync(Context, Args(new { days }), CancellationToken.None);
+
+            result.IsError.Should().BeTrue();
+            result.Json.Should().Contain("from 1 to 90");
+        }
     }
 }

@@ -3,13 +3,13 @@
 Idea backlog for the Habit Tracker, with enough grounding that each item can be picked up
 without re-deriving it. Ordered by value ÷ effort within each section, not by excitement.
 
-**Last updated:** 2026-09-13 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
+**Last updated:** 2026-09-28 · **Status key:** 🟢 done · 🟡 in progress · ⚪ not started
 
-**AI: one assistant, nothing else.** A chat assistant that reads — and, in later steps,
-changes — the user's calendar through the app's own commands is being built (see *The
-assistant* in `CLAUDE.md`). Everything below still stands on its own: each "smart" item is a
-SQL aggregate or a small heuristic over data the app already stores, and none of it waits for
-the assistant.
+**AI: one assistant, nothing else.** A chat assistant that reads the user's calendar and
+proposes new sessions — which the user adds with one tap, and can undo — is in place (see *The
+assistant* in `CLAUDE.md`); moving and deleting through it are not built yet. Everything
+below still stands on its own: each "smart" item is a SQL aggregate or a small heuristic over
+data the app already stores, and none of it waits for the assistant.
 
 ---
 
@@ -145,7 +145,11 @@ Review finding worth remembering: deriving the totals from the habit grouping ma
 say "nothing here yet" to the one account in the dev database with sessions in the window —
 15 of them, 790 minutes, every one on a plain event.
 
-### ⚪ 2.2 Completion rate by weekday and hour
+### 🟡 2.2 Completion rate by weekday and hour
+
+The numbers exist: `Application/Common/HabitAdherence` counts planned against kept sessions per
+habit, by weekday and start hour, with repeating days expanded, and the assistant reads them
+through `get_habit_stats`. No screen shows them yet.
 
 Two views from `Habit.TargetDays` + `Event.StartTime` + `IsCompleted`:
 

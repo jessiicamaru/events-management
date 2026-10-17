@@ -27,7 +27,8 @@ namespace HabitTracker.Application.Features.Assistant.Tools
             "Statistics for the last N days (1-90, default 7): focus minutes per day and in total, the " +
             "best day, and for finished sessions the planned against actual minutes per habit and per " +
             "category. Counts of scheduled/completed cover one-off events only; days of repeating events " +
-            "are not in them. Quote these numbers exactly; never estimate.";
+            "are not in them - for how often each habit was kept, use get_habit_stats. Quote these numbers " +
+            "exactly; never estimate.";
 
         public string ParametersSchemaJson => """
             {

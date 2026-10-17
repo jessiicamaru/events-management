@@ -25,7 +25,7 @@ void main() {
         expect(AssistantLabels.done(t, tool), isNot(contains(tool)), reason: '$locale done $tool');
       }
     }
-    expect(AssistantLabels.knownTools, contains('propose_schedule'));
+    expect(AssistantLabels.knownTools, containsAll(['get_habit_stats', 'propose_schedule']));
   });
 
   group('placeProposals', () {

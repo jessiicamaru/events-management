@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<Features.Assistant.Harness.IAssistantTool, Features.Assistant.Tools.GetHabitsTool>();
         services.AddScoped<Features.Assistant.Harness.IAssistantTool, Features.Assistant.Tools.GetCategoriesTool>();
         services.AddScoped<Features.Assistant.Harness.IAssistantTool, Features.Assistant.Tools.GetStatsTool>();
+        services.AddScoped<Features.Assistant.Harness.IAssistantTool, Features.Assistant.Tools.GetHabitStatsTool>();
         services.AddScoped<Features.Assistant.Harness.IAssistantTool, Features.Assistant.Tools.ProposeScheduleTool>();
         return services;
     }
