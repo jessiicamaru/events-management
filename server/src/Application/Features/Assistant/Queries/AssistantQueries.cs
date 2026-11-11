@@ -1,3 +1,4 @@
+using HabitTracker.Application.Features.Assistant.Scheduling;
 using HabitTracker.Domain.Entities;
 using HabitTracker.Domain.Interfaces;
 using MediatR;
@@ -15,9 +16,43 @@ namespace HabitTracker.Application.Features.Assistant.Queries
 
     /// <summary>
     /// A message as the app shows it. Tool steps are listed by name only; their raw results
-    /// are for the model.
+    /// are for the model. A tool step that proposed something carries the proposals, so the
+    /// history shows their cards — with their current state — where they were made.
     /// </summary>
-    public sealed record AssistantMessageDto(Guid Id, string Role, string? Content, string? ToolName, DateTime CreatedAt);
+    public sealed record AssistantMessageDto(
+        Guid Id,
+        string Role,
+        string? Content,
+        string? ToolName,
+        DateTime CreatedAt,
+        IReadOnlyList<AssistantProposalDto>? Proposals = null);
+
+    /// <summary>A proposal as the app's card shows it.</summary>
+    /// <param name="Status"><see cref="AssistantProposalStatus"/>.</param>
+    /// <param name="Start">"HH:mm", local.</param>
+    /// <param name="End">"HH:mm", local.</param>
+    /// <param name="Days">1 = Monday … 7 = Sunday.</param>
+    /// <param name="FirstDate">"yyyy-MM-dd".</param>
+    /// <param name="HabitName">The existing habit it joins; null when adding creates a new one.</param>
+    public sealed record AssistantProposalDto(
+        Guid Id,
+        string Status,
+        string Title,
+        string Start,
+        string End,
+        IReadOnlyList<int> Days,
+        string FirstDate,
+        IReadOnlyList<ScheduleConflict> Conflicts,
+        string? HabitName)
+    {
+        public static AssistantProposalDto From(AssistantProposal proposal)
+        {
+            var plan = ScheduleProposal.FromJson(proposal.PayloadJson);
+            return new AssistantProposalDto(
+                proposal.Id, proposal.Status, plan.Title, plan.StartLocal, plan.EndLocal,
+                plan.Days, plan.FirstDate, plan.Conflicts, plan.HabitName);
+        }
+    }
 
     public sealed record AssistantConversationDto(Guid Id, DateTime CreatedAt, DateTime UpdatedAt);
 
@@ -88,6 +123,10 @@ namespace HabitTracker.Application.Features.Assistant.Queries
             if (await _repository.GetConversationAsync(request.ConversationId, request.UserId) == null) return null;
 
             var messages = await _repository.GetMessagesAsync(request.ConversationId);
+            var proposals = (await _repository.GetProposalsAsync(request.ConversationId))
+                .GroupBy(p => p.ToolCallId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<AssistantProposalDto>)g.Select(AssistantProposalDto.From).ToList());
+
             return messages
                 // An assistant message that only called tools has nothing to show; its tool steps do.
                 .Where(m => m.Role != AssistantRoles.Assistant || !string.IsNullOrWhiteSpace(m.Content))
@@ -96,7 +135,8 @@ namespace HabitTracker.Application.Features.Assistant.Queries
                     m.Role,
                     m.Role == AssistantRoles.Tool ? null : m.Content,
                     m.ToolName,
-                    m.CreatedAt))
+                    m.CreatedAt,
+                    m.ToolCallId != null && proposals.TryGetValue(m.ToolCallId, out var made) ? made : null))
                 .ToList();
         }
     }

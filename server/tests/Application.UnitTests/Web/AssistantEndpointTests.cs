@@ -55,7 +55,50 @@ namespace HabitTracker.Application.Tests.Web
                 Guid.NewGuid(), sender.Object, new SendAssistantMessageRequest("mai?"), SignedIn("user-1"), CancellationToken.None);
 
             var ok = response.Result.Should().BeOfType<Ok<AssistantReplyDto>>().Subject;
-            ok.Value!.Should().BeEquivalentTo(new AssistantReplyDto("Completed", "Mai trống.", new[] { "get_events" }));
+            ok.Value!.Should().BeEquivalentTo(new AssistantReplyDto(
+                "Completed", "Mai trống.", new[] { "get_events" }, Array.Empty<AssistantProposalDto>()));
+        }
+
+        [Fact]
+        public async Task SendMessage_ShouldReturnWhatTheAssistantProposed_ForTheAppToShowAsCards()
+        {
+            var plan = new HabitTracker.Application.Features.Assistant.Scheduling.ScheduleProposal(
+                "Chạy bộ", 45, "05:00", new[] { 1, 2, 3, 4, 5, 6, 7 }, "2026-09-29", "RRULE:FREQ=DAILY",
+                new[] { 15 }, null, null, null, Array.Empty<HabitTracker.Application.Features.Assistant.Scheduling.ScheduleConflict>());
+            var proposal = new AssistantProposal { UserId = "user-1", ToolCallId = "c", PayloadJson = plan.ToJson() };
+            var sender = SenderReturning(new AssistantTurnResult(
+                AssistantTurnStatus.Completed, "Sáng 5h trống cả tuần.", new[] { "propose_schedule" }, new[] { proposal }));
+
+            var response = await new Assistant().SendMessage(
+                Guid.NewGuid(), sender.Object, new SendAssistantMessageRequest("chạy bộ 45p"), SignedIn("user-1"), CancellationToken.None);
+
+            var card = response.Result.Should().BeOfType<Ok<AssistantReplyDto>>().Subject.Value!.Proposals.Single();
+            card.Id.Should().Be(proposal.Id);
+            card.Start.Should().Be("05:00");
+            card.End.Should().Be("05:45");
+            card.Status.Should().Be(AssistantProposalStatus.Pending);
+        }
+
+        [Theory]
+        [InlineData(ProposalActionOutcome.NotFound, typeof(NotFound))]
+        [InlineData(ProposalActionOutcome.AlreadyResolved, typeof(Conflict<AssistantProposalDto>))]
+        [InlineData(ProposalActionOutcome.HasActivity, typeof(ProblemHttpResult))]
+        [InlineData(ProposalActionOutcome.Refused, typeof(ProblemHttpResult))]
+        public async Task ApplyProposal_ShouldAnswerEachOutcomeWithItsOwnResult(ProposalActionOutcome outcome, Type expected)
+        {
+            var sender = new Mock<ISender>();
+            ApplyAssistantProposalCommand? sent = null;
+            sender.Setup(s => s.Send(It.IsAny<ApplyAssistantProposalCommand>(), It.IsAny<CancellationToken>()))
+                .Callback<IRequest<ProposalActionResult>, CancellationToken>((c, _) => sent = (ApplyAssistantProposalCommand)c)
+                .ReturnsAsync(new ProposalActionResult(outcome,
+                    new AssistantProposalDto(Guid.NewGuid(), "applied", "x", "05:00", "05:45", new[] { 1 }, "2026-09-29",
+                        Array.Empty<HabitTracker.Application.Features.Assistant.Scheduling.ScheduleConflict>(), null)));
+            var id = Guid.NewGuid();
+
+            var response = await new Assistant().ApplyProposal(id, sender.Object, SignedIn("user-1"));
+
+            response.Result.Should().BeOfType(expected);
+            sent.Should().Be(new ApplyAssistantProposalCommand("user-1", id), "the proposal is applied as the user in the token");
         }
 
         [Theory]
@@ -158,8 +201,37 @@ namespace HabitTracker.Application.Tests.Web
                 ("user", "mai?", null),
                 ("tool", null, "get_events"),
                 ("assistant", "Mai trống.", null));
+            messages.Should().OnlyContain(m => m.Proposals == null);
             (await new GetAssistantMessagesQueryHandler(repository)
                 .Handle(new GetAssistantMessagesQuery("user-2", conversation.Id), CancellationToken.None)).Should().BeNull();
+        }
+
+        [Fact]
+        public async Task GetMessages_ShouldPutEachProposalOnTheToolStepThatMadeIt_WithItsCurrentState()
+        {
+            var repository = new InMemoryAssistantRepository();
+            var conversation = repository.AddConversation("user-1");
+            await repository.AppendMessagesAsync(conversation.Id, new List<AssistantMessage>
+            {
+                new() { Role = AssistantRoles.User, Content = "chạy bộ 45p" },
+                new() { Role = AssistantRoles.Assistant, ToolCallsJson = "[]" },
+                new() { Role = AssistantRoles.Tool, Content = "{}", ToolName = "propose_schedule", ToolCallId = "call-7" },
+                new() { Role = AssistantRoles.Assistant, Content = "Sáng 5h trống." },
+            });
+            var plan = new HabitTracker.Application.Features.Assistant.Scheduling.ScheduleProposal(
+                "Chạy bộ", 45, "05:00", new[] { 1 }, "2026-09-29", "RRULE:FREQ=WEEKLY;BYDAY=MO", new[] { 15 },
+                null, null, null, Array.Empty<HabitTracker.Application.Features.Assistant.Scheduling.ScheduleConflict>());
+            repository.Proposals.Add(new AssistantProposal
+            {
+                UserId = "user-1", ConversationId = conversation.Id, ToolCallId = "call-7",
+                PayloadJson = plan.ToJson(), Status = AssistantProposalStatus.Applied,
+            });
+
+            var messages = await new GetAssistantMessagesQueryHandler(repository)
+                .Handle(new GetAssistantMessagesQuery("user-1", conversation.Id), CancellationToken.None);
+
+            var step = messages!.Single(m => m.ToolName == "propose_schedule");
+            step.Proposals.Should().ContainSingle().Which.Status.Should().Be(AssistantProposalStatus.Applied);
         }
     }
 }

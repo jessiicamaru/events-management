@@ -27,5 +27,15 @@ namespace HabitTracker.Domain.Interfaces
         Task<UserAiSettings?> GetSettingsAsync(string userId);
 
         Task SaveSettingsAsync(UserAiSettings settings);
+
+        Task AddProposalAsync(AssistantProposal proposal);
+
+        /// <summary>The proposal, only if it belongs to <paramref name="userId"/>; otherwise null.</summary>
+        Task<AssistantProposal?> GetProposalAsync(Guid proposalId, string userId);
+
+        Task UpdateProposalAsync(AssistantProposal proposal);
+
+        /// <summary>The conversation's proposals, oldest first.</summary>
+        Task<IReadOnlyList<AssistantProposal>> GetProposalsAsync(Guid conversationId);
     }
 }

@@ -33,6 +33,7 @@ namespace HabitTracker.Infrastructure.Data
         public DbSet<AssistantConversation> AssistantConversations { get; set; } = null!;
         public DbSet<AssistantMessage> AssistantMessages { get; set; } = null!;
         public DbSet<UserAiSettings> UserAiSettings { get; set; } = null!;
+        public DbSet<AssistantProposal> AssistantProposals { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -159,6 +160,19 @@ namespace HabitTracker.Infrastructure.Data
                       .OnDelete(DeleteBehavior.Cascade);
                 // Order within a conversation, and a guard against two writers numbering the same slot.
                 entity.HasIndex(e => new { e.ConversationId, e.Sequence }).IsUnique();
+            });
+
+            modelBuilder.Entity<AssistantProposal>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UserId).IsRequired();
+                entity.Property(e => e.Status).IsRequired().HasMaxLength(16);
+                entity.Property(e => e.ToolCallId).IsRequired().HasMaxLength(128);
+                entity.HasOne(e => e.Conversation)
+                      .WithMany()
+                      .HasForeignKey(e => e.ConversationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.ConversationId);
             });
 
             modelBuilder.Entity<UserAiSettings>(entity =>

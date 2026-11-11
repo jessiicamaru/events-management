@@ -88,5 +88,31 @@ namespace HabitTracker.Infrastructure.Repositories
 
             await _context.SaveChangesAsync();
         }
+
+        public async Task AddProposalAsync(AssistantProposal proposal)
+        {
+            _context.AssistantProposals.Add(proposal);
+            await _context.SaveChangesAsync();
+        }
+
+        public Task<AssistantProposal?> GetProposalAsync(Guid proposalId, string userId) =>
+            _context.AssistantProposals.FirstOrDefaultAsync(p => p.Id == proposalId && p.UserId == userId);
+
+        public async Task UpdateProposalAsync(AssistantProposal proposal)
+        {
+            if (_context.Entry(proposal).State == EntityState.Detached)
+            {
+                _context.AssistantProposals.Update(proposal);
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<IReadOnlyList<AssistantProposal>> GetProposalsAsync(Guid conversationId) =>
+            await _context.AssistantProposals
+                .AsNoTracking()
+                .Where(p => p.ConversationId == conversationId)
+                .OrderBy(p => p.CreatedAt)
+                .ToListAsync();
     }
 }

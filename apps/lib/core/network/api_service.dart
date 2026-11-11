@@ -437,6 +437,31 @@ class ApiService {
         return AssistantReply.fromJson(response.data as Map<String, dynamic>);
       });
 
+  /// The user tapped "Add to calendar": the server creates the proposed habit and event.
+  Future<AssistantProposal> applyAssistantProposal(String proposalId) => _proposalAction(proposalId, 'apply');
+
+  Future<AssistantProposal> dismissAssistantProposal(String proposalId) => _proposalAction(proposalId, 'dismiss');
+
+  /// Takes back an added proposal. Refused once a day of it holds the user's own work.
+  Future<AssistantProposal> undoAssistantProposal(String proposalId) => _proposalAction(proposalId, 'undo');
+
+  /// A 409 carrying the proposal means the card was out of date — already added, dismissed or
+  /// undone, perhaps from another device. That is not an error: the card redraws from it.
+  Future<AssistantProposal> _proposalAction(String proposalId, String action) async {
+    try {
+      final response = await _dio.post('/assistant/proposals/$proposalId/$action');
+      return AssistantProposal.fromJson(response.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      if (e.response?.statusCode == 409 && body is Map<String, dynamic> && body['id'] != null) {
+        return AssistantProposal.fromJson(body);
+      }
+      if (e.response?.statusCode == 409) throw const AssistantException(AssistantFailure.proposalHasActivity);
+      if (e.response?.statusCode == 422) throw const AssistantException(AssistantFailure.proposalRefused);
+      throw AssistantException(assistantFailureOf(e));
+    }
+  }
+
   Future<T> _assistant<T>(Future<T> Function() call) async {
     try {
       return await call();

@@ -6,7 +6,13 @@ import 'package:habit_tracker/features/assistant/presentation/providers/assistan
 /// one place so a new tool or failure has exactly one spot to be given a label.
 abstract final class AssistantLabels {
   /// Tools that have their own wording; any other falls back to a generic label.
-  static const Set<String> knownTools = {'get_events', 'get_habits', 'get_categories', 'get_stats'};
+  static const Set<String> knownTools = {
+    'get_events',
+    'get_habits',
+    'get_categories',
+    'get_stats',
+    'propose_schedule',
+  };
 
   /// While [tool] runs: "Looking at your calendar…". Null [tool] means the model itself.
   static String running(AppTranslations t, String? tool) {
@@ -28,8 +34,20 @@ abstract final class AssistantLabels {
         AssistantFailure.modelUnavailable => 'assistant_error_model',
         AssistantFailure.conversationNotFound => 'assistant_error_not_found',
         AssistantFailure.network => 'assistant_error_network',
+        AssistantFailure.proposalHasActivity => 'assistant_error_proposal_has_activity',
+        AssistantFailure.proposalRefused => 'assistant_error_proposal_refused',
         AssistantFailure.unknown => 'assistant_error_unknown',
       });
+
+  /// "Every day", or the weekdays in order: "Mon, Wed, Fri".
+  static String days(AppTranslations t, List<int> days) => days.length == DateTime.daysPerWeek
+      ? t.translate('assistant_proposal_every_day')
+      : ([...days]..sort()).map((d) => t.translate('assistant_day_$d')).join(', ');
+
+  /// "Tue 29/09".
+  static String date(AppTranslations t, DateTime date) =>
+      '${t.translate('assistant_day_${date.weekday}')} '
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
 
   static String notice(AppTranslations t, AssistantNotice notice) => t.translate(switch (notice) {
         AssistantNotice.truncated => 'assistant_notice_truncated',
