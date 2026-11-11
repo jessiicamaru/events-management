@@ -11,6 +11,7 @@ abstract final class AssistantLabels {
     'get_habits',
     'get_categories',
     'get_stats',
+    'get_habit_stats',
     'propose_schedule',
   };
 
